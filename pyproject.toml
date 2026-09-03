@@ -5,25 +5,29 @@ build-backend = "hatchling.build"
 [project]
 name = "mixerm8"
 version = "0.1.0"
-description = "Local bridge for MixerM8."
+description = "Read-only bridge between a Behringer X32 and a booth tablet guide."
 readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "MIT" }
 authors = [{ name = "Ryan Moore" }]
-keywords = ["mixerm8", "bridge"]
+keywords = ["x32", "behringer", "osc", "audio", "church", "sound"]
 classifiers = [
     "Development Status :: 3 - Alpha",
+    "Environment :: Console",
     "License :: OSI Approved :: MIT License",
+    "Operating System :: Microsoft :: Windows",
+    "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.10",
-    "Programming Language :: Python :: 3.11",
-    "Programming Language :: Python :: 3.12",
-    "Programming Language :: Python :: 3.13",
+    "Topic :: Multimedia :: Sound/Audio",
 ]
+
+# Deliberately empty. The bridge is Python standard library only, so
+# `pip install mixerm8` pulls in nothing else and the frozen .exe stays small.
 dependencies = []
 
 [project.optional-dependencies]
 dev = ["pytest>=8", "ruff>=0.6"]
+build = ["pyinstaller>=6.0"]
 
 [project.urls]
 Homepage = "https://rwm6857.github.io/mixerm8/"
@@ -36,9 +40,14 @@ mixerm8 = "mixerm8.cli:main"
 [tool.hatch.build.targets.wheel]
 packages = ["src/mixerm8"]
 
+# The tablet app is one set of files with two delivery paths: GitHub Pages
+# serves docs/ directly, and the wheel carries the same files so the bridge
+# can serve them on a LAN with no internet. Single source, no duplication.
+[tool.hatch.build.targets.wheel.force-include]
+"docs" = "mixerm8/webroot"
+
 [tool.hatch.build.targets.sdist]
-# The Pages site and content are not part of the Python release.
-include = ["src/mixerm8", "tests", "README.md", "LICENSE", "pyproject.toml"]
+include = ["src/mixerm8", "docs", "tests", "README.md", "LICENSE", "pyproject.toml"]
 
 [tool.ruff]
 line-length = 100

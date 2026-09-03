@@ -1,0 +1,175 @@
+{
+  "version": 1,
+  "languages": ["en", "ko"],
+  "pages": {
+    "Home": {
+      "level": "ok",
+      "title": { "en": "Home", "ko": "홈" },
+      "body": {
+        "en": "This is the safe screen. The faders control how loud each microphone is in the room. This is where you should be during the service.",
+        "ko": "여기는 안전한 화면입니다. 페이더는 각 마이크가 본당에서 얼마나 크게 들리는지 조절합니다. 예배 중에는 이 화면에 있어야 합니다."
+      }
+    },
+    "Config": {
+      "level": "danger",
+      "title": { "en": "Config", "ko": "Config (설정)" },
+      "body": {
+        "en": "This page sets where the channel gets its sound from. Changing it will make the microphone stop working entirely.",
+        "ko": "이 페이지는 채널이 어디에서 소리를 받는지 설정합니다. 변경하면 마이크가 완전히 작동하지 않게 됩니다."
+      },
+      "action": { "en": "Press HOME.", "ko": "HOME을 누르세요." }
+    },
+    "Gate": {
+      "level": "caution",
+      "title": { "en": "Gate", "ko": "Gate (게이트)" },
+      "body": {
+        "en": "Gate switches a channel off when nobody is talking, so you don't hear the room hiss. If a microphone keeps cutting out in the middle of a sentence, this is usually why.",
+        "ko": "Gate는 아무도 말하지 않을 때 채널을 꺼서 잡음이 들리지 않게 합니다. 마이크가 말하는 중에 자꾸 끊긴다면 보통 이것이 원인입니다."
+      },
+      "action": {
+        "en": "Don't adjust it now. Tell the tech after the service.",
+        "ko": "지금은 조정하지 마세요. 예배 후 담당자에게 알려주세요."
+      }
+    },
+    "Dynamics": {
+      "level": "caution",
+      "title": { "en": "Dynamics", "ko": "Dynamics (다이나믹스)" },
+      "body": {
+        "en": "Dynamics stops loud sounds from getting too loud. It is already set up. Turning it up will not make a quiet microphone louder.",
+        "ko": "Dynamics는 큰 소리가 너무 커지지 않도록 합니다. 이미 설정되어 있습니다. 이것을 올려도 작은 마이크 소리가 커지지 않습니다."
+      },
+      "action": {
+        "en": "If a mic is too quiet, press HOME and raise its fader instead.",
+        "ko": "마이크 소리가 작으면 HOME을 누르고 해당 페이더를 올리세요."
+      }
+    },
+    "EQ": {
+      "level": "caution",
+      "title": { "en": "EQ", "ko": "EQ (이퀄라이저)" },
+      "body": {
+        "en": "EQ changes the tone of one channel — how bright or boomy it sounds. It does not change the volume.",
+        "ko": "EQ는 한 채널의 음색, 즉 밝거나 웅웅거리는 정도를 바꿉니다. 음량은 바뀌지 않습니다."
+      },
+      "action": {
+        "en": "If it sounded fine before you got here, press HOME and leave it alone.",
+        "ko": "오기 전에 소리가 괜찮았다면 HOME을 누르고 그대로 두세요."
+      }
+    },
+    "Sends": {
+      "level": "caution",
+      "title": { "en": "Sends", "ko": "Sends (센드)" },
+      "body": {
+        "en": "Sends control what the musicians hear in their own monitors on stage. They do not change what the congregation hears.",
+        "ko": "Sends는 무대 위 연주자가 자기 모니터로 듣는 소리를 조절합니다. 회중이 듣는 소리는 바뀌지 않습니다."
+      },
+      "action": {
+        "en": "Only change this if a musician has asked you to.",
+        "ko": "연주자가 요청한 경우에만 변경하세요."
+      }
+    },
+    "Main": {
+      "level": "caution",
+      "title": { "en": "Main", "ko": "Main (메인)" },
+      "body": {
+        "en": "This sets how much of this one channel goes to the main speakers, and where it sits left to right.",
+        "ko": "이 채널이 메인 스피커로 얼마나 나가는지, 그리고 좌우 어디에 위치하는지 설정합니다."
+      },
+      "action": { "en": "Use the fader on HOME instead.", "ko": "대신 HOME의 페이더를 사용하세요." }
+    }
+  },
+  "screens": {
+    "Meters": {
+      "level": "ok",
+      "title": { "en": "Meters", "ko": "Meters (미터)" },
+      "body": {
+        "en": "Meters just show you how loud things are. Nothing here changes the sound, so it is safe to look at.",
+        "ko": "Meters는 소리의 크기만 보여줍니다. 여기서는 소리가 바뀌지 않으므로 보아도 안전합니다."
+      },
+      "action": {
+        "en": "Green and yellow are good. Red means too loud.",
+        "ko": "초록과 노랑은 좋습니다. 빨강은 너무 크다는 뜻입니다."
+      }
+    },
+    "Routing": {
+      "level": "danger",
+      "title": { "en": "Routing", "ko": "Routing (라우팅)" },
+      "body": {
+        "en": "Routing decides which physical cable feeds which channel. A change here can silence every microphone at once.",
+        "ko": "Routing은 어떤 물리적 케이블이 어떤 채널로 연결되는지 결정합니다. 여기서 변경하면 모든 마이크가 한꺼번에 꺼질 수 있습니다."
+      },
+      "action": { "en": "Press HOME now.", "ko": "지금 HOME을 누르세요." }
+    },
+    "Setup": {
+      "level": "danger",
+      "title": { "en": "Setup", "ko": "Setup (셋업)" },
+      "body": {
+        "en": "Setup holds the network and system settings for the whole desk.",
+        "ko": "Setup에는 전체 콘솔의 네트워크 및 시스템 설정이 있습니다."
+      },
+      "action": { "en": "Nothing here needs changing during a service.", "ko": "예배 중에는 여기서 변경할 것이 없습니다." }
+    },
+    "Library": {
+      "level": "caution",
+      "title": { "en": "Library", "ko": "Library (라이브러리)" },
+      "body": {
+        "en": "Library loads saved settings onto a channel. Loading the wrong one will undo how a microphone is set up.",
+        "ko": "Library는 저장된 설정을 채널에 불러옵니다. 잘못 불러오면 마이크 설정이 초기화됩니다."
+      },
+      "action": { "en": "Press HOME.", "ko": "HOME을 누르세요." }
+    },
+    "Effects": {
+      "level": "caution",
+      "title": { "en": "Effects", "ko": "Effects (이펙트)" },
+      "body": {
+        "en": "Effects is where reverb and delay live — the echo on the vocals.",
+        "ko": "Effects에는 리버브와 딜레이, 즉 보컬의 잔향이 있습니다."
+      },
+      "action": {
+        "en": "Leave the settings alone. Reverb amount is set per channel on Sends.",
+        "ko": "설정은 그대로 두세요. 리버브 양은 채널별로 Sends에서 조절합니다."
+      }
+    },
+    "Monitor": {
+      "level": "ok",
+      "title": { "en": "Monitor", "ko": "Monitor (모니터)" },
+      "body": {
+        "en": "This controls the headphones and the small speaker at the booth. It does not change what the congregation hears.",
+        "ko": "이것은 헤드폰과 부스의 작은 스피커를 조절합니다. 회중이 듣는 소리는 바뀌지 않습니다."
+      },
+      "action": { "en": "Safe to adjust.", "ko": "조절해도 안전합니다." }
+    },
+    "USB": {
+      "level": "info",
+      "title": { "en": "USB", "ko": "USB" },
+      "body": {
+        "en": "This is the USB recorder and player. Use it to start or stop the service recording.",
+        "ko": "USB 레코더 및 재생기입니다. 예배 녹음을 시작하거나 정지할 때 사용합니다."
+      },
+      "action": {
+        "en": "Don't remove the USB stick while it is recording.",
+        "ko": "녹음 중에는 USB를 뽑지 마세요."
+      }
+    },
+    "Scenes": {
+      "level": "danger",
+      "title": { "en": "Scenes", "ko": "Scenes (씬)" },
+      "body": {
+        "en": "A scene is a saved snapshot of the whole desk. Loading one replaces every setting at once, including all the faders.",
+        "ko": "씬은 전체 콘솔의 저장된 스냅샷입니다. 씬을 불러오면 모든 페이더를 포함한 전체 설정이 한꺼번에 바뀝니다."
+      },
+      "action": {
+        "en": "Only load a scene at the very start, before people are on stage.",
+        "ko": "씬은 무대에 사람이 오르기 전, 맨 처음에만 불러오세요."
+      }
+    },
+    "Assign": {
+      "level": "caution",
+      "title": { "en": "Assign", "ko": "Assign (어사인)" },
+      "body": {
+        "en": "Assign sets what the custom buttons and knobs beside the screen do.",
+        "ko": "Assign은 화면 옆의 사용자 버튼과 노브의 기능을 설정합니다."
+      },
+      "action": { "en": "Press HOME.", "ko": "HOME을 누르세요." }
+    }
+  }
+}

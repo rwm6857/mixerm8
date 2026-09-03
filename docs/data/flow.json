@@ -1,0 +1,65 @@
+{
+  "version": 1,
+  "note": {
+    "en": "Edit this file to match your service. It is plain text.",
+    "ko": "예배에 맞게 이 파일을 수정하세요. 일반 텍스트입니다."
+  },
+  "steps": [
+    {
+      "when": { "en": "45 min before", "ko": "45분 전" },
+      "title": { "en": "Power up", "ko": "전원 켜기" },
+      "detail": {
+        "en": "Turn on the mixer first, then the amplifiers. Wait for the desk to finish starting before touching anything.",
+        "ko": "믹서를 먼저 켜고, 그 다음 앰프를 켜세요. 콘솔이 완전히 켜질 때까지 아무것도 만지지 마세요."
+      }
+    },
+    {
+      "when": { "en": "40 min before", "ko": "40분 전" },
+      "title": { "en": "Load the Sunday scene", "ko": "주일 씬 불러오기" },
+      "detail": {
+        "en": "SCENES → select the Sunday scene → LOAD. Do this before anyone is on stage. It resets every fader.",
+        "ko": "SCENES → 주일 씬 선택 → LOAD. 무대에 사람이 오르기 전에 하세요. 모든 페이더가 초기화됩니다."
+      }
+    },
+    {
+      "when": { "en": "30 min before", "ko": "30분 전" },
+      "title": { "en": "Line check", "ko": "라인 체크" },
+      "detail": {
+        "en": "Ask each person to speak or play one at a time. Watch the meter move. If nothing moves, check the mic is switched on before touching the desk.",
+        "ko": "한 사람씩 말하거나 연주하도록 요청하세요. 미터가 움직이는지 확인하세요. 움직이지 않으면 콘솔을 만지기 전에 마이크가 켜져 있는지 확인하세요."
+      }
+    },
+    {
+      "when": { "en": "20 min before", "ko": "20분 전" },
+      "title": { "en": "Band rehearsal", "ko": "밴드 리허설" },
+      "detail": {
+        "en": "Set rough levels with the faders on HOME. Ask the musicians if their monitors are right — that is the Sends page.",
+        "ko": "HOME의 페이더로 대략적인 레벨을 설정하세요. 연주자에게 모니터가 괜찮은지 물어보세요 — Sends 페이지입니다."
+      }
+    },
+    {
+      "when": { "en": "5 min before", "ko": "5분 전" },
+      "title": { "en": "Start the recording", "ko": "녹음 시작" },
+      "detail": {
+        "en": "USB screen → press record. Check the timer is counting up.",
+        "ko": "USB 화면 → 녹음 버튼을 누르세요. 타이머가 올라가는지 확인하세요."
+      }
+    },
+    {
+      "when": { "en": "During", "ko": "예배 중" },
+      "title": { "en": "Stay on HOME", "ko": "HOME 화면 유지" },
+      "detail": {
+        "en": "Ride the faders. Mute microphones that are not being used. If something sounds wrong, first check whether the person is close enough to the mic.",
+        "ko": "페이더를 조절하세요. 사용하지 않는 마이크는 음소거하세요. 소리가 이상하면 먼저 그 사람이 마이크에 충분히 가까운지 확인하세요."
+      }
+    },
+    {
+      "when": { "en": "After", "ko": "예배 후" },
+      "title": { "en": "Stop and shut down", "ko": "정지 및 종료" },
+      "detail": {
+        "en": "Stop the recording before removing the USB stick. Turn off the amplifiers first, then the mixer — the opposite order from starting up.",
+        "ko": "USB를 뽑기 전에 녹음을 정지하세요. 앰프를 먼저 끄고 그 다음 믹서를 끄세요 — 켤 때와 반대 순서입니다."
+      }
+    }
+  ]
+}

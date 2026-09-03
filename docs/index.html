@@ -2,65 +2,61 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>MixerM8</title>
-<style>
-  :root {
-    color-scheme: light dark;
-    --bg: #fbfaf8;
-    --fg: #1c1b19;
-    --muted: #6b6862;
-    --line: #e2ded6;
-    --accent: #b4531f;
-  }
-  @media (prefers-color-scheme: dark) {
-    :root { --bg:#161513; --fg:#ece9e3; --muted:#98938a; --line:#2e2c28; --accent:#e08a4e; }
-  }
-  * { box-sizing: border-box; }
-  body {
-    margin: 0;
-    background: var(--bg);
-    color: var(--fg);
-    font: 16px/1.6 ui-sans-serif, -apple-system, "Segoe UI", Roboto, sans-serif;
-  }
-  main { max-width: 42rem; margin: 0 auto; padding: 4rem 1.5rem; }
-  h1 { font-size: 2.25rem; letter-spacing: -0.02em; margin: 0 0 .25rem; }
-  .tagline { color: var(--muted); margin: 0 0 2.5rem; }
-  h2 { font-size: 1rem; text-transform: uppercase; letter-spacing: .08em;
-       color: var(--muted); margin: 2.5rem 0 .75rem; }
-  a { color: var(--accent); }
-  code {
-    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-    font-size: .9em; background: color-mix(in srgb, var(--fg) 7%, transparent);
-    padding: .15em .4em; border-radius: 4px;
-  }
-  pre {
-    background: color-mix(in srgb, var(--fg) 5%, transparent);
-    border: 1px solid var(--line); border-radius: 8px;
-    padding: 1rem; overflow-x: auto;
-  }
-  pre code { background: none; padding: 0; }
-  footer { margin-top: 4rem; padding-top: 1.5rem; border-top: 1px solid var(--line);
-           color: var(--muted); font-size: .875rem; }
-</style>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#14161a">
+<title>MixerM8 — Booth Guide</title>
+<link rel="stylesheet" href="styles.css">
 </head>
 <body>
+
+<header class="bar">
+  <div class="brand">
+    <span class="mark" aria-hidden="true"></span>
+    <span>MixerM8</span>
+  </div>
+  <div class="bar-right">
+    <button id="lang" class="chip" type="button" aria-label="Language">EN</button>
+    <span id="status" class="status" data-state="idle">
+      <span class="dot" aria-hidden="true"></span><span id="status-text">Starting</span>
+    </span>
+  </div>
+</header>
+
+<nav class="tabs" role="tablist">
+  <button class="tab" data-view="now"    role="tab" aria-selected="true">Now</button>
+  <button class="tab" data-view="guides" role="tab" aria-selected="false">Guides</button>
+  <button class="tab" data-view="flow"   role="tab" aria-selected="false">Service</button>
+</nav>
+
 <main>
-  <h1>MixerM8</h1>
-  <p class="tagline">Web app plus a local Python bridge.</p>
+  <!-- Follow view -->
+  <section id="view-now" class="view">
+    <div class="follow-row">
+      <label class="switch">
+        <input id="follow" type="checkbox" checked>
+        <span class="track" aria-hidden="true"><span class="knob"></span></span>
+        <span class="switch-label">Follow the mixer</span>
+      </label>
+      <span id="where" class="where"></span>
+    </div>
+    <div id="now"></div>
+  </section>
 
-  <p>This page is served from <code>docs/</code> on the <code>main</code> branch via GitHub Pages.
-  The Python bridge lives in the same repository under <code>src/mixerm8/</code> and is released
-  separately to PyPI.</p>
+  <!-- All guides -->
+  <section id="view-guides" class="view" hidden>
+    <p class="lede">Every screen on the desk, and what it does. Tap one to read it.</p>
+    <div id="guides" class="grid"></div>
+  </section>
 
-  <h2>Install the bridge</h2>
-<pre><code>pip install mixerm8
-mixerm8 --version</code></pre>
-
-  <h2>Source</h2>
-  <p><a href="https://github.com/rwm6857/mixerm8">github.com/rwm6857/mixerm8</a></p>
-
-  <footer>MIT licensed.</footer>
+  <!-- Service flow -->
+  <section id="view-flow" class="view" hidden>
+    <p class="lede">The order of a normal Sunday.</p>
+    <ol id="flow" class="flow"></ol>
+  </section>
 </main>
+
+<footer id="foot"></footer>
+
+<script src="app.js"></script>
 </body>
 </html>

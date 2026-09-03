@@ -1,0 +1,52 @@
+# Builds the booth .exe on Windows and attaches it to a GitHub release.
+#
+# This exists because the exe cannot be built from macOS. Tag and push:
+#     git tag v0.1.1 && git push origin v0.1.1
+# and the download appears on the Releases page a few minutes later, which
+# is what the in-app update check points people at.
+
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[build]"
+
+      - name: Build MixerM8.exe
+        run: python -m PyInstaller packaging/mixerm8.spec --noconfirm --clean
+
+      - name: Smoke test the build
+        run: dist\MixerM8.exe --version
+
+      - name: Stage the booth package
+        run: |
+          mkdir package
+          copy dist\MixerM8.exe package\
+          copy packaging\install_startup.ps1 package\
+          copy README.md package\
+          Compress-Archive -Path package\* -DestinationPath MixerM8-windows.zip
+
+      - uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: |
+            dist/MixerM8.exe
+            MixerM8-windows.zip
+          generate_release_notes: true
