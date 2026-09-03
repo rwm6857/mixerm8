@@ -25,3 +25,8 @@ htmlcov/
 # Local env
 .env
 .env.local
+
+# A church's own guide wording. Contains staff names and the channel layout,
+# so it stays on their machine: never committed, never served by Pages.
+# The committed docs/data/*.json are the generic example.
+docs/data/*.local.json

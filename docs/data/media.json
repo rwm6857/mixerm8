@@ -1,0 +1,233 @@
+{
+  "version": 1,
+  "role": "media",
+  "note": {
+    "en": "Example wording. Copy this to media.local.json and edit that copy — it is never committed. A run of four underscores marks something that still needs filling in for your church.",
+    "ko": "예시 문구입니다. media.local.json으로 복사한 뒤 그 파일을 수정하세요. 복사한 파일은 커밋되지 않습니다. 밑줄 네 개로 표시된 부분은 각 교회에 맞게 채워야 합니다."
+  },
+
+  "checklist": [
+    {
+      "text": {
+        "en": "Turn on the projector. It takes a minute or two to warm up, so do this first.",
+        "ko": "프로젝터를 켜세요. 예열에 1~2분 걸리므로 가장 먼저 하세요."
+      }
+    },
+    {
+      "text": {
+        "en": "Turn on the computer and log in.",
+        "ko": "컴퓨터를 켜고 로그인하세요."
+      }
+    },
+    {
+      "todo": {
+        "en": "Fill in where this week's slides are kept, and who sends them.",
+        "ko": "이번 주 슬라이드가 어디에 있고 누가 보내주는지 채워주세요."
+      },
+      "text": {
+        "en": "Open this week's slides from ____.",
+        "ko": "____에서 이번 주 슬라이드를 여세요."
+      }
+    },
+    {
+      "text": {
+        "en": "Press Windows key + P and choose Extend, so the projector is a second screen and not a copy of yours.",
+        "ko": "Windows 키 + P를 누르고 '확장'을 선택하세요. 그러면 프로젝터가 내 화면의 복사본이 아닌 두 번째 화면이 됩니다."
+      }
+    },
+    {
+      "text": {
+        "en": "In PowerPoint, start the slide show. Your screen should show the notes and the next slide; the projector should show only the slide.",
+        "ko": "PowerPoint에서 슬라이드 쇼를 시작하세요. 내 화면에는 메모와 다음 슬라이드가, 프로젝터에는 슬라이드만 보여야 합니다."
+      }
+    },
+    {
+      "text": {
+        "en": "Look up at the congregation screen and check it is not showing your desktop.",
+        "ko": "회중 화면을 올려다보고 내 바탕화면이 나오고 있지 않은지 확인하세요."
+      }
+    },
+    {
+      "text": {
+        "en": "Put the first slide up before people start arriving.",
+        "ko": "사람들이 도착하기 전에 첫 슬라이드를 띄워두세요."
+      }
+    }
+  ],
+
+  "problems": [
+    {
+      "level": "caution",
+      "title": { "en": "The projector is showing nothing", "ko": "프로젝터에 아무것도 안 나옵니다" },
+      "symptom": {
+        "en": "The screen is blank or blue, or it says there is no signal.",
+        "ko": "화면이 비어 있거나 파란색이거나, 신호가 없다고 표시됩니다."
+      },
+      "steps": [
+        {
+          "en": "Is the projector actually on? Look for a light on the projector itself, not just the remote.",
+          "ko": "프로젝터가 정말 켜져 있나요? 리모컨이 아니라 프로젝터 본체의 표시등을 확인하세요."
+        },
+        {
+          "en": "Press Windows key + P on the computer and choose Extend. Windows forgets this setting when it restarts.",
+          "ko": "컴퓨터에서 Windows 키 + P를 누르고 '확장'을 선택하세요. Windows는 재시작하면 이 설정을 잊어버립니다."
+        },
+        {
+          "en": "If it still says no signal, the projector may be on the wrong input. Press the Source or Input button on its remote until you see the computer.",
+          "ko": "여전히 신호가 없다고 나오면 프로젝터 입력이 잘못된 것일 수 있습니다. 리모컨의 Source 또는 Input 버튼을 눌러 컴퓨터 화면이 나올 때까지 바꾸세요."
+        },
+        {
+          "en": "Check the cable is pushed all the way in at both ends.",
+          "ko": "케이블 양쪽 끝이 완전히 꽂혀 있는지 확인하세요."
+        }
+      ]
+    },
+    {
+      "level": "caution",
+      "title": { "en": "Everyone can see my desktop", "ko": "회중이 제 바탕화면을 보고 있습니다" },
+      "symptom": {
+        "en": "The congregation screen is showing your files, your email, or the notes you are supposed to be the only one reading.",
+        "ko": "회중 화면에 내 파일, 이메일, 또는 나만 봐야 하는 메모가 나오고 있습니다."
+      },
+      "steps": [
+        {
+          "en": "Presenter view is on the wrong screen. In PowerPoint's presenter view there is a Display Settings button at the top — choose Swap Presenter View and Slide Show.",
+          "ko": "발표자 보기가 잘못된 화면에 있습니다. PowerPoint 발표자 보기 상단의 '디스플레이 설정' 버튼에서 '발표자 보기와 슬라이드 쇼 바꾸기'를 선택하세요."
+        },
+        {
+          "en": "If you cannot find that, press B. That blanks the projector immediately and buys you time.",
+          "ko": "찾을 수 없으면 B를 누르세요. 프로젝터가 즉시 검은 화면이 되어 시간을 벌 수 있습니다."
+        },
+        {
+          "en": "Do not press Escape to fix this. Escape ends the slide show and puts your editing window on the big screen instead.",
+          "ko": "이 문제를 해결하려고 Esc를 누르지 마세요. Esc는 슬라이드 쇼를 끝내고 편집 창을 큰 화면에 띄웁니다."
+        }
+      ]
+    },
+    {
+      "level": "caution",
+      "title": { "en": "The slides will not advance", "ko": "슬라이드가 넘어가지 않습니다" },
+      "symptom": {
+        "en": "You click and nothing happens.",
+        "ko": "클릭해도 아무 일도 일어나지 않습니다."
+      },
+      "steps": [
+        {
+          "en": "Click once on the slide itself first. If you clicked on anything else, PowerPoint stopped listening to the keyboard.",
+          "ko": "먼저 슬라이드를 한 번 클릭하세요. 다른 곳을 클릭했다면 PowerPoint가 키보드 입력을 받지 않습니다."
+        },
+        {
+          "en": "If you are using a clicker, change its battery. This is the usual cause.",
+          "ko": "리모컨을 사용한다면 배터리를 교체하세요. 보통 이것이 원인입니다."
+        },
+        {
+          "en": "The space bar and the right arrow both advance a slide. Use those while you sort the clicker out.",
+          "ko": "스페이스바와 오른쪽 화살표 모두 슬라이드를 넘깁니다. 리모컨을 해결하는 동안 이것을 사용하세요."
+        }
+      ]
+    },
+    {
+      "level": "info",
+      "title": { "en": "I have lost my place", "ko": "지금 어디인지 모르겠습니다" },
+      "symptom": {
+        "en": "The wrong slide is up and you do not know how many to go back.",
+        "ko": "잘못된 슬라이드가 떠 있고 몇 장을 되돌아가야 할지 모릅니다."
+      },
+      "steps": [
+        {
+          "en": "Type the slide number on the keyboard and press Enter. It jumps straight there.",
+          "ko": "키보드로 슬라이드 번호를 입력하고 Enter를 누르세요. 바로 그 슬라이드로 이동합니다."
+        },
+        {
+          "en": "Presenter view on your own screen shows all the slides as small pictures. Use that to find the right one.",
+          "ko": "내 화면의 발표자 보기에는 모든 슬라이드가 작은 그림으로 표시됩니다. 그것으로 맞는 슬라이드를 찾으세요."
+        },
+        {
+          "en": "Press B to blank the projector while you look, so nobody watches you hunt for it.",
+          "ko": "찾는 동안 B를 눌러 프로젝터를 검은 화면으로 만드세요. 찾는 모습이 보이지 않습니다."
+        }
+      ]
+    },
+    {
+      "level": "caution",
+      "title": { "en": "A video in the slides has no sound", "ko": "슬라이드의 영상에서 소리가 안 납니다" },
+      "symptom": {
+        "en": "The video plays on the screen but the room hears nothing.",
+        "ko": "영상은 재생되는데 본당에서 소리가 들리지 않습니다."
+      },
+      "todo": {
+        "en": "Fill in which mixer channel this computer's sound arrives on, and who to ask.",
+        "ko": "이 컴퓨터의 소리가 믹서의 몇 번 채널로 들어오는지, 누구에게 물어봐야 하는지 채워주세요."
+      },
+      "steps": [
+        {
+          "en": "Check the computer's own volume is not muted, bottom right of the screen.",
+          "ko": "화면 오른쪽 아래에서 컴퓨터 자체 음량이 음소거되어 있지 않은지 확인하세요."
+        },
+        {
+          "en": "This computer's sound goes through the mixing desk, not the projector. Ask the sound volunteer to bring up channel ____.",
+          "ko": "이 컴퓨터의 소리는 프로젝터가 아니라 믹싱 콘솔을 통해 나갑니다. 음향 봉사자에게 ____번 채널을 올려달라고 요청하세요."
+        },
+        {
+          "en": "Tell them before the service, not during it. A video with no sound is much easier to prevent than to fix live.",
+          "ko": "예배 중이 아니라 예배 전에 알려주세요. 소리 없는 영상은 미리 막는 것이 훨씬 쉽습니다."
+        }
+      ]
+    }
+  ],
+
+  "flow": [
+    {
+      "when": { "en": "30 min before", "ko": "30분 전" },
+      "title": { "en": "Projector on", "ko": "프로젝터 켜기" },
+      "detail": {
+        "en": "Turn the projector on first so it can warm up while you do everything else.",
+        "ko": "프로젝터를 가장 먼저 켜서 다른 일을 하는 동안 예열되게 하세요."
+      }
+    },
+    {
+      "when": { "en": "25 min before", "ko": "25분 전" },
+      "title": { "en": "Open the slides", "ko": "슬라이드 열기" },
+      "todo": {
+        "en": "Fill in where the slides are kept and who sends them.",
+        "ko": "슬라이드가 어디에 있고 누가 보내주는지 채워주세요."
+      },
+      "detail": {
+        "en": "Get this week's file from ____ and open it. Read through it once before the service so nothing surprises you.",
+        "ko": "____에서 이번 주 파일을 가져와 여세요. 예배 전에 한 번 훑어보아 당황할 일이 없게 하세요."
+      }
+    },
+    {
+      "when": { "en": "20 min before", "ko": "20분 전" },
+      "title": { "en": "Set up the two screens", "ko": "두 화면 설정" },
+      "detail": {
+        "en": "Windows key + P → Extend. Start the slide show and check the projector shows only the slide, while your screen shows the notes.",
+        "ko": "Windows 키 + P → '확장'. 슬라이드 쇼를 시작하고, 프로젝터에는 슬라이드만, 내 화면에는 메모가 나오는지 확인하세요."
+      }
+    },
+    {
+      "when": { "en": "10 min before", "ko": "10분 전" },
+      "title": { "en": "First slide up", "ko": "첫 슬라이드 띄우기" },
+      "detail": {
+        "en": "Put the welcome slide up before people arrive, and leave it there.",
+        "ko": "사람들이 도착하기 전에 환영 슬라이드를 띄워두고 그대로 두세요."
+      }
+    },
+    {
+      "when": { "en": "During", "ko": "예배 중" },
+      "title": { "en": "Follow along", "ko": "따라가기" },
+      "detail": {
+        "en": "Advance on the last word of a line, not after it. If you lose your place, press B to blank the screen while you find it.",
+        "ko": "한 줄의 마지막 단어에서 넘기세요, 끝난 뒤가 아닙니다. 위치를 놓쳤으면 B를 눌러 화면을 가린 뒤 찾으세요."
+      }
+    },
+    {
+      "when": { "en": "After", "ko": "예배 후" },
+      "title": { "en": "Shut down", "ko": "종료" },
+      "detail": {
+        "en": "Press Escape to end the show, close the file, then turn the projector off. Leave the computer as you found it.",
+        "ko": "Esc를 눌러 쇼를 종료하고 파일을 닫은 뒤 프로젝터를 끄세요. 컴퓨터는 원래 상태로 두세요."
+      }
+    }
+  ]
+}

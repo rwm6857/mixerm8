@@ -11,6 +11,8 @@ import sys
 import threading
 from pathlib import Path
 
+from . import config
+
 HEARTBEAT_EVERY = 15.0    # keeps idle SSE connections from being reaped
 
 
@@ -31,6 +33,18 @@ def webroot() -> Path:
         if (candidate / "index.html").is_file():
             return candidate
     raise FileNotFoundError("could not locate the MixerM8 web app")
+
+
+def override_dir() -> Path:
+    """Where a church's own guide wording lives on the media computer.
+
+    Dropping `guides.local.json` in here beats the copy bundled in the exe,
+    so a media director can reword the guide without git, without a rebuild
+    and without reinstalling. Nothing in here is ever committed or published,
+    which matters because a filled-in guide names staff and lists the
+    channel layout.
+    """
+    return config.config_dir() / "data"
 
 
 def local_ip() -> str:
@@ -99,9 +113,25 @@ class Handler(http.server.BaseHTTPRequestHandler):
     def _static(self, path: str) -> None:
         if path in ("/", ""):
             path = "/index.html"
-        target = (self.root / path.lstrip("/")).resolve()
-        # Refuse anything that climbs out of the web root.
-        if not str(target).startswith(str(self.root.resolve())):
+
+        # A church's own wording wins over the bundled example. Restricted to
+        # a single "*.json" filename so this cannot become a second file
+        # server rooted outside the web root.
+        if path.startswith("/data/"):
+            name = path[len("/data/"):]
+            if name.endswith(".json") and "/" not in name and ".." not in name:
+                local = override_dir() / name
+                if local.is_file():
+                    self._send_bytes(local.read_bytes(),
+                                     "application/json; charset=utf-8")
+                    return
+
+        root = self.root.resolve()
+        target = (root / path.lstrip("/")).resolve()
+        # Refuse anything that climbs out of the web root. Compared as paths,
+        # not as a string prefix -- a sibling directory whose name merely
+        # starts with the web root's would pass a prefix test.
+        if target != root and root not in target.parents:
             self.send_error(403)
             return
         if not target.is_file():
