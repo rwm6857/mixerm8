@@ -1,0 +1,247 @@
+{
+  "version": 1,
+  "role": "livestream",
+  "note": {
+    "en": "Example wording. Copy this to livestream.local.json and edit that copy — it is never committed. A run of four underscores marks something that still needs filling in for your church.",
+    "ko": "예시 문구입니다. livestream.local.json으로 복사한 뒤 그 파일을 수정하세요. 복사한 파일은 커밋되지 않습니다. 밑줄 네 개로 표시된 부분은 각 교회에 맞게 채워야 합니다."
+  },
+
+  "checklist": [
+    {
+      "todo": {
+        "en": "Fill in the power-on order for the cameras, the ATEM and the streaming computer. Nobody has written this down yet, and the order matters — a device powered up in the wrong order often will not be seen by the one before it.",
+        "ko": "카메라, ATEM, 방송용 컴퓨터의 전원 켜는 순서를 채워주세요. 아직 기록된 것이 없으며 순서가 중요합니다 — 잘못된 순서로 켜면 앞 장비가 뒤 장비를 인식하지 못하는 경우가 많습니다."
+      },
+      "text": {
+        "en": "Power everything on in this order: ____.",
+        "ko": "다음 순서로 전원을 켜세요: ____."
+      }
+    },
+    {
+      "todo": {
+        "en": "Fill in which program runs the stream on this computer, and where its icon is.",
+        "ko": "이 컴퓨터에서 방송을 실행하는 프로그램과 아이콘 위치를 채워주세요."
+      },
+      "text": {
+        "en": "Open ____ on the streaming computer.",
+        "ko": "방송용 컴퓨터에서 ____을 여세요."
+      }
+    },
+    {
+      "text": {
+        "en": "Press each camera button on the ATEM in turn and check you get a picture from every one.",
+        "ko": "ATEM에서 각 카메라 버튼을 차례로 눌러 모든 카메라에서 화면이 나오는지 확인하세요."
+      }
+    },
+    {
+      "text": {
+        "en": "Watch the audio meter on the streaming computer while someone talks into a microphone. If it does not move, stop and fix that now — this is the most common thing to go wrong.",
+        "ko": "누군가 마이크에 말하는 동안 방송용 컴퓨터의 오디오 미터를 확인하세요. 움직이지 않으면 지금 해결하세요 — 가장 흔한 문제입니다."
+      }
+    },
+    {
+      "text": {
+        "en": "Start the stream. Wait until YouTube says it is live before you trust it.",
+        "ko": "방송을 시작하세요. YouTube에 '라이브'라고 표시될 때까지 기다린 뒤 확인하세요."
+      }
+    },
+    {
+      "text": {
+        "en": "Watch the first minute on your own phone, with the volume up. That is the only way to know the people at home are getting picture and sound.",
+        "ko": "본인 휴대폰으로 첫 1분을 소리를 켜고 확인하세요. 집에서 보는 사람들에게 화면과 소리가 나가는지 확인할 수 있는 유일한 방법입니다."
+      }
+    },
+    {
+      "text": {
+        "en": "Stop the stream after the service, before turning anything off.",
+        "ko": "예배 후 장비를 끄기 전에 방송을 먼저 정지하세요."
+      }
+    }
+  ],
+
+  "problems": [
+    {
+      "level": "danger",
+      "title": { "en": "No sound on the stream", "ko": "방송에 소리가 안 나갑니다" },
+      "symptom": {
+        "en": "People at home can see the service but cannot hear it. The room itself sounds fine.",
+        "ko": "집에서 보는 사람들이 화면은 보이지만 소리가 들리지 않습니다. 본당은 정상입니다."
+      },
+      "todo": {
+        "en": "Fill in how sound reaches the stream at your church — which mixer output, which cable, which input on the ATEM or the computer — and who to ask.",
+        "ko": "이 교회에서 소리가 방송으로 전달되는 경로를 채워주세요 — 믹서의 어느 출력, 어느 케이블, ATEM이나 컴퓨터의 어느 입력인지, 그리고 누구에게 물어봐야 하는지."
+      },
+      "steps": [
+        {
+          "en": "Look at the audio meter in the streaming program first. If it is moving, the sound is reaching the computer and the problem is between the computer and YouTube. If it is flat, the sound is not arriving at all.",
+          "ko": "먼저 방송 프로그램의 오디오 미터를 확인하세요. 움직이고 있다면 소리는 컴퓨터까지 도달하고 있고 문제는 컴퓨터와 YouTube 사이에 있습니다. 움직이지 않으면 소리가 아예 들어오지 않는 것입니다."
+        },
+        {
+          "en": "If the meter is flat, check the sound is not muted in the streaming program itself. There is usually a mute button beside the meter.",
+          "ko": "미터가 움직이지 않으면 방송 프로그램 자체에서 음소거되어 있지 않은지 확인하세요. 보통 미터 옆에 음소거 버튼이 있습니다."
+        },
+        {
+          "en": "The sound for the stream comes from the mixing desk, along ____. Check that connection at both ends.",
+          "ko": "방송용 소리는 믹싱 콘솔에서 ____을 통해 옵니다. 양쪽 끝의 연결을 확인하세요."
+        },
+        {
+          "en": "Ask the sound volunteer whether the desk is still sending the stream feed. This can be muted at the desk without affecting the room at all, which is why it catches people out.",
+          "ko": "음향 봉사자에게 콘솔이 방송용 신호를 계속 보내고 있는지 물어보세요. 본당에는 아무 영향 없이 콘솔에서 음소거될 수 있어 놓치기 쉽습니다."
+        },
+        {
+          "en": "If you cannot fix it during the service, say so in the live chat so people at home know it is being worked on.",
+          "ko": "예배 중에 해결할 수 없으면 실시간 채팅에 알려서 집에서 보는 사람들이 조치 중임을 알게 하세요."
+        }
+      ]
+    },
+    {
+      "level": "caution",
+      "title": { "en": "The stream will not start", "ko": "방송이 시작되지 않습니다" },
+      "symptom": {
+        "en": "You press start and it fails, or YouTube keeps saying it is waiting for the stream.",
+        "ko": "시작을 눌러도 실패하거나, YouTube가 계속 방송을 기다리고 있다고 표시합니다."
+      },
+      "steps": [
+        {
+          "en": "Check the computer is on the internet. Open any website — if that fails, nothing else here will help.",
+          "ko": "컴퓨터가 인터넷에 연결되어 있는지 확인하세요. 아무 웹사이트나 열어보세요 — 열리지 않으면 다른 방법은 소용없습니다."
+        },
+        {
+          "en": "\"Waiting for the stream\" on YouTube means YouTube is ready and the computer is not sending yet. The problem is on this end.",
+          "ko": "YouTube에 '방송을 기다리는 중'이라고 나오면 YouTube는 준비되었고 컴퓨터가 아직 보내지 않는 것입니다. 문제는 이쪽에 있습니다."
+        },
+        {
+          "en": "Stop and start the stream once. Do not stop and start it repeatedly — YouTube can lock the broadcast if you do.",
+          "ko": "방송을 한 번만 정지하고 다시 시작하세요. 반복해서 정지하고 시작하지 마세요 — YouTube가 방송을 잠글 수 있습니다."
+        },
+        {
+          "en": "If it still will not go, start the service without the stream and record it instead. A recording posted later is better than a broken stream nobody can watch.",
+          "ko": "그래도 안 되면 방송 없이 예배를 시작하고 대신 녹화하세요. 나중에 올리는 녹화가 아무도 볼 수 없는 방송보다 낫습니다."
+        }
+      ]
+    },
+    {
+      "level": "caution",
+      "title": { "en": "One camera is black", "ko": "카메라 하나가 검은 화면입니다" },
+      "symptom": {
+        "en": "Pressing that camera's button on the ATEM gives you nothing.",
+        "ko": "ATEM에서 그 카메라 버튼을 눌러도 아무것도 나오지 않습니다."
+      },
+      "steps": [
+        {
+          "en": "Do not put that camera on air while you work on it. Leave the ATEM on a camera that works.",
+          "ko": "고치는 동안 그 카메라를 방송에 내보내지 마세요. ATEM은 정상 작동하는 카메라에 두세요."
+        },
+        {
+          "en": "Check the camera is switched on and its lens cap is off. Both happen more often than you would think.",
+          "ko": "카메라가 켜져 있고 렌즈 캡이 벗겨져 있는지 확인하세요. 둘 다 생각보다 자주 있는 일입니다."
+        },
+        {
+          "en": "Check the camera has power. A camera on battery will have gone flat since last week.",
+          "ko": "카메라에 전원이 들어오는지 확인하세요. 배터리로 작동하는 카메라는 지난주 이후 다 소모되었을 수 있습니다."
+        },
+        {
+          "en": "Follow its cable to the ATEM and push it in firmly at both ends.",
+          "ko": "케이블을 따라 ATEM까지 확인하고 양쪽 끝을 단단히 꽂으세요."
+        },
+        {
+          "en": "If it will not come back, run the service on the cameras that work. One angle streamed well beats switching to a black picture.",
+          "ko": "복구되지 않으면 작동하는 카메라로 예배를 진행하세요. 검은 화면으로 전환하는 것보다 한 각도로 잘 방송하는 것이 낫습니다."
+        }
+      ]
+    },
+    {
+      "level": "caution",
+      "title": { "en": "The stream is choppy or keeps stopping", "ko": "방송이 끊기거나 자꾸 멈춥니다" },
+      "symptom": {
+        "en": "People at home say it freezes, stutters, or goes blurry.",
+        "ko": "집에서 보는 사람들이 화면이 멈추거나 끊기거나 흐려진다고 합니다."
+      },
+      "steps": [
+        {
+          "en": "This is almost always the internet connection, not the cameras.",
+          "ko": "거의 항상 카메라가 아니라 인터넷 연결 문제입니다."
+        },
+        {
+          "en": "Check nothing else large is using the connection — a computer downloading updates, or someone else uploading a video.",
+          "ko": "다른 곳에서 인터넷을 많이 쓰고 있지 않은지 확인하세요 — 업데이트를 받는 컴퓨터나 영상을 올리는 사람이 있을 수 있습니다."
+        },
+        {
+          "en": "Lower the streaming quality in the program. A clear picture at a lower quality is far better than a frozen one at high quality.",
+          "ko": "프로그램에서 방송 화질을 낮추세요. 높은 화질로 멈춘 화면보다 낮은 화질로 선명하게 나오는 것이 훨씬 낫습니다."
+        },
+        {
+          "en": "If the streaming computer is on wifi, that is likely the cause. A cable is worth asking for.",
+          "ko": "방송용 컴퓨터가 와이파이를 쓰고 있다면 그것이 원인일 수 있습니다. 유선 연결을 요청할 만합니다."
+        }
+      ]
+    }
+  ],
+
+  "flow": [
+    {
+      "when": { "en": "45 min before", "ko": "45분 전" },
+      "title": { "en": "Power up", "ko": "전원 켜기" },
+      "todo": {
+        "en": "Fill in the order. Ask whoever set the system up which device has to be on before which — this is not written down anywhere yet.",
+        "ko": "순서를 채워주세요. 시스템을 설치한 사람에게 어떤 장비를 먼저 켜야 하는지 물어보세요 — 아직 어디에도 기록되어 있지 않습니다."
+      },
+      "detail": {
+        "en": "Turn things on in this order: ____. Until that is filled in, ask before you start, and write down the order that worked.",
+        "ko": "다음 순서로 켜세요: ____. 채워지기 전까지는 시작하기 전에 물어보고, 잘 작동한 순서를 적어두세요."
+      }
+    },
+    {
+      "when": { "en": "35 min before", "ko": "35분 전" },
+      "title": { "en": "Open the streaming program", "ko": "방송 프로그램 열기" },
+      "todo": {
+        "en": "Fill in the program name.",
+        "ko": "프로그램 이름을 채워주세요."
+      },
+      "detail": {
+        "en": "Open ____ and load the usual setup for a Sunday service.",
+        "ko": "____을 열고 주일 예배용 기본 설정을 불러오세요."
+      }
+    },
+    {
+      "when": { "en": "30 min before", "ko": "30분 전" },
+      "title": { "en": "Check every camera", "ko": "모든 카메라 확인" },
+      "detail": {
+        "en": "Press through each camera on the ATEM. Check the framing as well as the picture — a camera pointing at an empty chair is not much use.",
+        "ko": "ATEM에서 각 카메라를 차례로 눌러보세요. 화면이 나오는지와 함께 구도도 확인하세요 — 빈 의자를 향한 카메라는 쓸모가 없습니다."
+      }
+    },
+    {
+      "when": { "en": "20 min before", "ko": "20분 전" },
+      "title": { "en": "Check the sound", "ko": "소리 확인" },
+      "detail": {
+        "en": "Ask the sound volunteer to talk into a microphone. Watch the audio meter in the streaming program move. Do this every week — silent streams are the single most common failure.",
+        "ko": "음향 봉사자에게 마이크에 말해달라고 요청하세요. 방송 프로그램의 오디오 미터가 움직이는지 확인하세요. 매주 하세요 — 소리 없는 방송이 가장 흔한 실패입니다."
+      }
+    },
+    {
+      "when": { "en": "5 min before", "ko": "5분 전" },
+      "title": { "en": "Go live", "ko": "방송 시작" },
+      "detail": {
+        "en": "Start the stream and wait for YouTube to say it is live. Then watch the first minute on your phone with the sound on.",
+        "ko": "방송을 시작하고 YouTube에 '라이브'로 표시될 때까지 기다리세요. 그 다음 휴대폰으로 첫 1분을 소리를 켜고 확인하세요."
+      }
+    },
+    {
+      "when": { "en": "During", "ko": "예배 중" },
+      "title": { "en": "Switch slowly", "ko": "천천히 전환하기" },
+      "detail": {
+        "en": "Cut on a natural pause, and hold each shot longer than feels comfortable. Frequent switching is harder to watch than a single steady camera.",
+        "ko": "자연스러운 쉼에서 전환하고, 각 화면을 편하게 느껴지는 것보다 더 길게 유지하세요. 자주 전환하면 고정된 한 카메라보다 보기 힘듭니다."
+      }
+    },
+    {
+      "when": { "en": "After", "ko": "예배 후" },
+      "title": { "en": "Stop the stream first", "ko": "방송 먼저 정지" },
+      "detail": {
+        "en": "Stop the stream before you switch anything off, so the recording on YouTube ends cleanly. Then power down in the reverse of the order you started in.",
+        "ko": "장비를 끄기 전에 방송을 정지하여 YouTube의 녹화가 깔끔하게 끝나게 하세요. 그 다음 켤 때와 반대 순서로 전원을 끄세요."
+      }
+    }
+  ]
+}

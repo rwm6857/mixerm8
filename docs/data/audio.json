@@ -1,0 +1,267 @@
+{
+  "version": 1,
+  "role": "audio",
+  "note": {
+    "en": "Example wording. Copy this to audio.local.json and edit that copy — it is never committed. A run of four underscores marks something that still needs filling in for your church.",
+    "ko": "예시 문구입니다. audio.local.json으로 복사한 뒤 그 파일을 수정하세요. 복사한 파일은 커밋되지 않습니다. 밑줄 네 개로 표시된 부분은 각 교회에 맞게 채워야 합니다."
+  },
+
+  "checklist": [
+    {
+      "text": {
+        "en": "Turn on the mixer. Wait until it has finished starting up before you touch anything.",
+        "ko": "믹서를 켜세요. 완전히 켜질 때까지 아무것도 만지지 마세요."
+      }
+    },
+    {
+      "text": {
+        "en": "Turn on the amplifiers, after the mixer.",
+        "ko": "믹서를 켠 다음에 앰프를 켜세요."
+      }
+    },
+    {
+      "todo": {
+        "en": "Fill in the scene name. This desk does use scenes, but loading one is only safe before the service — it resets every fader at once.",
+        "ko": "씬 이름을 채워주세요. 이 콘솔은 씬을 사용하지만, 씬 불러오기는 예배 시작 전에만 안전합니다 — 모든 페이더가 한꺼번에 초기화됩니다."
+      },
+      "text": {
+        "en": "Load the scene: SCENES → ____ → LOAD. Only now, before anyone is on stage.",
+        "ko": "씬을 불러오세요: SCENES → ____ → LOAD. 무대에 사람이 오르기 전, 지금만 하세요."
+      }
+    },
+    {
+      "text": {
+        "en": "Line check: ask each person to speak or play, one at a time, and watch their meter move.",
+        "ko": "라인 체크: 한 사람씩 말하거나 연주하게 하고, 해당 미터가 움직이는지 확인하세요."
+      }
+    },
+    {
+      "text": {
+        "en": "Ask the musicians whether they can hear themselves. That is the Sends page.",
+        "ko": "연주자들에게 자기 소리가 들리는지 물어보세요. Sends 페이지에서 조절합니다."
+      }
+    },
+    {
+      "text": {
+        "en": "Start the recording: USB screen → record. Check the timer is counting up.",
+        "ko": "녹음을 시작하세요: USB 화면 → 녹음. 타이머가 올라가는지 확인하세요."
+      }
+    },
+    {
+      "text": {
+        "en": "Mute every microphone that nobody is using yet.",
+        "ko": "아직 사용하지 않는 마이크는 모두 음소거하세요."
+      }
+    },
+    {
+      "text": {
+        "en": "Press HOME and stay there for the service.",
+        "ko": "HOME을 누르고 예배 중에는 그 화면에 있으세요."
+      }
+    }
+  ],
+
+  "problems": [
+    {
+      "level": "caution",
+      "title": { "en": "Someone is too quiet", "ko": "소리가 너무 작습니다" },
+      "symptom": {
+        "en": "You can hear them, but not well enough from the back of the room.",
+        "ko": "들리기는 하지만 본당 뒤쪽에서 충분히 들리지 않습니다."
+      },
+      "steps": [
+        {
+          "en": "Look at the person, not the desk. Are they speaking across the microphone instead of into it? That fixes it more often than the mixer does.",
+          "ko": "콘솔이 아니라 그 사람을 보세요. 마이크에 대고 말하지 않고 옆으로 말하고 있나요? 믹서보다 이것이 원인인 경우가 더 많습니다."
+        },
+        {
+          "en": "Press HOME. Find their fader and push it up slowly, a little at a time.",
+          "ko": "HOME을 누르세요. 그 사람의 페이더를 찾아 천천히, 조금씩 올리세요."
+        },
+        {
+          "en": "Check the channel is not muted. A muted channel shows a lit MUTE button.",
+          "ko": "채널이 음소거되어 있지 않은지 확인하세요. 음소거된 채널은 MUTE 버튼에 불이 들어옵니다."
+        },
+        {
+          "en": "Check the main fader on the right is up where it normally sits.",
+          "ko": "오른쪽 메인 페이더가 평소 위치까지 올라가 있는지 확인하세요."
+        },
+        {
+          "en": "Do not go to the Dynamics or EQ pages to fix this. Neither one makes a quiet microphone louder.",
+          "ko": "이 문제를 해결하려고 Dynamics나 EQ 페이지에 가지 마세요. 둘 다 작은 마이크 소리를 크게 만들지 않습니다."
+        }
+      ]
+    },
+    {
+      "level": "caution",
+      "title": { "en": "No sound at all from one microphone", "ko": "마이크 하나에서 소리가 전혀 안 납니다" },
+      "symptom": {
+        "en": "Someone is talking and nothing is coming out of the speakers.",
+        "ko": "말하고 있는데 스피커에서 아무 소리도 나지 않습니다."
+      },
+      "steps": [
+        {
+          "en": "Is the microphone switched on? Handheld and belt-pack microphones have their own switch.",
+          "ko": "마이크가 켜져 있나요? 핸드 마이크와 벨트팩 마이크에는 자체 스위치가 있습니다."
+        },
+        {
+          "en": "If it is wireless, look at its battery light.",
+          "ko": "무선 마이크라면 배터리 표시등을 확인하세요."
+        },
+        {
+          "en": "Press HOME. Is that channel muted? Is its fader all the way down?",
+          "ko": "HOME을 누르세요. 그 채널이 음소거되어 있나요? 페이더가 완전히 내려가 있나요?"
+        },
+        {
+          "en": "Watch the meter for that channel while they talk. If the meter moves, the desk is receiving them and the problem is after the desk. If it does not move, the problem is the microphone or its cable.",
+          "ko": "그 사람이 말하는 동안 해당 채널의 미터를 보세요. 미터가 움직이면 콘솔은 소리를 받고 있고 문제는 콘솔 이후에 있습니다. 움직이지 않으면 마이크나 케이블 문제입니다."
+        },
+        {
+          "en": "If a spare handheld microphone is working, give them that and sort the rest out afterwards.",
+          "ko": "작동하는 예비 핸드 마이크가 있으면 그것을 드리고, 나머지는 예배 후에 해결하세요."
+        }
+      ]
+    },
+    {
+      "level": "danger",
+      "title": { "en": "A squeal or a howl", "ko": "삐 소리나 웅 소리가 납니다" },
+      "symptom": {
+        "en": "A rising tone that gets louder on its own. This is feedback.",
+        "ko": "저절로 점점 커지는 소리입니다. 하울링입니다."
+      },
+      "steps": [
+        {
+          "en": "Act now — this gets worse every second and it hurts people's ears.",
+          "ko": "지금 바로 조치하세요 — 매 순간 심해지고 사람들의 귀에 해롭습니다."
+        },
+        {
+          "en": "Press HOME and pull down the fader of whoever is speaking. If you cannot tell who, pull the main fader down a third.",
+          "ko": "HOME을 누르고 말하고 있는 사람의 페이더를 내리세요. 누구인지 모르겠으면 메인 페이더를 3분의 1 정도 내리세요."
+        },
+        {
+          "en": "The usual cause is a microphone pointing at a speaker, or someone holding a microphone too close to one. Ask them to move.",
+          "ko": "보통 원인은 마이크가 스피커를 향하고 있거나, 스피커에 너무 가까이 마이크를 들고 있는 것입니다. 자리를 옮겨달라고 하세요."
+        },
+        {
+          "en": "Bring the fader back up, but stop below where it was when it started squealing.",
+          "ko": "페이더를 다시 올리되, 삐 소리가 나기 시작했던 지점보다 낮은 곳에서 멈추세요."
+        }
+      ]
+    },
+    {
+      "level": "caution",
+      "title": { "en": "A microphone keeps cutting out", "ko": "마이크가 계속 끊깁니다" },
+      "symptom": {
+        "en": "The first word of a sentence disappears, or the sound drops out when they pause.",
+        "ko": "문장의 첫 단어가 사라지거나, 말을 멈출 때 소리가 끊깁니다."
+      },
+      "todo": {
+        "en": "Fill in who to tell. Until then, write it on paper and leave it on the desk.",
+        "ko": "알려야 할 담당자를 채워주세요. 그때까지는 종이에 적어 콘솔 위에 두세요."
+      },
+      "steps": [
+        {
+          "en": "This is almost always the Gate, and it is already set up. Do not change it in the middle of a service.",
+          "ko": "거의 항상 Gate 문제이며, 이미 설정되어 있습니다. 예배 중에는 변경하지 마세요."
+        },
+        {
+          "en": "If it is bad enough to be distracting, press HOME and raise that fader slightly. It is a rough fix, but it is safe.",
+          "ko": "방해가 될 정도로 심하면 HOME을 누르고 그 페이더를 약간 올리세요. 임시 조치이지만 안전합니다."
+        },
+        {
+          "en": "Write down which channel it was and tell ____ after the service.",
+          "ko": "어느 채널이었는지 적어두고 예배 후 ____에게 알려주세요."
+        }
+      ]
+    },
+    {
+      "level": "caution",
+      "title": { "en": "Nothing was recorded", "ko": "녹음이 안 되었습니다" },
+      "symptom": {
+        "en": "The service is over and the USB stick has no file on it.",
+        "ko": "예배가 끝났는데 USB에 파일이 없습니다."
+      },
+      "steps": [
+        {
+          "en": "Nothing can be recovered now. This one is only fixable next week, so read the rest before the next service.",
+          "ko": "지금은 복구할 수 없습니다. 다음 주에만 해결할 수 있으니, 다음 예배 전에 아래 내용을 읽어주세요."
+        },
+        {
+          "en": "Recording does not start by itself. Someone has to press record on the USB screen every week.",
+          "ko": "녹음은 저절로 시작되지 않습니다. 매주 누군가 USB 화면에서 녹음을 눌러야 합니다."
+        },
+        {
+          "en": "After pressing it, check the timer is counting up. That is the only proof it is running.",
+          "ko": "누른 다음 타이머가 올라가는지 확인하세요. 그것이 녹음 중이라는 유일한 증거입니다."
+        },
+        {
+          "en": "Never pull the USB stick out while it is still recording. Stop it first.",
+          "ko": "녹음 중에는 절대 USB를 뽑지 마세요. 먼저 정지하세요."
+        }
+      ]
+    }
+  ],
+
+  "flow": [
+    {
+      "when": { "en": "45 min before", "ko": "45분 전" },
+      "title": { "en": "Power up", "ko": "전원 켜기" },
+      "detail": {
+        "en": "Turn on the mixer first, then the amplifiers. Wait for the desk to finish starting before touching anything.",
+        "ko": "믹서를 먼저 켜고, 그 다음 앰프를 켜세요. 콘솔이 완전히 켜질 때까지 아무것도 만지지 마세요."
+      }
+    },
+    {
+      "when": { "en": "40 min before", "ko": "40분 전" },
+      "title": { "en": "Load the scene", "ko": "씬 불러오기" },
+      "todo": {
+        "en": "Fill in the scene name as it appears on the desk.",
+        "ko": "콘솔에 표시된 대로 씬 이름을 채워주세요."
+      },
+      "detail": {
+        "en": "SCENES → select ____ → LOAD. Do this now and only now. It resets every fader, so loading it once the service has started would undo everything and silence the room.",
+        "ko": "SCENES → ____ 선택 → LOAD. 지금, 이때만 하세요. 모든 페이더가 초기화되므로 예배가 시작된 뒤에 불러오면 모든 설정이 사라지고 소리가 끊깁니다."
+      }
+    },
+    {
+      "when": { "en": "30 min before", "ko": "30분 전" },
+      "title": { "en": "Line check", "ko": "라인 체크" },
+      "detail": {
+        "en": "Ask each person to speak or play one at a time. Watch the meter move. If nothing moves, check the mic is switched on before touching the desk.",
+        "ko": "한 사람씩 말하거나 연주하도록 요청하세요. 미터가 움직이는지 확인하세요. 움직이지 않으면 콘솔을 만지기 전에 마이크가 켜져 있는지 확인하세요."
+      }
+    },
+    {
+      "when": { "en": "20 min before", "ko": "20분 전" },
+      "title": { "en": "Band rehearsal", "ko": "밴드 리허설" },
+      "detail": {
+        "en": "Set rough levels with the faders on HOME. Ask the musicians if their monitors are right — that is the Sends page.",
+        "ko": "HOME의 페이더로 대략적인 레벨을 설정하세요. 연주자에게 모니터가 괜찮은지 물어보세요 — Sends 페이지입니다."
+      }
+    },
+    {
+      "when": { "en": "5 min before", "ko": "5분 전" },
+      "title": { "en": "Start the recording", "ko": "녹음 시작" },
+      "detail": {
+        "en": "USB screen → press record. Check the timer is counting up.",
+        "ko": "USB 화면 → 녹음 버튼을 누르세요. 타이머가 올라가는지 확인하세요."
+      }
+    },
+    {
+      "when": { "en": "During", "ko": "예배 중" },
+      "title": { "en": "Stay on HOME", "ko": "HOME 화면 유지" },
+      "detail": {
+        "en": "Ride the faders. Mute microphones that are not being used. If something sounds wrong, first check whether the person is close enough to the mic. Do not load a scene now.",
+        "ko": "페이더를 조절하세요. 사용하지 않는 마이크는 음소거하세요. 소리가 이상하면 먼저 그 사람이 마이크에 충분히 가까운지 확인하세요. 지금은 씬을 불러오지 마세요."
+      }
+    },
+    {
+      "when": { "en": "After", "ko": "예배 후" },
+      "title": { "en": "Stop and shut down", "ko": "정지 및 종료" },
+      "detail": {
+        "en": "Stop the recording before removing the USB stick. Turn off the amplifiers first, then the mixer — the opposite order from starting up.",
+        "ko": "USB를 뽑기 전에 녹음을 정지하세요. 앰프를 먼저 끄고 그 다음 믹서를 끄세요 — 켤 때와 반대 순서입니다."
+      }
+    }
+  ]
+}

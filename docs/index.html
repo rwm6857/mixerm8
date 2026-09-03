@@ -4,15 +4,16 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#14161a">
-<title>MixerM8 — Booth Guide</title>
+<title>MixerM8 — Sunday Guide</title>
 <link rel="stylesheet" href="styles.css">
 </head>
 <body>
 
 <header class="bar">
   <div class="brand">
+    <button id="home" class="homebtn" type="button" hidden aria-label="Back to the station list">←</button>
     <span class="mark" aria-hidden="true"></span>
-    <span>MixerM8</span>
+    <span id="brand-text">MixerM8</span>
   </div>
   <div class="bar-right">
     <button id="lang" class="chip" type="button" aria-label="Language">EN</button>
@@ -22,15 +23,37 @@
   </div>
 </header>
 
-<nav class="tabs" role="tablist">
-  <button class="tab" data-view="now"    role="tab" aria-selected="true">Now</button>
-  <button class="tab" data-view="guides" role="tab" aria-selected="false">Guides</button>
-  <button class="tab" data-view="flow"   role="tab" aria-selected="false">Service</button>
-</nav>
+<nav class="tabs" id="tabs" role="tablist" hidden></nav>
 
 <main>
-  <!-- Follow view -->
-  <section id="view-now" class="view">
+  <!-- Station picker: the bare URL, and the tablet's home screen -->
+  <section id="view-pick" class="view">
+    <p class="lede" id="pick-lede">Which station are you on today?</p>
+    <div id="pick" class="pick"></div>
+  </section>
+
+  <!-- Before the service -->
+  <section id="view-checklist" class="view" hidden>
+    <p class="lede" id="checklist-lede"></p>
+    <ol id="checklist" class="checklist"></ol>
+    <button id="reset" class="chip wide" type="button">Clear the ticks</button>
+  </section>
+
+  <!-- Something is wrong -->
+  <section id="view-problems" class="view" hidden>
+    <p class="lede" id="problems-lede"></p>
+    <div id="problems" class="grid"></div>
+    <div id="problem-detail"></div>
+  </section>
+
+  <!-- Running order -->
+  <section id="view-flow" class="view" hidden>
+    <p class="lede" id="flow-lede"></p>
+    <ol id="flow" class="flow"></ol>
+  </section>
+
+  <!-- Follows the mixer. Only exists when a bridge answered. -->
+  <section id="view-now" class="view" hidden>
     <div class="follow-row">
       <label class="switch">
         <input id="follow" type="checkbox" checked>
@@ -40,18 +63,7 @@
       <span id="where" class="where"></span>
     </div>
     <div id="now"></div>
-  </section>
-
-  <!-- All guides -->
-  <section id="view-guides" class="view" hidden>
-    <p class="lede">Every screen on the desk, and what it does. Tap one to read it.</p>
-    <div id="guides" class="grid"></div>
-  </section>
-
-  <!-- Service flow -->
-  <section id="view-flow" class="view" hidden>
-    <p class="lede">The order of a normal Sunday.</p>
-    <ol id="flow" class="flow"></ol>
+    <div id="screens" class="grid"></div>
   </section>
 </main>
 

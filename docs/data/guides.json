@@ -158,8 +158,8 @@
         "ko": "씬은 전체 콘솔의 저장된 스냅샷입니다. 씬을 불러오면 모든 페이더를 포함한 전체 설정이 한꺼번에 바뀝니다."
       },
       "action": {
-        "en": "Only load a scene at the very start, before people are on stage.",
-        "ko": "씬은 무대에 사람이 오르기 전, 맨 처음에만 불러오세요."
+        "en": "Load a scene only before the service, while the stage is empty. Never during — it would reset every fader at once and silence the room.",
+        "ko": "씬은 무대가 비어 있는 예배 시작 전에만 불러오세요. 예배 중에는 절대 불러오지 마세요 — 모든 페이더가 한꺼번에 초기화되어 소리가 끊깁니다."
       }
     },
     "Assign": {

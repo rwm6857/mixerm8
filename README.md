@@ -1,15 +1,68 @@
 # MixerM8
 
-A tablet guide for sound booth volunteers that follows along with the mixer.
+A free Sunday guide for small church production teams, in plain English and
+Korean side by side.
 
-When someone at the Behringer X32 Compact opens the EQ tab, the tablet beside
-them shows what EQ does and whether they should touch it. There is a
-**Follow the mixer** switch to turn that off, plus the full set of guides and
-a service running order that work on their own.
+A volunteer scans the QR code at their station and gets steps for their own
+job, on their own phone, in their own language. No account, no app, no
+subscription, nothing to install for the person reading it.
+
+Three stations, each with the same two layers — a short list to tick off
+before the service, and problem-shaped pages for when something goes wrong
+mid-service:
+
+| Station | Covers | "Something is wrong" reads like |
+| --- | --- | --- |
+| **Sound** | the mixing desk | *Someone is too quiet* · *A squeal or a howl* |
+| **Slides** | the projector computer | *Everyone can see my desktop* |
+| **Livestream** | the cameras and stream | *No sound on the stream* |
+
+In the sound booth there is optionally a wall-mounted tablet and a small
+bridge program that reads which screen the mixer is showing and turns to the
+matching page. That part is an add-on: the guide works completely without it,
+and nothing about a broken bridge can stop a volunteer reading their steps.
 
 **The bridge never writes to the console.** It cannot: the only OSC encoder in
 the codebase takes an address and no arguments, and on the X32 a message
 without arguments is a read. See [Read-only by construction](#read-only-by-construction).
+
+## The QR codes
+
+Everything after the `#` picks the station and the language. Make one sticker
+per station per language and put it where that volunteer stands.
+
+    .../mixerm8/#audio            sound desk, reader's usual language
+    .../mixerm8/#audio/en         sound desk, English
+    .../mixerm8/#audio/ko         sound desk, Korean
+    .../mixerm8/#audio/both       both languages, one above the other
+    .../mixerm8/#media/ko         projector computer, Korean
+    .../mixerm8/#livestream/en    streaming computer, English
+    .../mixerm8/                  no station — shows the picker
+
+Two stickers side by side at the same station, one `/en` and one `/ko`, is the
+point of the whole thing: nobody has to find a language setting while a
+service is starting. Any free QR generator will do — the link is all that
+matters, and it never changes.
+
+In the booth, use the address the bridge prints instead of the public one, so
+the tablet can follow the desk:
+
+    http://192.168.1.20:8080/#audio/both
+
+## Where this has actually run
+
+| | |
+| --- | --- |
+| Console | Behringer X32 Compact |
+| Firmware tested | **not yet tested against a console** |
+| Channel-tab numbers | **unverified** — see [Mapping the tabs](#mapping-the-tabs) |
+
+Everything here is written from the community's reverse-engineering of the
+X32's OSC protocol, which Behringer does not document. The read-only guarantee
+is structural and does not depend on that being right, but the *screen
+following* does. Until someone has run the bridge next to a real desk, treat
+the follow feature as unproven. The guides and the service running order do
+not touch the console at all and work regardless.
 
 ## The two halves
 
@@ -71,12 +124,29 @@ pytest && ruff check .
 mixerm8 --discover
 ```
 
-To work on the tablet app without a mixer, serve `docs/` directly — it comes up
-in reference mode:
+To work on the guide without a mixer, serve `docs/` directly — it comes up in
+reference mode, with everything except the live follow:
 
 ```bash
 python -m http.server -d docs 8000
 ```
+
+To exercise the bridge without a console, run the stand-in desk in one
+terminal and the bridge in another:
+
+```bash
+python tests/fake_x32.py
+```
+
+```bash
+mixerm8 127.0.0.1
+```
+
+The stand-in answers the queries a real desk would, walks through a few
+screens so the tablet has something to follow, and — the reason it exists —
+asserts that every packet arriving from the bridge has an empty typetag. It
+prints `write attempts: 0` and exits non-zero if that ever stops being true.
+The same code runs inside `pytest` as `tests/test_integration.py`.
 
 ## Read-only by construction
 
@@ -103,11 +173,66 @@ Stand at the desk with the tablet visible and press each tab. Anything unmapped
 shows as *"Tab 4 — not mapped yet"* along with its number. Write the numbers
 down, correct `CHAN_PAGES`, and the guides attach themselves.
 
-## Editing the guides
+## Your own wording
 
-`docs/data/guides.json` and `docs/data/flow.json` are plain JSON, English and
-Korean side by side. There is no build step — edit, commit, push. GitHub Pages
-updates immediately; the booth picks the change up at the next release.
+The words the volunteers read are not in the code. They are in two plain text
+files, English and Korean side by side, and there is no build step — save the
+file and reload the page.
+
+    docs/data/audio.json       the sound desk station
+    docs/data/media.json       the projector station
+    docs/data/livestream.json  the streaming station
+    docs/data/roles.json       the names of the three stations
+    docs/data/guides.json      what each screen on the mixer does
+
+Each station file holds that station's `checklist`, its `problems`, and its
+`flow` — the three tabs a volunteer sees.
+
+**Do not edit those directly.** They are the generic example that ships with
+MixerM8. Your own version goes in a file with `.local` in the name, one per
+file you want to change:
+
+    docs/data/audio.local.json
+    docs/data/livestream.local.json
+
+Copy the example, rename it, and edit the copy. The page prefers your copy
+whenever it exists and falls back to the example when it does not.
+
+Why the extra step: a finished guide names the person to call when something
+goes wrong and lists which microphone is on which channel. That belongs to
+your church, not on the internet. The `.local.json` files are listed in
+`.gitignore`, so they are never committed and never appear on GitHub Pages —
+whereas anything you type into `guides.json` would be published the moment
+you push.
+
+### On the booth computer
+
+If you are running MixerM8 from the released `.exe` there is no repository to
+edit. Put your files here instead and the bridge will serve them:
+
+    %APPDATA%\MixerM8\data\audio.local.json
+    %APPDATA%\MixerM8\data\livestream.local.json
+
+No reinstall and no rebuild — restart MixerM8 and reload the tablet.
+
+### Blanks
+
+Anything MixerM8 does not know about your church is left as a blank rather
+than filled in with a plausible guess. A blank looks like four underscores in
+the file:
+
+```json
+"detail": { "en": "SCENES → select ____ → LOAD." }
+```
+
+and shows on the tablet as an underlined gap, next to a note saying what is
+missing. That is deliberate: a volunteer who reads "select ____" asks someone,
+where a volunteer who reads an invented scene name loads the wrong scene in
+the middle of a service. Fill the blanks in as you learn the answers, and
+delete the `todo` note next to each one when you do.
+
+The footer of the page always says which copy you are looking at — your own
+wording, or the example with the blanks still in it.
 
 ## Releasing
 
@@ -124,3 +249,13 @@ copies of MixerM8 notice the new version on startup and print the link.
 ## License
 
 MIT — see [LICENSE](LICENSE).
+
+## Not affiliated with Behringer
+
+MixerM8 is an independent project. It is not affiliated with, endorsed by, or
+supported by Behringer, Midas, or Music Tribe. "X32" is their trademark, used
+here only to say which console this talks to.
+
+The OSC behaviour MixerM8 relies on is community-documented — Behringer
+publishes no specification for it — so it may change between firmware
+versions without notice.
