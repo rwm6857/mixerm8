@@ -11,12 +11,14 @@
 
 <header class="bar">
   <div class="brand">
-    <button id="home" class="homebtn" type="button" hidden aria-label="Back to the station list">←</button>
+    <button id="back" class="homebtn" type="button" hidden aria-label="Back to the station list">←</button>
     <span class="mark" aria-hidden="true"></span>
     <span id="brand-text">MixerM8</span>
   </div>
   <div class="bar-right">
-    <button id="lang" class="chip" type="button" aria-label="Language">EN</button>
+    <!-- Language is a flip, not a menu: three fixed segments, always in the
+         same place on every view, so switching is one deliberate tap. -->
+    <div id="langs" class="langs" role="group" aria-label="Language"></div>
     <span id="status" class="status" data-state="idle">
       <span class="dot" aria-hidden="true"></span><span id="status-text">Starting</span>
     </span>
@@ -28,8 +30,17 @@
 <main>
   <!-- Station picker: the bare URL, and the tablet's home screen -->
   <section id="view-pick" class="view">
+    <div id="hero" class="hero"></div>
     <p class="lede" id="pick-lede">Which station are you on today?</p>
     <div id="pick" class="pick"></div>
+  </section>
+
+  <!-- A station's own front page: what this job is, where to go, and the
+       questions people actually ask. Static, so it works with the bridge dead. -->
+  <section id="view-home" class="view" hidden>
+    <div id="home-intro"></div>
+    <div id="home-nav" class="homenav"></div>
+    <div id="home-faq"></div>
   </section>
 
   <!-- Before the service -->
@@ -49,10 +60,11 @@
   <!-- Running order -->
   <section id="view-flow" class="view" hidden>
     <p class="lede" id="flow-lede"></p>
+    <button id="expand" class="chip" type="button"></button>
     <ol id="flow" class="flow"></ol>
   </section>
 
-  <!-- Follows the mixer. Only exists when a bridge answered. -->
+  <!-- Follows the mixer. Only the follow row needs a bridge. -->
   <section id="view-now" class="view" hidden>
     <div class="follow-row">
       <label class="switch">

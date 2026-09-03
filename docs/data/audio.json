@@ -6,6 +6,76 @@
     "ko": "예시 문구입니다. audio.local.json으로 복사한 뒤 그 파일을 수정하세요. 복사한 파일은 커밋되지 않습니다. 밑줄 네 개로 표시된 부분은 각 교회에 맞게 채워야 합니다."
   },
 
+  "intro": {
+    "en": "You make sure the room can hear what is happening on stage. Most of the job is done before anyone arrives; during the service you mostly listen and nudge faders.",
+    "ko": "이 자리는 무대에서 일어나는 일이 본당에 들리도록 하는 자리입니다. 대부분의 일은 사람들이 오기 전에 끝나고, 예배 중에는 주로 듣고 페이더를 조금씩 조절합니다."
+  },
+
+  "diagram": {
+    "src": "img/x32-layout.svg",
+    "alt": {
+      "en": "The four areas of the mixing desk: channel faders, select buttons, the screen with its tab buttons, and the main fader on the right.",
+      "ko": "믹싱 콘솔의 네 영역: 채널 페이더, 선택 버튼, 탭 버튼이 있는 화면, 오른쪽 메인 페이더."
+    },
+    "caption": {
+      "en": "Four areas, and that is the whole desk. Nearly everything you do on a Sunday is in the two fader strips.",
+      "ko": "콘솔은 이 네 영역이 전부입니다. 주일에 하는 일은 거의 모두 두 페이더 부분에서 이루어집니다."
+    }
+  },
+
+  "faq": [
+    {
+      "q": {
+        "en": "Do I need to understand what all these buttons do?",
+        "ko": "이 버튼들이 무엇을 하는지 다 알아야 하나요?"
+      },
+      "a": {
+        "en": "No. Faders up and down, mute on and off, and staying on the HOME screen will get you through a normal Sunday. The Mixer tab explains the other screens when you are curious, which is best done on a weekday.",
+        "ko": "아닙니다. 페이더를 올리고 내리는 것, 음소거를 켜고 끄는 것, 그리고 HOME 화면에 머무는 것만으로 평범한 주일은 충분합니다. 다른 화면이 궁금하다면 믹서 탭에 설명이 있습니다. 예배가 없는 날에 읽어보시는 것이 좋습니다."
+      }
+    },
+    {
+      "q": {
+        "en": "Someone said not to touch the EQ. Why?",
+        "ko": "EQ를 만지지 말라고 하던데, 왜 그런가요?"
+      },
+      "a": {
+        "en": "Because it is already set, and because it is the wrong tool for the problem people usually reach for it with. If someone is too quiet, the fader is the answer. EQ changes the character of a voice rather than its volume, and a change made in a hurry is hard to undo by ear.",
+        "ko": "이미 설정되어 있고, 사람들이 EQ를 찾게 되는 문제에는 맞지 않는 도구이기 때문입니다. 소리가 작으면 페이더가 답입니다. EQ는 크기가 아니라 목소리의 성격을 바꾸며, 급하게 바꾼 설정은 귀로만 되돌리기 어렵습니다."
+      }
+    },
+    {
+      "q": {
+        "en": "The Mixer tab says it is not connected. Is something broken?",
+        "ko": "믹서 탭에 연결되지 않았다고 나옵니다. 고장인가요?"
+      },
+      "a": {
+        "en": "Not necessarily. That tab follows along only when you open this page from the booth's own address. Opened from the internet it still explains every screen on the desk; it just cannot show you which one you are on.",
+        "ko": "꼭 그렇지는 않습니다. 이 탭은 부스 자체 주소로 이 페이지를 열었을 때만 콘솔을 따라갑니다. 인터넷에서 열어도 콘솔의 모든 화면 설명은 그대로 볼 수 있고, 지금 어느 화면에 있는지만 표시되지 않습니다."
+      }
+    },
+    {
+      "q": {
+        "en": "Can this page change anything on the mixer?",
+        "ko": "이 페이지가 믹서를 변경할 수 있나요?"
+      },
+      "a": {
+        "en": "No, and not by configuration either — it is built so that it cannot send a setting to the desk at all. It only ever asks the desk what it is doing.",
+        "ko": "할 수 없습니다. 설정으로 막아둔 것이 아니라, 애초에 콘솔에 설정값을 보낼 수 없도록 만들어져 있습니다. 콘솔에 지금 무엇을 하고 있는지 물어보기만 합니다."
+      }
+    },
+    {
+      "q": {
+        "en": "Nobody complained. Did I do it right?",
+        "ko": "아무도 뭐라고 하지 않았습니다. 잘한 건가요?"
+      },
+      "a": {
+        "en": "Yes. Sound is only noticed when it is wrong, so a quiet Sunday is the good outcome. If you want a second opinion, stand at the back of the room during a song — that is where the mix actually has to work.",
+        "ko": "네. 음향은 잘못되었을 때만 눈에 띄므로, 조용히 지나간 주일이 좋은 결과입니다. 확인해 보고 싶다면 찬양 중에 본당 뒤쪽에 서 보세요. 실제로 소리가 잘 들려야 하는 곳은 그곳입니다."
+      }
+    }
+  ],
+
   "checklist": [
     {
       "text": {
@@ -98,6 +168,17 @@
       "symptom": {
         "en": "Someone is talking and nothing is coming out of the speakers.",
         "ko": "말하고 있는데 스피커에서 아무 소리도 나지 않습니다."
+      },
+      "diagram": {
+        "src": "img/signal-flow.svg",
+        "alt": {
+          "en": "Sound travels from the microphone, along a cable, into a mixer channel, through the main fader, to the amplifier and then the speakers. The channel meter shows whether the desk is receiving the microphone.",
+          "ko": "소리는 마이크에서 케이블을 따라 믹서 채널로 들어가고, 메인 페이더를 거쳐 앰프로, 그 다음 스피커로 갑니다. 채널 미터를 보면 콘솔이 마이크 소리를 받고 있는지 알 수 있습니다."
+        },
+        "caption": {
+          "en": "The meter splits the problem in half. Moving means the break is to the right of it; still means it is to the left.",
+          "ko": "미터가 문제를 절반으로 나눠 줍니다. 움직이면 고장은 미터 오른쪽에, 움직이지 않으면 왼쪽에 있습니다."
+        }
       },
       "steps": [
         {

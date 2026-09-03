@@ -87,7 +87,7 @@ class Console(threading.Thread):
             "channel": None, "name": None, "seen": {}, "last_seen": 0.0,
         }
         self._name_asked: int | None = None
-        self._stop = threading.Event()
+        self._stopping = threading.Event()
 
     # -- outgoing -------------------------------------------------------
     def _query(self, address: str) -> None:
@@ -99,11 +99,11 @@ class Console(threading.Thread):
 
     # -- lifecycle ------------------------------------------------------
     def stop(self) -> None:
-        self._stop.set()
+        self._stopping.set()
 
     def run(self) -> None:
         last_sub = last_poll = 0.0
-        while not self._stop.is_set():
+        while not self._stopping.is_set():
             now = time.time()
 
             if now - last_sub > RESUBSCRIBE_EVERY:

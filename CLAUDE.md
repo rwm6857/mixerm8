@@ -38,35 +38,65 @@ This is why the bridge serves its own copy, and why the app auto-detects
 "bridge" vs "reference" mode instead of being configured. Any proposal to have
 the Pages copy talk to the bridge runs into this; don't re-litigate it.
 
-## Three stations, and where the console sits
+## Four stations, and where the console sits
 
 The guide is the product; the console bridge is an add-on. Keep it that way —
-two of the three stations have no console at all.
+three of the four stations have no console at all.
 
-| Station | Data file | Tabs |
-| --- | --- | --- |
-| `audio` | `docs/data/audio.json` | Before · Problems · Order · Mixer |
-| `media` | `docs/data/media.json` | Before · Problems · Order |
-| `livestream` | `docs/data/livestream.json` | Before · Problems · Order |
+| Station | Data file | Palette | Tabs |
+| --- | --- | --- | --- |
+| `audio` | `docs/data/audio.json` | green | Home · Before · Problems · Order · Mixer |
+| `media` | `docs/data/media.json` | amber | Home · Before · Problems · Order |
+| `livestream` | `docs/data/livestream.json` | violet | Home · Before · Problems · Order |
+| `misc` | `docs/data/misc.json` | slate | Home |
 
-Each station file carries `checklist`, `problems` and `flow`. Two layers by
-design: the checklist is for the volunteer who has done this before, the
-problem pages are for the one who has not. Problem titles are *symptoms*
-("Someone is too quiet"), never component names ("Gate") — a page called
-"Gate" only helps someone who already knows the word, and that person is not
-who the layer is for. `test_the_problem_pages_are_problem_shaped` guards it.
+**A station's tabs come from `layers` in `roles.json`, never from an
+assumption.** `misc` is questions and policies with no equipment behind it, so
+it declares no layers and gets no tab bar — one tab is not a choice.
+`test_a_role_declares_exactly_the_layers_its_file_carries` pins it in both
+directions: a declared layer must be complete, and an undeclared one must be
+absent, because a tab offering an empty checklist is worse than no tab.
+
+Every station has a **home page** (`intro` + `faq`) and the three optional
+layers are `checklist`, `problems` and `flow`. Two layers by design: the
+checklist is for the volunteer who has done this before, the problem pages are
+for the one who has not. Problem titles are *symptoms* ("Someone is too
+quiet"), never component names ("Gate") — a page called "Gate" only helps
+someone who already knows the word, and that person is not who the layer is
+for. `test_the_problem_pages_are_problem_shaped` guards it.
 
 Routing is the hash, because a QR sticker is the whole user interface:
 `#<role>` and `#<role>/<lang>`, with `en`, `ko` and `both`. A bare URL is the
 station picker, which is also the tablet's home screen. Changing station
-resets to the checklist; changing only the language does not, so cycling
-EN/KO does not lose someone's place.
+resets to that station's home; changing only the language does not, so
+switching EN/KO does not lose someone's place. The hash stays two segments —
+a QR sticker addresses a station and a language, not a tab.
 
-**The checklist is always the landing view, and the Mixer tab never is.** A
+**The station home is the landing view, and the Mixer tab never is.** A
 station has to work with the bridge dead, so the first thing a volunteer sees
-must not depend on a UDP reply. The Mixer tab is present for `audio` whether
-or not a bridge answered — the screen guides are worth reading on a Tuesday —
-but only the follow row inside it depends on the bridge.
+must not depend on a UDP reply — the home page is entirely static for exactly
+that reason. The Mixer tab is present for `audio` whether or not a bridge
+answered — the screen guides are worth reading on a Tuesday — but only the
+follow row inside it depends on the bridge. `Before` is the first card in the
+home nav, so the Sunday-morning path is one tap.
+
+### Colour and collapsing
+
+A station's palette is set as `data-theme` on `<html>` (and on each card in
+the picker, so all four are visible at once). It drives **chrome only** —
+tab underline, timeline dots, icon wells, the language segment. The severity
+colours (`--ok`, `--caution`, `--danger`) never change between stations: a
+"do not change this" card has to look identical everywhere or the colour
+stops meaning anything. `docs/kit.html` is an unlinked page showing every
+element at every palette; it is for whoever maintains the guide, not for a
+Sunday morning.
+
+The running order and the questions are native `<details>` cards, so
+collapsing needs no script. Two rules: **a card carrying an unfilled blank
+opens by default** (hiding a `____` behind a closed summary would make the gap
+silent, which is the one thing the blanks convention exists to prevent), and
+**problem steps are never collapsed** — somebody is reading those while a
+microphone squeals.
 
 ## Content is two-layered, for privacy
 
@@ -85,6 +115,18 @@ prefers and `.gitignore` excludes. Three resolution points, one convention:
 This exists because a filled-in guide names a staff member and lists the
 channel layout. Do not add site-specific text to the committed example files;
 that publishes it.
+
+**Diagrams follow the same split.** The committed `docs/img/*.svg` are
+generic — the shape of any X32-family desk, the path sound takes from a
+microphone to a speaker. A church's own drawings go in `docs/img/local/`,
+which is gitignored, and a `*.local.json` points at `img/local/...`. The
+bridge's override dir stays JSON-only: widening it to serve images would turn
+a deliberately narrow single-filename lookup into a file server, and the
+value does not pay for that. Every diagram is optional decoration around
+wording that stands alone, and `wireDiagrams()` hides a figure whose image did
+not load rather than leaving a broken-image icon on a tablet in a dark booth.
+`test_every_diagram_points_at_a_file_that_ships` catches a committed one that
+does not resolve.
 
 **Unfilled values are blanks, never guesses.** A run of four or more
 underscores renders as a visible gap (`fill()` in `app.js`), and the entry
@@ -110,7 +152,7 @@ wrong scene resets every fader mid-service.
 
 ```bash
 pip install -e ".[dev]"    # stdlib only at runtime; this adds pytest + ruff
-pytest                     # 33 tests, ~3s
+pytest                     # 37 tests, ~3s
 ruff check .               # line length 100
 mixerm8 --discover         # find consoles on the network
 python -m http.server -d docs 8000   # the app in reference mode, no mixer

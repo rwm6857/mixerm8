@@ -10,6 +10,9 @@
   --fg: #f2f4f7;
   --muted: #98a1b0;
 
+  /* Severity. These never change between stations: a "do not change this"
+     card has to look identical everywhere, or the colour stops meaning
+     anything. Only the chrome below takes the station's own palette. */
   --ok: #4a9eda;
   --caution: #e8a33d;
   --danger: #e5564b;
@@ -18,7 +21,19 @@
 
   --radius: 14px;
   --tap: 52px;
+  --barh: 72px;
 }
+
+/* ---------- station palettes ----------
+   Set on <html> for the station you are in, and on each card in the picker
+   so all four are visible at once. Chrome only -- tab underline, timeline
+   dots, icon wells, the language segment. Deliberately a bare attribute
+   selector rather than :root so a card can carry its own. */
+:root         { --accent: #4a9eda; --accent-rgb:  74 158 218; --accent-ink: #9fcbee; }
+[data-theme="green"]  { --accent: #4bbf7b; --accent-rgb:  75 191 123; --accent-ink: #a8e6c4; }
+[data-theme="amber"]  { --accent: #e8933d; --accent-rgb: 232 147  61; --accent-ink: #f5c48a; }
+[data-theme="violet"] { --accent: #a680f2; --accent-rgb: 166 128 242; --accent-ink: #cdb6fb; }
+[data-theme="slate"]  { --accent: #9aa7bc; --accent-rgb: 154 167 188; --accent-ink: #c6cfdc; }
 
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 
@@ -38,16 +53,16 @@ body {
 /* ---------- top bar ---------- */
 .bar {
   display: flex; align-items: center; justify-content: space-between;
-  gap: 12px; padding: 14px 20px;
+  gap: 12px; padding: 14px 20px; min-height: var(--barh);
   background: var(--panel); border-bottom: 1px solid var(--line);
   position: sticky; top: 0; z-index: 10;
 }
 .brand { display: flex; align-items: center; gap: 10px; font-weight: 650; letter-spacing: -.01em; }
 .mark {
-  width: 18px; height: 18px; border-radius: 5px;
-  background: linear-gradient(150deg, var(--ok), var(--good));
+  width: 18px; height: 18px; border-radius: 5px; flex: none;
+  background: linear-gradient(150deg, var(--accent), var(--good));
 }
-.bar-right { display: flex; align-items: center; gap: 10px; }
+.bar-right { display: flex; align-items: center; gap: 12px; }
 
 .chip {
   min-width: 52px; min-height: 38px; padding: 0 14px;
@@ -57,18 +72,35 @@ body {
 }
 .chip:active { background: var(--line); }
 
+/* ---------- language flip ----------
+   Three fixed segments in the same place on every view. Cycling through a
+   single button meant a Korean reader tapped twice and read English on the
+   way past; here the language you want is always one tap. */
+.langs {
+  display: flex; gap: 2px; padding: 2px; flex: none;
+  background: var(--panel-2); border: 1px solid var(--line); border-radius: 999px;
+}
+.seg {
+  min-height: 34px; padding: 0 11px;
+  background: none; border: none; border-radius: 999px;
+  color: var(--muted); font: inherit; font-size: .82rem; font-weight: 700;
+  cursor: pointer; white-space: nowrap;
+}
+.seg[aria-pressed="true"] { background: var(--accent); color: #10141a; }
+.seg:focus-visible { outline: 2px solid var(--accent-ink); outline-offset: 2px; }
+
 .status { display: flex; align-items: center; gap: 7px; font-size: .82rem; color: var(--muted); }
 .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--info); flex: none; }
 .status[data-state="live"]    .dot { background: var(--good); box-shadow: 0 0 0 3px rgb(75 191 123 / .18); }
 .status[data-state="waiting"] .dot { background: var(--caution); }
 .status[data-state="offline"] .dot { background: var(--danger); }
-.status[data-state="ref"]     .dot { background: var(--ok); }
+.status[data-state="ref"]     .dot { background: var(--accent); }
 
 /* ---------- tabs ---------- */
 .tabs {
   display: grid; grid-template-columns: repeat(3, 1fr);
   background: var(--panel); border-bottom: 1px solid var(--line);
-  position: sticky; top: 63px; z-index: 9;
+  position: sticky; top: var(--barh); z-index: 9;
 }
 .tab {
   min-height: var(--tap); padding: 0 8px;
@@ -76,10 +108,35 @@ body {
   color: var(--muted); font: inherit; font-size: .95rem; font-weight: 600;
   cursor: pointer;
 }
-.tab[aria-selected="true"] { color: var(--fg); border-bottom-color: var(--ok); }
+/* display:grid beats the hidden attribute's UA display:none, so misc — which
+   has one tab and therefore no choice to offer — needs this to lose its bar. */
+.tabs[hidden] { display: none; }
+.tab[aria-selected="true"] { color: var(--fg); border-bottom-color: var(--accent); }
+.tabs[data-count="5"] .tab { font-size: .85rem; padding: 0 3px; }
 
 main { max-width: 780px; margin: 0 auto; padding: 20px 20px 40px; }
 .lede { color: var(--muted); font-size: .95rem; margin: 4px 0 18px; }
+
+/* ---------- hero ---------- */
+.hero {
+  margin: 0 0 22px; border: 1px solid var(--line);
+  border-radius: 16px; overflow: hidden;
+  background:
+    radial-gradient(110% 130% at 0% 0%,   rgb( 75 191 123 / .20), transparent 58%),
+    radial-gradient(110% 130% at 100% 0%, rgb(166 128 242 / .20), transparent 58%),
+    radial-gradient(120% 120% at 50% 120%, rgb(232 147  61 / .16), transparent 60%),
+    var(--panel);
+}
+.hero[hidden] { display: none; }
+.hero-img { margin: 0; }
+.hero-img img {
+  display: block; width: 100%; max-width: none;
+  height: 168px; object-fit: cover; border-radius: 0;
+}
+.hero-text { padding: 24px 24px 26px; }
+.hero-text h1 { margin: 0 0 4px; font-size: 1.8rem; letter-spacing: -.025em; }
+.hero-text h1.ko { font-size: 1.3rem; font-weight: 600; margin-bottom: 10px; }
+.hero-text .blurb { color: #d7dce3; font-size: .95rem; margin-top: 8px; }
 
 /* ---------- follow switch ---------- */
 .follow-row[hidden] { display: none; }
@@ -99,7 +156,7 @@ main { max-width: 780px; margin: 0 auto; padding: 20px 20px 40px; }
 }
 .switch input:checked + .track { background: var(--good); }
 .switch input:checked + .track .knob { transform: translateX(22px); }
-.switch input:focus-visible + .track { outline: 2px solid var(--ok); outline-offset: 3px; }
+.switch input:focus-visible + .track { outline: 2px solid var(--accent); outline-offset: 3px; }
 .switch-label { font-size: .95rem; font-weight: 600; }
 .where { color: var(--muted); font-size: .9rem; font-variant-numeric: tabular-nums; }
 
@@ -144,6 +201,19 @@ code {
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .88em;
 }
 
+/* ---------- diagrams ----------
+   Always optional. A figure whose image fails to load hides itself rather
+   than leaving a broken-image icon: the wording beside it already says the
+   same thing, and a church's own diagrams live outside the repo. */
+.diagram { margin: 16px 0 0; }
+.diagram[hidden] { display: none; }
+.diagram img {
+  display: block; width: 100%; max-width: 430px;
+  border: 1px solid var(--line); border-radius: 10px; background: var(--bg);
+}
+.diagram figcaption { margin-top: 8px; max-width: 520px; color: var(--muted); font-size: .85rem; }
+.diagram figcaption .ko { color: #aab3c0; }
+
 /* ---------- guide index ---------- */
 .grid { display: grid; gap: 10px; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); }
 .tile {
@@ -167,22 +237,51 @@ code {
 }
 .group-head:first-child { margin-top: 0; }
 
+/* ---------- collapsible step cards ----------
+   Used by the running order and by the questions. Native <details>, so it
+   works with a keyboard and needs no script. */
+.step {
+  background: var(--panel); border: 1px solid var(--line);
+  border-radius: 12px; margin-bottom: 10px;
+}
+.step > summary {
+  display: flex; flex-direction: column; justify-content: center; gap: 1px;
+  position: relative; list-style: none; cursor: pointer;
+  min-height: var(--tap); padding: 14px 48px 14px 18px;
+}
+.step > summary::-webkit-details-marker { display: none; }
+.step > summary::after {
+  content: ""; position: absolute; right: 20px; top: 50%;
+  width: 10px; height: 10px;
+  border-right: 2px solid var(--muted); border-bottom: 2px solid var(--muted);
+  transform: translateY(-70%) rotate(45deg); transition: transform .15s;
+}
+.step[open] > summary::after { transform: translateY(-25%) rotate(-135deg); }
+.step > summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: 12px; }
+.step-title { font-size: 1.1rem; font-weight: 650; }
+.step-title.ko { font-size: .95rem; font-weight: 600; }
+.step-body { padding: 0 18px 16px; }
+.step-body .detail, .step-body .answer { color: #d7dce3; font-size: .96rem; margin-bottom: 6px; }
+.step-body .detail:last-child, .step-body .answer:last-child { margin-bottom: 0; }
+.qa .step-title { font-size: 1.02rem; }
+#expand { margin-bottom: 14px; }
+
 /* ---------- service flow ---------- */
 .flow { list-style: none; margin: 0; padding: 0; }
 .flow li {
-  position: relative; padding: 0 0 22px 26px;
+  position: relative; padding: 0 0 10px 26px;
   border-left: 2px solid var(--line); margin-left: 8px;
 }
-.flow li:last-child { border-left-color: transparent; padding-bottom: 0; }
+.flow li:last-child { border-left-color: transparent; }
 .flow li::before {
-  content: ""; position: absolute; left: -7px; top: 6px;
+  content: ""; position: absolute; left: -7px; top: 20px;
   width: 12px; height: 12px; border-radius: 50%;
-  background: var(--ok); border: 3px solid var(--bg);
+  background: var(--accent); border: 3px solid var(--bg);
 }
-.when { color: var(--ok); font-size: .78rem; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; }
-.flow h3 { margin: 2px 0 6px; font-size: 1.18rem; }
-.flow .detail { margin: 0 0 6px; color: #d7dce3; font-size: .96rem; }
-.flow .detail:last-child { margin-bottom: 0; }
+.when {
+  color: var(--accent-ink); font-size: .75rem; font-weight: 700;
+  letter-spacing: .05em; text-transform: uppercase;
+}
 
 /* ---------- unfilled content ----------
    A blank is a first-class display case, not an error. The owner of the
@@ -214,15 +313,48 @@ code {
 
 .pick { display: grid; gap: 12px; }
 .station {
-  display: block; padding: 22px 24px;
+  display: flex; align-items: center; gap: 16px;
+  padding: 18px 22px; min-height: 88px;
   background: var(--panel); color: var(--fg); text-decoration: none;
-  border: 1px solid var(--line); border-left: 6px solid var(--ok);
-  border-radius: var(--radius); min-height: 84px;
+  border: 1px solid var(--line); border-left: 6px solid var(--accent);
+  border-radius: var(--radius);
 }
 .station:active { background: var(--panel-2); }
-.station b { display: block; font-size: 1.45rem; letter-spacing: -.02em; }
-.station b.ko { font-size: 1.1rem; font-weight: 600; }
-.station span { display: block; color: var(--muted); font-size: .9rem; margin-top: 4px; }
+.station-icon {
+  display: grid; place-items: center; flex: none;
+  width: 50px; height: 50px; border-radius: 13px;
+  background: rgb(var(--accent-rgb) / .15); color: var(--accent);
+}
+/* Scoped to .station-text, not .station: .station-icon is a span too, and a
+   bare `.station span` rule would repaint the glyph muted grey. */
+.station-text { min-width: 0; }
+.station-text b { display: block; font-size: 1.4rem; letter-spacing: -.02em; }
+.station-text b.ko { font-size: 1.05rem; font-weight: 600; }
+.station-text span { display: block; color: var(--muted); font-size: .88rem; margin-top: 3px; }
+.icon { width: 26px; height: 26px; }
+
+/* ---------- a station's front page ---------- */
+.home-head { display: flex; align-items: center; gap: 14px; margin-bottom: 14px; color: var(--accent); }
+.home-head .icon { width: 32px; height: 32px; flex: none; }
+.home-head b { display: block; color: var(--fg); font-size: 1.4rem; letter-spacing: -.02em; }
+.home-head span { display: block; color: var(--muted); font-size: .86rem; }
+.intro { color: #d7dce3; margin-bottom: 6px; }
+.intro.ko { color: #bcc4d0; }
+
+.homenav {
+  display: grid; gap: 10px; margin: 22px 0 8px;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+}
+.navcard {
+  text-align: left; min-height: var(--tap); padding: 15px 18px;
+  background: var(--panel); color: var(--fg);
+  border: 1px solid var(--line); border-left: 5px solid var(--accent);
+  border-radius: 11px; font: inherit; cursor: pointer;
+}
+.navcard:active { background: var(--panel-2); }
+.navcard b { display: block; font-size: 1.08rem; }
+.navcard span { display: block; color: var(--muted); font-size: .84rem; line-height: 1.38; }
+.section { font-size: 1.15rem; margin: 28px 0 12px; letter-spacing: -.01em; }
 
 /* ---------- checklist ---------- */
 .checklist { list-style: none; margin: 0 0 18px; padding: 0; counter-reset: step; }
@@ -248,7 +380,7 @@ code {
   content: "✓"; display: block; color: #0c1a12;
   font-size: 20px; font-weight: 800; line-height: 26px; text-align: center;
 }
-.checklist input:focus-visible + .box { outline: 2px solid var(--ok); outline-offset: 3px; }
+.checklist input:focus-visible + .box { outline: 2px solid var(--accent); outline-offset: 3px; }
 .item { flex: 1; }
 .item .text { margin-bottom: 2px; }
 .chip.wide { display: block; width: 100%; min-height: var(--tap); }
@@ -275,8 +407,16 @@ footer {
   color: var(--muted); font-size: .8rem;
 }
 
+@media (max-width: 560px) {
+  /* The dot still carries the state; the word is the first thing to go. */
+  #status-text { display: none; }
+}
+
 @media (max-width: 480px) {
   body { font-size: 18px; }
   main { padding: 16px 14px 32px; }
   .card { padding: 18px; }
+  .hero-text { padding: 20px; }
+  .hero-text h1 { font-size: 1.55rem; }
+  .station { padding: 16px; gap: 13px; }
 }
