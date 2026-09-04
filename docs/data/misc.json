@@ -37,10 +37,7 @@
       }
     },
     {
-      "q": {
-        "en": "What time should I arrive?",
-        "ko": "몇 시까지 도착해야 하나요?"
-      },
+      "q": { "en": "What time should I arrive?", "ko": "몇 시까지 도착해야 하나요?" },
       "todo": {
         "en": "Fill in the arrival time. Every station's running order counts backwards from the service, so this is the one number that makes the rest usable.",
         "ko": "도착 시간을 채워주세요. 모든 자리의 진행 순서가 예배 시작 시각을 기준으로 거꾸로 계산되므로, 이 숫자가 있어야 나머지가 쓸모 있습니다."
@@ -117,10 +114,7 @@
       }
     },
     {
-      "q": {
-        "en": "The guide says a word I do not know.",
-        "ko": "안내에 모르는 단어가 나옵니다."
-      },
+      "q": { "en": "The guide says a word I do not know.", "ko": "안내에 모르는 단어가 나옵니다." },
       "a": {
         "en": "That is a fault in the guide, not in you. Write the word down and tell whoever keeps this guide — the wording is meant to be readable by someone on their first Sunday, and every word that is not gets rewritten.",
         "ko": "그것은 여러분이 아니라 안내문의 잘못입니다. 그 단어를 적어 이 안내를 관리하는 사람에게 알려주세요. 이 안내는 첫 주일에 오는 사람도 읽을 수 있어야 하고, 그렇지 않은 표현은 모두 고쳐 씁니다."

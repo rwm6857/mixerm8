@@ -7,7 +7,7 @@ import sys
 import time
 import webbrowser
 
-from . import __version__, config, update
+from . import __version__, config, editor, update
 from .console import Console, discover
 from .server import local_ip, serve
 
@@ -25,6 +25,10 @@ def build_parser() -> argparse.ArgumentParser:
                    help=f"port to serve the tablet app on (default {DEFAULT_PORT})")
     p.add_argument("--discover", action="store_true",
                    help="list consoles on the network and exit")
+    p.add_argument("--edit", action="store_true",
+                   help="open the guide editor in a browser on this machine")
+    p.add_argument("--edit-port", type=int, default=editor.DEFAULT_PORT,
+                   help=f"port for the editor (default {editor.DEFAULT_PORT})")
     p.add_argument("--open", action="store_true",
                    help="open the app in a browser on this machine")
     p.add_argument("--no-update-check", action="store_true",
@@ -51,8 +55,49 @@ def resolve_ip(requested: str | None) -> str | None:
     return c["ip"]
 
 
+def edit(args) -> int:
+    """Run the guide editor and nothing else.
+
+    Deliberately not part of a normal run. The bridge listens on the LAN so
+    tablets can reach it; the editor writes files, so it stays on loopback
+    and never shares a process with a server volunteers can reach. It also
+    never opens a socket to the desk, which is why this returns before any
+    Console is built -- the writing happens on somebody's laptop, usually
+    nowhere near the building.
+    """
+    try:
+        server = editor.serve(args.edit_port)
+    except OSError as exc:
+        print(f"Could not start the editor on port {args.edit_port}: {exc}")
+        return 1
+
+    url = f"http://127.0.0.1:{args.edit_port}/"
+    guide = editor.EditorHandler.guide
+    print()
+    print(f"  Editing the guide:  {url}")
+    print(f"  Saves go to:        {guide.path_for('media').parent}")
+    if editor.repo_data_dir() is None:
+        print("  (This is not a source checkout, so only this church's own")
+        print("   wording can be edited. It is never committed or published.)")
+    print()
+    print("  This does not touch the console, and only this machine can reach it.")
+    print("  Close this window to stop.")
+    webbrowser.open(url)
+    try:
+        while True:
+            time.sleep(1.0)
+    except KeyboardInterrupt:
+        print("\nStopping.")
+    finally:
+        server.shutdown()
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
+
+    if args.edit:
+        return edit(args)
 
     if args.discover:
         found = discover()

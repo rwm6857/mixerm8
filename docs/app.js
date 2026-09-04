@@ -59,6 +59,7 @@ const UI = {
   tabCheck:   { en: "Before",    ko: "예배 전" },
   tabProblem: { en: "Problems",  ko: "문제 해결" },
   tabFlow:    { en: "Order",     ko: "진행 순서" },
+  tabEquip:   { en: "Equipment", ko: "장비" },
   tabMixer:   { en: "Mixer",     ko: "믹서" },
   navCheck:   { en: "What to do before the service starts.",
                 ko: "예배가 시작되기 전에 할 일입니다." },
@@ -66,6 +67,8 @@ const UI = {
                 ko: "지금 문제가 생겼을 때 보세요." },
   navFlow:    { en: "The order of a normal Sunday, with times.",
                 ko: "평소 주일의 진행 순서와 시간입니다." },
+  navEquip:   { en: "What each piece of gear here is, and where it lives.",
+                ko: "이 자리의 각 장비가 무엇이고 어디에 있는지 알려줍니다." },
   navMixer:   { en: "Every screen on the desk, and what it does.",
                 ko: "콘솔의 모든 화면과 그 기능입니다." },
   ledeCheck:  { en: "Work down the list. Ticks clear themselves each day.",
@@ -74,6 +77,8 @@ const UI = {
                 ko: "지금 들리는 상황에 맞는 항목을 누르세요." },
   ledeFlow:   { en: "The order of a normal Sunday. Tap a step to open it.",
                 ko: "평소 주일의 진행 순서입니다. 각 단계를 눌러 펼치세요." },
+  ledeEquip:  { en: "Tap a box to read what it does and where it is.",
+                ko: "장비를 눌러 무슨 역할을 하고 어디에 있는지 확인하세요." },
   ledeMixer:  { en: "Every screen on the desk, and what it does.",
                 ko: "콘솔의 모든 화면과 그 기능입니다." },
   faqHead:    { en: "Questions people ask", ko: "자주 묻는 질문" },
@@ -97,6 +102,7 @@ const state = {
   follow: true,
   view: "pick",
   problem: null,     // index of an open problem
+  gear: null,        // index of an open equipment page
   pinned: null,      // a console guide opened by hand
   flowOpen: false,   // has the reader asked for every step at once?
   ticks: new Set(),
@@ -376,6 +382,54 @@ function renderFlow() {
   wireDiagrams($("view-flow"));
 }
 
+/* ---------- the gear at this station ----------
+ * Same two-step shape as the problem pages: a grid of what is here, then
+ * one page about the box you tapped. Audio declares no equipment layer --
+ * its Mixer tab already is the sound desk's equipment page, and the boxes
+ * behind the desk are not something a volunteer touches. */
+
+function renderEquipment() {
+  $("equipment-lede").textContent = t1("ledeEquip");
+  const list = state.data.equipment || [];
+
+  if (state.gear !== null && list[state.gear]) {
+    const item = list[state.gear];
+    $("equipment").innerHTML = "";
+    // Not a <details>: there is one card on screen and nothing to collapse
+    // it against, and "where is it" is the reason the page was opened.
+    $("equipment-detail").innerHTML =
+      `<button class="chip" id="gback">${esc(t1("back"))}</button>` +
+      `<div class="card" data-level="${item.level || "info"}">` +
+      `<h2>${esc(one(item.title))}</h2>` +
+      (two(item.title) ? `<h2 class="ko">${esc(two(item.title))}</h2>` : "") +
+      lines(item.where, "spec") +
+      todo(item) +
+      lines(item.body, "body") +
+      diagram(item.diagram) +
+      (item.action ? `<div class="action">${lines(item.action)}</div>` : "") +
+      `</div>`;
+    $("gback").onclick = () => { state.gear = null; renderEquipment(); };
+    wireDiagrams($("view-equipment"));
+    return;
+  }
+
+  $("equipment-detail").innerHTML = "";
+  $("equipment").innerHTML = list.map((item, i) =>
+    `<button class="tile" data-i="${i}" data-level="${item.level || "info"}">` +
+    `<b>${esc(one(item.title))}</b>` +
+    (two(item.title) ? `<b class="ko">${esc(two(item.title))}</b>` : "") +
+    `<span>${fill(one(item.where).slice(0, 70))}</span></button>`
+  ).join("");
+
+  $("equipment").querySelectorAll(".tile").forEach((el) => {
+    el.onclick = () => {
+      state.gear = Number(el.dataset.i);
+      renderEquipment();
+      window.scrollTo(0, 0);
+    };
+  });
+}
+
 /* ---------- the mixer (sound station only) ---------- */
 
 function renderNow() {
@@ -478,6 +532,7 @@ function tabsFor(role) {
   if (layers.includes("checklist")) tabs.push({ view: "checklist", key: "tabCheck", nav: "navCheck" });
   if (layers.includes("problems")) tabs.push({ view: "problems", key: "tabProblem", nav: "navProblem" });
   if (layers.includes("flow")) tabs.push({ view: "flow", key: "tabFlow", nav: "navFlow" });
+  if (layers.includes("equipment")) tabs.push({ view: "equipment", key: "tabEquip", nav: "navEquip" });
   // The mixer tab exists for the sound station whether or not a bridge is
   // answering: the screen guides are worth reading on a Tuesday too, and a
   // dead bridge must never take a tab away mid-service.
@@ -520,11 +575,12 @@ function setLang(i) {
   else render();
 }
 
-const VIEWS = ["pick", "home", "checklist", "problems", "flow", "now"];
+const VIEWS = ["pick", "home", "checklist", "problems", "flow", "equipment", "now"];
 
 function setView(view) {
   state.view = view;
   if (view !== "problems") state.problem = null;
+  if (view !== "equipment") state.gear = null;
   if (view !== "now") state.pinned = null;
   VIEWS.forEach((v) => { $("view-" + v).hidden = v !== view; });
   $("tabs").querySelectorAll(".tab").forEach((el) => {
@@ -567,6 +623,7 @@ function render() {
     if (state.view === "checklist") renderChecklist();
     if (state.view === "problems") renderProblems();
     if (state.view === "flow") renderFlow();
+    if (state.view === "equipment") renderEquipment();
     if (state.view === "now") renderNow();
   }
   setFoot();
@@ -638,6 +695,7 @@ async function route() {
   const switched = state.role?.id !== role.id;
   if (switched) {
     state.problem = null;
+    state.gear = null;
     state.pinned = null;
     state.view = "home";
   }

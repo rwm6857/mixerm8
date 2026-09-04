@@ -45,9 +45,14 @@ packages = ["src/mixerm8"]
 # can serve them on a LAN with no internet. Single source, no duplication.
 [tool.hatch.build.targets.wheel.force-include]
 "docs" = "mixerm8/webroot"
+# The editor is not under docs/ on purpose: docs/ is published to GitHub
+# Pages, and an editor served from a static host is a Save button with
+# nothing behind it. It still ships, so the booth machine can reword its
+# own copy without a checkout.
+"editor" = "mixerm8/editorroot"
 
 [tool.hatch.build.targets.sdist]
-include = ["src/mixerm8", "docs", "tests", "README.md", "LICENSE", "pyproject.toml"]
+include = ["src/mixerm8", "docs", "editor", "tests", "README.md", "LICENSE", "pyproject.toml"]
 
 [tool.ruff]
 line-length = 100

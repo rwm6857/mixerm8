@@ -189,8 +189,11 @@ file and reload the page.
     docs/data/guides.json      what each screen on the mixer does
 
 Each station file holds that station's home page (`intro` and `faq`) and
-whichever of `checklist`, `problems` and `flow` it declares in `roles.json`.
-`misc` declares none of the three: it is questions and policies only.
+whichever of `checklist`, `problems`, `flow` and `equipment` it declares in
+`roles.json`. `misc` declares none of them: it is questions and policies only.
+Media and Livestream declare `equipment` — one card per piece of gear, saying
+what it is, where it lives and what to do about it. The sound desk does not:
+its Mixer tab already does that job.
 
 **Do not edit those directly.** They are the generic example that ships with
 MixerM8. Your own version goes in a file with `.local` in the name, one per
@@ -200,7 +203,8 @@ file you want to change:
     docs/data/livestream.local.json
 
 Copy the example, rename it, and edit the copy. The page prefers your copy
-whenever it exists and falls back to the example when it does not.
+whenever it exists and falls back to the example when it does not. Or let the
+editor do the copying for you — see below.
 
 Why the extra step: a finished guide names the person to call when something
 goes wrong and lists which microphone is on which channel. That belongs to
@@ -208,6 +212,42 @@ your church, not on the internet. The `.local.json` files are listed in
 `.gitignore`, so they are never committed and never appear on GitHub Pages —
 whereas anything you type into `guides.json` would be published the moment
 you push.
+
+### The editor
+
+Editing JSON by hand is fine if you already do that for a living. If you do
+not:
+
+```bash
+mixerm8 --edit
+```
+
+That opens a page in your browser with everything in the guide down the left,
+a form in the middle, and the real tablet app on the right showing your
+unsaved changes as you type. It runs on your own machine only — nothing on
+the network can reach it — and it never touches the mixer, so you can use it
+on a Mac at home with no console anywhere nearby.
+
+It checks as you type. The bar along the bottom runs exactly the rules the
+test suite runs, so it tells you about a `____` with no explanation above it,
+a sentence translated into only one language, or a problem page titled after
+a component rather than a symptom, before you save rather than after you push.
+
+There are two places it can save, and it says which at the top:
+
+- **The example (repo)** writes `docs/data/*.json` in your checkout. Offered
+  only when you are running from a source checkout. The editor writes the
+  files and prints the `git` commands; you run them yourself, so you see the
+  branch you are on first.
+- **This church** writes `%APPDATA%/MixerM8/data/*.local.json` on Windows, or
+  `~/.config/MixerM8/data/` elsewhere. This is the one for whoever sets the
+  booth machine up: it starts from the example, saves your version alongside
+  it, and the tablet prefers it from then on.
+
+Your own wording is deliberately not pushable. It is written outside the
+repository entirely, so a `git pull` cannot overwrite it, a MixerM8 update
+cannot replace it, and there is no button anywhere in the editor that could
+publish it. If you want a change to ship to everyone, make it in the example.
 
 ### Diagrams
 

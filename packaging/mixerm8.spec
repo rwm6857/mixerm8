@@ -15,8 +15,10 @@ a = Analysis(
     pathex=[str(ROOT / "src")],
     binaries=[],
     # The same docs/ that GitHub Pages serves, carried inside the exe.
-    datas=[(str(ROOT / "docs"), "webroot")],
-    hiddenimports=["mixerm8.cli", "mixerm8.console", "mixerm8.server"],
+    datas=[(str(ROOT / "docs"), "webroot"),
+           (str(ROOT / "editor"), "editorroot")],
+    hiddenimports=["mixerm8.cli", "mixerm8.console", "mixerm8.server",
+                   "mixerm8.editor", "mixerm8.validate"],
     hookspath=[],
     runtime_hooks=[],
     excludes=["tkinter", "unittest", "pydoc", "email", "xml", "pdb"],

@@ -170,6 +170,9 @@ main { max-width: 780px; margin: 0 auto; padding: 20px 20px 40px; }
 }
 .card h2 { font-size: 1.7rem; margin: 0 0 4px; letter-spacing: -.02em; }
 .card h2.ko { font-size: 1.25rem; margin: 0 0 8px; font-weight: 600; }
+/* Where a piece of equipment physically is. Equipment cards only. */
+.card .spec { color: var(--muted); font-size: .9rem; margin: 0 0 12px; }
+.card .spec.ko { margin-top: -8px; }
 .card .body { margin: 0 0 12px; }
 .card .body:last-child { margin-bottom: 0; }
 
@@ -401,6 +404,7 @@ code {
   line-height: 29px; text-align: center;
 }
 #problem-detail .chip { margin-bottom: 14px; }
+#equipment-detail .chip { margin-bottom: 14px; }
 
 footer {
   max-width: 780px; margin: 0 auto; padding: 20px;
@@ -413,6 +417,10 @@ footer {
 }
 
 @media (max-width: 480px) {
+  /* Five tabs on a phone, and "Equipment" is the longest label there is.
+     At the shared 5-tab size it clears the edge by a pixel on this machine
+     and would not on the booth's, where Segoe UI is wider. */
+  .tabs[data-count="5"] .tab { font-size: .74rem; letter-spacing: -.01em; }
   body { font-size: 18px; }
   main { padding: 16px 14px 32px; }
   .card { padding: 18px; }
