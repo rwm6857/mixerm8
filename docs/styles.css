@@ -111,6 +111,16 @@ body {
 /* display:grid beats the hidden attribute's UA display:none, so misc — which
    has one tab and therefore no choice to offer — needs this to lose its bar. */
 .tabs[hidden] { display: none; }
+/* Past five, the row scrolls instead of squeezing. A station is free to
+   have eight pages; eight names crushed into 780px would be eight names
+   nobody can read at arm's length in a dim booth. */
+.tabs.scrolls {
+  overflow-x: auto; scrollbar-width: none;
+  scroll-snap-type: x proximity;
+}
+.tabs.scrolls::-webkit-scrollbar { display: none; }
+.tabs.scrolls .tab { padding: 0 18px; scroll-snap-align: center; white-space: nowrap; }
+
 .tab[aria-selected="true"] { color: var(--fg); border-bottom-color: var(--accent); }
 .tabs[data-count="5"] .tab { font-size: .85rem; padding: 0 3px; }
 
@@ -405,6 +415,33 @@ code {
 }
 #problem-detail .chip { margin-bottom: 14px; }
 #equipment-detail .chip { margin-bottom: 14px; }
+
+/* ---------- next ----------
+   A page can name the page after it, so somebody who has never been in the
+   booth can keep going without working out which tab comes next. */
+.pagenext { max-width: 780px; margin: 0 auto; padding: 0 20px 40px; }
+.pagenext[hidden] { display: none; }
+.nextbtn {
+  display: flex; align-items: center; gap: 12px;
+  width: 100%; min-height: var(--tap); padding: 16px 20px;
+  background: var(--panel); color: var(--fg);
+  border: 1px solid var(--line); border-left: 6px solid var(--accent);
+  border-radius: var(--radius); font: inherit; text-align: left; cursor: pointer;
+}
+.nextbtn:active { background: var(--panel-2); }
+.nextlabel { color: var(--muted); font-size: .8rem; font-weight: 600;
+             letter-spacing: .06em; text-transform: uppercase; }
+.nextbtn b { flex: 1; font-size: 1.1rem; }
+.nextbtn .arrow { color: var(--accent); font-size: 1.3rem; }
+
+/* ---------- emphasis inside the wording ----------
+   **bold**, *italic* and ++underline++ survive fill(). Underline is drawn
+   with an offset border rather than text-decoration so it does not collide
+   with the way an unfilled blank is drawn. */
+.card u, .step-body u, .item u, .detail u, .body u, .answer u {
+  text-decoration: underline; text-underline-offset: 3px;
+  text-decoration-thickness: 1px;
+}
 
 footer {
   max-width: 780px; margin: 0 auto; padding: 20px;

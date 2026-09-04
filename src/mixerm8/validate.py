@@ -11,6 +11,14 @@ ever written to disk.
 Every check takes parsed documents and returns a list of plain sentences.
 Nothing raises: the editor shows all the problems at once rather than
 stopping at the first, and a check that cannot apply returns nothing.
+
+**An empty page is not an error.** It used to be -- a station declared a
+layer and the layer had to be complete -- and that was right about the
+tablet and wrong about the editor, where the only way to build a page is
+to make an empty one first. The tablet keeps the guarantee anyway, because
+`visible_pages()` hides a page with nothing in it. So adding a page and
+filling it in over three Sundays is a normal thing to do, and a volunteer
+still never meets an empty tab.
 """
 
 from __future__ import annotations
@@ -22,24 +30,30 @@ from pathlib import Path
 # The files that make up a guide, in the order the editor lists them.
 DOCUMENTS = ("roles", "audio", "media", "livestream", "misc", "guides")
 
-# The optional layers a station can declare in roles.json, and the fields
-# each entry of one must carry in both languages. Everything else on an
-# entry -- `where`, `action`, `diagram`, `todo` -- is optional.
-LAYERS = {
+# What a page can be, and the fields each of its items must carry in both
+# languages. Everything else on an item -- `todo`, `action`, `diagram`,
+# `where` outside equipment -- is optional.
+KINDS = {
     "checklist": ("text",),
     "problems": ("title", "symptom"),
     "flow": ("when", "title", "detail"),
     "equipment": ("title", "where", "body"),
+    "cards": ("title", "body"),
+    "mixer": (),        # its content is guides.json, not a list of items
 }
+
+# Pages that carry no `items` of their own.
+CONTENTLESS = ("mixer",)
 
 LEVELS = ("ok", "caution", "danger", "info")
 LANGUAGES = ("en", "ko")
 
 BLANK = re.compile(r"_{4,}")
+ID = re.compile(r"[a-z][a-z0-9-]*")
 
 
 # ---------------------------------------------------------------------------
-# loading
+# loading and shape helpers
 # ---------------------------------------------------------------------------
 
 def load_documents(directory: Path) -> dict[str, dict]:
@@ -60,21 +74,50 @@ def station_ids(docs: dict[str, dict]) -> list[str]:
     return [r["id"] for r in roles(docs) if "id" in r]
 
 
+def pages(doc: dict) -> list[dict]:
+    return doc.get("pages") or []
+
+
+def has_content(page: dict) -> bool:
+    """Whether this page has anything for a volunteer to read."""
+    if page.get("kind") in CONTENTLESS:
+        return True
+    return bool(page.get("items"))
+
+
+def visible_pages(doc: dict) -> list[dict]:
+    """The pages that earn a tab: not hidden, and not empty.
+
+    This is the rule that used to be enforced by refusing to let a layer be
+    declared without content. Enforcing it here instead means the editor can
+    hold a half-built page without the guide being "broken", while the tablet
+    still never offers a tab onto nothing.
+    """
+    return [p for p in pages(doc) if not p.get("hidden") and has_content(p)]
+
+
 def _walk(docs, visit) -> None:
     """Every node of every document, with a dotted path for the message."""
     def go(where, node):
+        visit(where, node)
         if isinstance(node, dict):
-            visit(where, node)
             for key, value in node.items():
                 go(f"{where}.{key}", value)
         elif isinstance(node, list):
             for i, item in enumerate(node):
                 go(f"{where}[{i}]", item)
-        else:
-            visit(where, node)
 
     for name, doc in docs.items():
         go(f"{name}.json", doc)
+
+
+def _bilingual(block, where: str, out: list[str]) -> None:
+    if not isinstance(block, dict):
+        out.append(f"{where} is missing")
+        return
+    for lang in LANGUAGES:
+        if not block.get(lang):
+            out.append(f"{where} missing {lang}")
 
 
 # ---------------------------------------------------------------------------
@@ -112,9 +155,7 @@ def todos_not_bilingual(docs: dict[str, dict]) -> list[str]:
 
     def visit(where, node):
         if isinstance(node, dict) and isinstance(node.get("todo"), dict):
-            for lang in LANGUAGES:
-                if not node["todo"].get(lang):
-                    missing.append(f"{where}.todo missing {lang}")
+            _bilingual(node["todo"], f"{where}.todo", missing)
 
     _walk(docs, visit)
     return missing
@@ -123,7 +164,7 @@ def todos_not_bilingual(docs: dict[str, dict]) -> list[str]:
 def bad_role_ids(docs: dict[str, dict]) -> list[str]:
     """They end up in a QR code as "#audio/ko", so keep them boring."""
     return [f"role id {rid!r} is not url-safe" for rid in station_ids(docs)
-            if not re.fullmatch(r"[a-z][a-z0-9-]*", rid)]
+            if not ID.fullmatch(rid)]
 
 
 def roles_without_content(docs: dict[str, dict]) -> list[str]:
@@ -132,88 +173,93 @@ def roles_without_content(docs: dict[str, dict]) -> list[str]:
             if rid not in docs]
 
 
-def layers_out_of_step(docs: dict[str, dict]) -> list[str]:
-    """A declared layer is complete; an undeclared one is absent.
+def bad_pages(docs: dict[str, dict]) -> list[str]:
+    """Ids, kinds, names and Next targets.
 
-    Pinned in both directions. `misc` is questions and policies with no
-    equipment behind it, so it declares none of them -- and a tab offering
-    an empty checklist is worse than no tab at all. The other way round, a
-    layer sitting in a file that no role declares is content nothing shows.
+    A page is free to be empty or hidden. What it may not be is nameless,
+    of a kind nothing can draw, or pointing its Next button at a page that
+    does not exist -- a dead end is worse than no button at all.
     """
     problems: list[str] = []
-    for role in roles(docs):
-        rid = role.get("id")
-        data = docs.get(rid)
-        if data is None:
+    for rid in station_ids(docs):
+        doc = docs.get(rid)
+        if doc is None:
             continue
-        declared = set(role.get("layers") or [])
-        for unknown in sorted(declared - set(LAYERS)):
-            problems.append(f"{rid} declares an unknown layer {unknown!r}")
-        for layer in LAYERS:
-            if layer in declared:
-                if not data.get(layer):
-                    problems.append(f"{rid} declares {layer} but has none")
-            elif layer in data:
-                problems.append(
-                    f"{rid} carries a {layer} it does not declare, "
-                    f"so nothing shows it")
+        seen: set[str] = set()
+        ids = {p.get("id") for p in pages(doc)}
+        for i, page in enumerate(pages(doc)):
+            where = f"{rid}.pages[{i}]"
+            pid = page.get("id")
+            if not isinstance(pid, str) or not ID.fullmatch(pid):
+                problems.append(f"{where}.id {pid!r} is not url-safe")
+            elif pid in seen:
+                problems.append(f"{where}.id {pid!r} is used twice in {rid}")
+            else:
+                seen.add(pid)
+
+            kind = page.get("kind")
+            if kind not in KINDS:
+                problems.append(f"{where}.kind {kind!r} is not one of "
+                                f"{', '.join(sorted(KINDS))}")
+            _bilingual(page.get("label"), f"{where}.label", problems)
+            for optional in ("blurb", "lede"):
+                if page.get(optional) is not None:
+                    _bilingual(page[optional], f"{where}.{optional}", problems)
+
+            nxt = page.get("next")
+            if nxt is not None:
+                if nxt == pid:
+                    problems.append(f"{where}.next points at itself")
+                elif nxt not in ids:
+                    problems.append(f"{where}.next points at {nxt!r}, "
+                                    f"which is not a page in {rid}")
+            if kind in CONTENTLESS and page.get("items"):
+                problems.append(f"{where} is a {kind} page and cannot hold items")
     return problems
 
 
-def incomplete_layers(docs: dict[str, dict]) -> list[str]:
-    """Every declared layer, in both languages, all the way down."""
+def incomplete_items(docs: dict[str, dict]) -> list[str]:
+    """Every item a page does carry, in both languages, all the way down."""
     problems: list[str] = []
-    for role in roles(docs):
-        rid = role.get("id")
-        data = docs.get(rid)
-        if data is None:
+    for rid in station_ids(docs):
+        doc = docs.get(rid)
+        if doc is None:
             continue
-        for layer in role.get("layers") or []:
-            fields = LAYERS.get(layer)
+        for page in pages(doc):
+            fields = KINDS.get(page.get("kind"))
             if not fields:
                 continue
-            for i, entry in enumerate(data.get(layer) or []):
-                for field in fields:
-                    block = entry.get(field)
-                    if not isinstance(block, dict):
-                        problems.append(f"{rid}.{layer}[{i}] has no {field}")
-                        continue
-                    for lang in LANGUAGES:
-                        if not block.get(lang):
-                            problems.append(
-                                f"{rid}.{layer}[{i}].{field} missing {lang}")
-
-        for i, prob in enumerate(data.get("problems") or []
-                                 if "problems" in (role.get("layers") or []) else []):
-            if not prob.get("steps"):
-                problems.append(f"{rid}.problems[{i}] has no steps")
-            for j, step in enumerate(prob.get("steps") or []):
-                for lang in LANGUAGES:
-                    if not step.get(lang):
-                        problems.append(
-                            f"{rid}.problems[{i}].steps[{j}] missing {lang}")
+            where = f"{rid}.{page.get('id')}"
+            for i, item in enumerate(page.get("items") or []):
+                for name in fields:
+                    _bilingual(item.get(name), f"{where}[{i}].{name}", problems)
+                if page["kind"] != "problems":
+                    continue
+                if not item.get("steps"):
+                    problems.append(f"{where}[{i}] has no steps")
+                for j, step in enumerate(item.get("steps") or []):
+                    _bilingual(step, f"{where}[{i}].steps[{j}]", problems)
     return problems
 
 
 def missing_home_page(docs: dict[str, dict]) -> list[str]:
-    """The station's front page is the landing view, so it is never empty."""
+    """The station's front page is the landing view, so it is never empty.
+
+    Home is deliberately not one of the `pages`: it cannot be reordered
+    away, hidden, or deleted, because it is what a QR sticker lands on.
+    """
     problems: list[str] = []
     for rid in station_ids(docs):
-        data = docs.get(rid)
-        if data is None:
+        doc = docs.get(rid)
+        if doc is None:
             continue
-        intro = data.get("intro") or {}
-        for lang in LANGUAGES:
-            if not intro.get(lang):
-                problems.append(f"{rid}.intro missing {lang}")
-        faq = data.get("faq") or []
+        _bilingual(doc.get("intro"), f"{rid}.intro", problems)
+        faq = doc.get("faq") or []
         if not faq:
             problems.append(f"{rid} has no questions on its front page")
         for i, item in enumerate(faq):
             for key in ("q", "a"):
-                for lang in LANGUAGES:
-                    if not (item.get(key) or {}).get(lang):
-                        problems.append(f"{rid}.faq[{i}].{key} missing {lang}")
+                _bilingual(item.get(key), f"{rid}.faq[{i}].{key}", problems)
     return problems
 
 
@@ -221,18 +267,19 @@ def component_shaped_problem_titles(docs: dict[str, dict]) -> list[str]:
     """Titles describe what the volunteer notices, not what the gear is.
 
     A page called "Gate" only helps someone who already knows the word.
-    The layer exists for the volunteer who does not, so each title has to
+    The kind exists for the volunteer who does not, so each title has to
     read as a complaint.
     """
     bad: list[str] = []
-    for role in roles(docs):
-        if "problems" not in (role.get("layers") or []):
-            continue
-        for prob in (docs.get(role["id"]) or {}).get("problems") or []:
-            title = (prob.get("title") or {}).get("en") or ""
-            if len(title.split()) < 3:
-                bad.append(f"{role['id']}: {title!r} reads like a component, "
-                           f"not a symptom")
+    for rid in station_ids(docs):
+        for page in pages(docs.get(rid) or {}):
+            if page.get("kind") != "problems":
+                continue
+            for item in page.get("items") or []:
+                title = (item.get("title") or {}).get("en") or ""
+                if title and len(title.split()) < 3:
+                    bad.append(f"{rid}: {title!r} reads like a component, "
+                               f"not a symptom")
     return bad
 
 
@@ -255,9 +302,7 @@ def guides_missing_language(docs: dict[str, dict]) -> list[str]:
     missing: list[str] = []
     for group in ("pages", "screens"):
         for key, entry in ((docs.get("guides") or {}).get(group) or {}).items():
-            for lang in LANGUAGES:
-                if not (entry.get("body") or {}).get(lang):
-                    missing.append(f"guides.{group}.{key} body missing {lang}")
+            _bilingual(entry.get("body"), f"guides.{group}.{key} body", missing)
     return missing
 
 
@@ -267,17 +312,17 @@ def unguided_channel_pages(docs: dict[str, dict]) -> list[str]:
 
     if "guides" not in docs:
         return []
-    pages = (docs["guides"].get("pages")) or {}
+    known = (docs["guides"].get("pages")) or {}
     return [f"no guide written for channel tab {name}"
-            for name in CHAN_PAGES.values() if name not in pages]
+            for name in CHAN_PAGES.values() if name not in known]
 
 
 def broken_diagrams(docs: dict[str, dict], root: Path | None = None) -> list[str]:
-    """A diagram is optional, but a broken one is a broken image on a tablet.
+    """A picture is optional, but a broken one is a broken image on a tablet.
 
-    `root` is the web root a `src` is relative to. Without one only the
-    bilingual alt text is checked, because there is nothing to resolve
-    against -- a church's own drawing may legitimately not be here yet.
+    `root` is the web root a `src` is relative to. Uploaded images live
+    outside it -- `img/local/` in a checkout, the override folder on the
+    booth machine -- so those are checked for alt text and left alone.
     """
     problems: list[str] = []
 
@@ -287,11 +332,11 @@ def broken_diagrams(docs: dict[str, dict], root: Path | None = None) -> list[str
         fig = node.get("diagram")
         if not isinstance(fig, dict) or not fig.get("src"):
             return
-        for lang in LANGUAGES:
-            if not (fig.get("alt") or {}).get(lang):
-                problems.append(f"{where}.diagram.alt missing {lang}")
-        if root is not None and not (root / fig["src"]).is_file():
-            problems.append(f"{where}.diagram -> {fig['src']} does not exist")
+        _bilingual(fig.get("alt"), f"{where}.diagram.alt", problems)
+        src = fig["src"]
+        if root is not None and not src.startswith("img/local/") \
+                and not (root / src).is_file():
+            problems.append(f"{where}.diagram -> {src} does not exist")
 
     _walk(docs, visit)
     return problems
@@ -302,8 +347,8 @@ ALL_CHECKS = (
     todos_not_bilingual,
     bad_role_ids,
     roles_without_content,
-    layers_out_of_step,
-    incomplete_layers,
+    bad_pages,
+    incomplete_items,
     missing_home_page,
     component_shaped_problem_titles,
     bad_levels,

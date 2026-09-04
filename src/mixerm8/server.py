@@ -47,6 +47,50 @@ def override_dir() -> Path:
     return config.config_dir() / "data"
 
 
+# What an uploaded picture may be. Deliberately short: these are served to a
+# tablet as <img src>, and the list is an allowlist rather than a denylist so
+# a new extension is a decision somebody makes rather than one that leaks in.
+IMAGE_TYPES = {".svg": "image/svg+xml", ".png": "image/png", ".jpg": "image/jpeg",
+               ".jpeg": "image/jpeg", ".webp": "image/webp", ".gif": "image/gif"}
+
+
+def override_img_dir() -> Path:
+    """A church's own pictures, next to its own wording.
+
+    This widens the override from JSON-only, which was a deliberate choice
+    once: a second lookup was judged not to pay for itself. Uploading a photo
+    of your own booth changes that -- a drawing of the actual room is worth
+    more than any generic diagram -- so `/img/local/<one filename>` resolves
+    here. It stays the same shape as the JSON lookup and not a file server:
+    one path prefix, one filename, no slashes, no "..", and an extension that
+    has to be on IMAGE_TYPES.
+    """
+    return config.config_dir() / "img"
+
+
+def override_file(path: str) -> tuple[Path, str] | None:
+    """Map a URL onto this church's own copy of a file, or None.
+
+    Two prefixes, one rule. `/data/<name>.json` is the wording and
+    `/img/local/<name>` is the pictures; both take a single filename with a
+    known extension and nothing else.
+    """
+    if path.startswith("/data/"):
+        name = path[len("/data/"):]
+        if name.endswith(".json") and "/" not in name and ".." not in name:
+            return override_dir() / name, "application/json; charset=utf-8"
+        return None
+
+    if path.startswith("/img/local/"):
+        name = path[len("/img/local/"):]
+        if "/" in name or ".." in name or not name:
+            return None
+        ctype = IMAGE_TYPES.get(Path(name).suffix.lower())
+        if ctype:
+            return override_img_dir() / name, ctype
+    return None
+
+
 def resolve_within(root: Path, path: str) -> Path | None:
     """Resolve a URL path under `root`, or None if it climbs out.
 
@@ -129,17 +173,13 @@ class Handler(http.server.BaseHTTPRequestHandler):
         if path in ("/", ""):
             path = "/index.html"
 
-        # A church's own wording wins over the bundled example. Restricted to
-        # a single "*.json" filename so this cannot become a second file
-        # server rooted outside the web root.
-        if path.startswith("/data/"):
-            name = path[len("/data/"):]
-            if name.endswith(".json") and "/" not in name and ".." not in name:
-                local = override_dir() / name
-                if local.is_file():
-                    self._send_bytes(local.read_bytes(),
-                                     "application/json; charset=utf-8")
-                    return
+        # A church's own wording and pictures win over what shipped.
+        override = override_file(path)
+        if override:
+            local, ctype = override
+            if local.is_file():
+                self._send_bytes(local.read_bytes(), ctype)
+                return
 
         target = resolve_within(self.root, path)
         if target is None:

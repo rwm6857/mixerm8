@@ -170,7 +170,8 @@ def test_an_unknown_file_is_refused(guide):
 
 def test_the_draft_is_checked_against_the_same_rules_as_ci(guide):
     broken = json.loads(json.dumps(guide.docs["media"]))
-    del broken["equipment"][0]["todo"]        # leaves a "____" unexplained
+    gear = next(p for p in broken["pages"] if p["id"] == "equipment")
+    del gear["items"][0]["todo"]              # leaves a "____" unexplained
     guide.replace("media", broken)
     assert any("blank with no 'todo'" in p for p in guide.problems())
 
@@ -292,3 +293,128 @@ def test_saving_writes_and_clears(tmp_path, monkeypatch):
             written.read_text("utf-8")
     finally:
         srv.shutdown()
+
+
+# ---------------------------------------------------------------------------
+# Pictures. Uploading one widened the bridge's override folder, which had been
+# JSON-only on the grounds that a second lookup did not pay for itself. A photo
+# of the actual booth is worth more than any generic diagram, so it now does --
+# but only as the same shape of lookup, not as a file server.
+# ---------------------------------------------------------------------------
+
+def test_a_filename_off_a_camera_becomes_a_boring_one():
+    assert editor.slug_filename("Booth Photo (1).PNG") == "booth-photo-1.png"
+    assert editor.slug_filename("한글.jpg") == "image.jpg"
+    assert editor.slug_filename("../../etc/passwd.png") == "passwd.png"
+
+
+def test_only_pictures_are_accepted():
+    for name in ("evil.php", "notes.txt", "run.exe", "guide.json", "noextension"):
+        assert editor.slug_filename(name) is None, name
+    for name in ("a.svg", "a.png", "a.jpg", "a.jpeg", "a.webp", "a.gif"):
+        assert editor.slug_filename(name), name
+
+
+def test_a_picture_too_big_for_the_church_wifi_is_refused(monkeypatch, tmp_path):
+    monkeypatch.setattr(editor.config, "config_dir", lambda: tmp_path)
+    guide = editor.Guide(editor.LOCAL)
+    with pytest.raises(ValueError, match="limit"):
+        guide.save_image("big.png", b"x" * (editor.MAX_IMAGE_BYTES + 1))
+
+
+def test_a_picture_is_addressed_the_same_way_whichever_target_wrote_it(
+        monkeypatch, tmp_path):
+    """One `src` in the JSON, two places on disk.
+
+    A guide written on a Mac and copied onto the booth machine has to keep
+    working, so the path in the file cannot name either location.
+    """
+    monkeypatch.setattr(editor.config, "config_dir", lambda: tmp_path)
+    for target in (editor.REPO, editor.LOCAL):
+        guide = editor.Guide(target)
+        assert guide.save_image("Booth.png", b"x") == "img/local/booth.png"
+        assert (guide.image_dir() / "booth.png").is_file()
+        (guide.image_dir() / "booth.png").unlink()
+
+
+def test_uploaded_pictures_are_never_committed():
+    """A photo of your own booth is as much yours as the wording is."""
+    import subprocess
+
+    guide = editor.Guide(editor.REPO)
+    folder = guide.image_dir()
+    folder.mkdir(parents=True, exist_ok=True)
+    probe = folder / "test-probe.png"
+    probe.write_bytes(b"x")
+    try:
+        out = subprocess.run(("git", "check-ignore", str(probe)),
+                             cwd=folder.parents[2], capture_output=True, text=True)
+        assert out.returncode == 0, f"{probe} is not gitignored"
+    finally:
+        probe.unlink()
+
+
+def test_the_override_serves_pictures_but_only_one_filename_of_them():
+    from mixerm8.server import override_file
+
+    assert override_file("/img/local/booth.png")[1] == "image/png"
+    assert override_file("/data/media.local.json")[1].startswith("application/json")
+    for path in ("/img/local/../../secret.png", "/img/local/sub/booth.png",
+                 "/img/local/notes.txt", "/img/local/", "/img/booth.png",
+                 "/data/media.local.yaml", "/data/sub/media.json"):
+        assert override_file(path) is None, path
+
+
+def test_uploading_and_reading_a_picture_back(tmp_path, monkeypatch):
+    srv, request = _running_editor(tmp_path, monkeypatch)
+    try:
+        with request("/api/target", "POST", body=json.dumps({"target": "local"})) as r:
+            r.read()
+        # percent-encoded, because that is how a file picker's name arrives
+        with request("/api/image/Booth%20Photo.PNG", "POST", body=b"not-really-a-png") as r:
+            out = json.loads(r.read())
+        assert out["src"] == "img/local/booth-photo.png"
+        assert out["images"] == ["img/local/booth-photo.png"]
+        assert (tmp_path / "img" / "booth-photo.png").is_file()
+
+        with request("/preview/img/local/booth-photo.png") as r:
+            assert r.status == 200
+            assert r.read() == b"not-really-a-png"
+        with request("/preview/img/local/nothing.png") as r:
+            assert r.status == 404
+    finally:
+        srv.shutdown()
+
+
+def test_an_uploaded_picture_cannot_climb_out_of_its_folder(tmp_path, monkeypatch):
+    srv, request = _running_editor(tmp_path, monkeypatch)
+    try:
+        with request("/api/image/evil.php", "POST", body=b"<?php") as r:
+            assert r.status == 400
+            assert b"not a picture" in r.read()
+        for path in ("/preview/img/local/..%2f..%2fpyproject.toml",
+                     "/preview/img/local/../../pyproject.toml"):
+            with request(path) as r:
+                assert r.status in (403, 404), f"{path} returned {r.status}"
+    finally:
+        srv.shutdown()
+
+
+# ---------------------------------------------------------------------------
+# Pages, from the editor's side.
+# ---------------------------------------------------------------------------
+
+def test_adding_a_page_leaves_the_guide_valid(guide):
+    """The bug this whole model exists to fix.
+
+    Turning a layer on used to declare a tab whose content did not exist,
+    which the rules rejected and the editor gave you no way to fill. A new
+    page has to be legal the moment it is born, or adding one is a trap.
+    """
+    doc = json.loads(json.dumps(guide.docs["audio"]))
+    doc["pages"].append({"id": "stage-box", "kind": "equipment",
+                         "label": {"en": "Stage box", "ko": "스테이지 박스"},
+                         "items": []})
+    guide.replace("audio", doc)
+    assert guide.problems() == []
+    assert "stage-box" not in [p["id"] for p in validate.visible_pages(doc)]

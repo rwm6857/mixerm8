@@ -1,5 +1,5 @@
 {
-  "version": 1,
+  "version": 3,
   "role": "misc",
   "note": {
     "en": "Example wording. Copy this to misc.local.json and edit that copy — it is never committed. A run of four underscores marks something that still needs filling in for your church. Almost everything on this page is one of those: how a church runs its rota is not something this file can guess.",
@@ -130,5 +130,7 @@
         "ko": "부스에 있는 화면이 아니라 인터넷에 올라온 사본을 보고 계시기 때문입니다. 부스 태블릿은 미디어 컴퓨터에서 작은 프로그램이 콘솔을 지켜보며 화면을 따라갑니다. 그 외의 내용은 어느 쪽에서 보든 똑같이 작동합니다."
       }
     }
-  ]
+  ],
+
+  "pages": []
 }

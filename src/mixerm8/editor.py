@@ -34,17 +34,34 @@ from __future__ import annotations
 import http.server
 import json
 import mimetypes
+import re
 import subprocess
 import sys
 import threading
 import unicodedata
+import urllib.parse
 from pathlib import Path
 
 from . import config, validate
-from .server import Server, resolve_within, webroot
+from .server import (
+    IMAGE_TYPES,
+    Server,
+    override_file,
+    override_img_dir,
+    resolve_within,
+    webroot,
+)
 
 REPO, LOCAL = "repo", "local"
 DEFAULT_PORT = 8181
+
+# Uploaded pictures are addressed as "img/local/<name>" whichever target is
+# in use. In a checkout that is docs/img/local/, which is gitignored; on the
+# booth machine it is the override folder. One path in the JSON, two places
+# on disk, resolved the same way the wording already is -- so a guide written
+# on a Mac and copied to the booth keeps working without a rewrite.
+IMAGE_PREFIX = "img/local/"
+MAX_IMAGE_BYTES = 4 * 1024 * 1024
 
 # Same as ruff's line-length for this repo. Measured in columns rather than
 # characters, because a Korean glyph occupies two of them and half of every
@@ -133,6 +150,21 @@ def local_data_dir() -> Path:
     return config.config_dir() / "data"
 
 
+def slug_filename(name: str) -> str | None:
+    """A safe, boring filename, or None if it is not a picture we will serve.
+
+    Uploads come from a file picker, so the name is whatever the camera or
+    the phone called it -- spaces, accents, occasionally a slash. It is
+    reduced to the same shape as everything else in these folders.
+    """
+    stem = Path(name).name
+    suffix = Path(stem).suffix.lower()
+    if suffix not in IMAGE_TYPES:
+        return None
+    base = re.sub(r"[^a-z0-9]+", "-", Path(stem).stem.lower()).strip("-")
+    return f"{base or 'image'}{suffix}"
+
+
 class Guide:
     """Every guide file, in memory, with somewhere to put it back."""
 
@@ -151,6 +183,34 @@ class Guide:
         if self.target == LOCAL:
             return local_data_dir() / f"{name}.local.json"
         return repo_data_dir() / f"{name}.json"
+
+    def image_dir(self) -> Path:
+        """Where an upload lands. Both are excluded from git on purpose: a
+        photo of your own booth is as much yours as the wording is."""
+        if self.target == LOCAL:
+            return override_img_dir()
+        return repo_data_dir().parent / "img" / "local"
+
+    def save_image(self, name: str, blob: bytes) -> str:
+        safe = slug_filename(name)
+        if safe is None:
+            raise ValueError(f"{name!r} is not a picture MixerM8 will serve "
+                             f"({', '.join(sorted(IMAGE_TYPES))})")
+        if len(blob) > MAX_IMAGE_BYTES:
+            raise ValueError(f"that picture is {len(blob) // 1024}KB; the limit "
+                             f"is {MAX_IMAGE_BYTES // 1024}KB, because it has to "
+                             f"load on a tablet over the church wifi")
+        folder = self.image_dir()
+        folder.mkdir(parents=True, exist_ok=True)
+        (folder / safe).write_bytes(blob)
+        return IMAGE_PREFIX + safe
+
+    def images(self) -> list[str]:
+        folder = self.image_dir()
+        if not folder.is_dir():
+            return []
+        return sorted(IMAGE_PREFIX + f.name for f in folder.iterdir()
+                      if f.is_file() and f.suffix.lower() in IMAGE_TYPES)
 
     def set_target(self, target: str) -> None:
         if not self.can(target):
@@ -299,8 +359,10 @@ class EditorHandler(http.server.BaseHTTPRequestHandler):
         self._send(path.read_bytes(), ctype)
 
     def _body(self):
-        length = int(self.headers.get("Content-Length") or 0)
-        return json.loads(self.rfile.read(length) or b"null")
+        return json.loads(self._raw() or b"null")
+
+    def _raw(self) -> bytes:
+        return self.rfile.read(int(self.headers.get("Content-Length") or 0))
 
     def _is_local(self) -> bool:
         """Only this machine's browser may talk to a server that writes files.
@@ -345,6 +407,13 @@ class EditorHandler(http.server.BaseHTTPRequestHandler):
         try:
             if path.startswith("/api/doc/"):
                 g.replace(path[len("/api/doc/"):], self._body())
+            elif path.startswith("/api/image/"):
+                # The name came off a file picker and through a URL, so it
+                # arrives percent-encoded; "Booth Photo.png" is a normal name.
+                name = urllib.parse.unquote(path[len("/api/image/"):])
+                src = g.save_image(name, self._raw())
+                self._json({"src": src, "images": g.images(), **self._state()})
+                return
             elif path == "/api/save":
                 written = g.save()
                 self._json({"written": written, **self._state()})
@@ -357,6 +426,8 @@ class EditorHandler(http.server.BaseHTTPRequestHandler):
                 self.send_error(404)
                 return
             self._json(self._state())
+        except (BrokenPipeError, ConnectionResetError):
+            pass    # the browser navigated away mid-write
         except (KeyError, ValueError) as exc:
             self._json({"error": str(exc)}, 400)
         except OSError as exc:
@@ -371,6 +442,8 @@ class EditorHandler(http.server.BaseHTTPRequestHandler):
             "willWriteTo": {name: str(g.path_for(name)) for name in g.docs},
             "dirty": sorted(g.dirty),
             "problems": g.problems(),
+            "images": g.images(),
+            "imageDir": str(g.image_dir()),
             "git": git_status(g),
         }
 
@@ -397,6 +470,16 @@ class EditorHandler(http.server.BaseHTTPRequestHandler):
         # and renders in reference mode -- which is what a tablet on Pages
         # sees, and the honest thing to be previewing.
         if path in ("/state", "/events"):
+            self.send_error(404)
+            return
+
+        if path.startswith("/img/local/"):
+            name = urllib.parse.unquote(path[len("/img/local/"):])
+            local = self.guide.image_dir() / name
+            override = override_file("/img/local/" + name)
+            if override and local.is_file() and local.parent == self.guide.image_dir():
+                self._send(local.read_bytes(), override[1])
+                return
             self.send_error(404)
             return
 

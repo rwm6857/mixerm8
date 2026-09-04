@@ -188,12 +188,27 @@ file and reload the page.
     docs/data/roles.json       the stations, their colours and their tabs
     docs/data/guides.json      what each screen on the mixer does
 
-Each station file holds that station's home page (`intro` and `faq`) and
-whichever of `checklist`, `problems`, `flow` and `equipment` it declares in
-`roles.json`. `misc` declares none of them: it is questions and policies only.
-Media and Livestream declare `equipment` — one card per piece of gear, saying
-what it is, where it lives and what to do about it. The sound desk does not:
-its Mixer tab already does that job.
+Each station file holds that station's front page (`intro` and `faq`) and a
+list of `pages`. The pages are the tabs along the top, in the order they are
+written, under whatever names they are given:
+
+    { "id": "equipment",
+      "kind": "equipment",
+      "label": { "en": "Equipment", "ko": "장비" },
+      "blurb": { "en": "What each piece of gear here is.", "ko": "..." },
+      "next":  "order",
+      "items": [ ... ] }
+
+`kind` picks how it is drawn — `checklist`, `problems`, `flow`, `equipment`,
+`cards` for anything else, or `mixer` for the console screens. `next` puts a
+button at the foot of the page pointing at another one, so a first-timer can
+keep going without working out which tab comes next. `"hidden": true` keeps
+everything in a page but takes its tab away.
+
+A page with nothing in it hides its own tab, so adding a page now and filling
+it in over the next three Sundays is a normal thing to do rather than a broken
+guide. The front page is not one of the pages: it is always first and cannot
+be removed, because it is what a QR sticker lands on.
 
 **Do not edit those directly.** They are the generic example that ships with
 MixerM8. Your own version goes in a file with `.local` in the name, one per
@@ -213,6 +228,16 @@ your church, not on the internet. The `.local.json` files are listed in
 whereas anything you type into `guides.json` would be published the moment
 you push.
 
+### Bold, italic and blanks
+
+Inside any wording:
+
+    **bold**        *italic*        ++underline++        ____
+
+Four or more underscores is an unfilled blank, which is why underscores are
+not used for underlining. A blank shows as a visible gap and has to be
+explained by a `todo` next to it — see [Blanks](#blanks).
+
 ### The editor
 
 Editing JSON by hand is fine if you already do that for a living. If you do
@@ -230,8 +255,18 @@ on a Mac at home with no console anywhere nearby.
 
 It checks as you type. The bar along the bottom runs exactly the rules the
 test suite runs, so it tells you about a `____` with no explanation above it,
-a sentence translated into only one language, or a problem page titled after
-a component rather than a symptom, before you save rather than after you push.
+a sentence translated into only one language, a Next button pointing at a page
+that does not exist, or a problem page titled after a component rather than a
+symptom — before you save rather than after you push.
+
+You can **add, rename, reorder, hide and delete pages** from the tree on the
+left, choose what kind each one is, and pick where its Next button goes. Each
+text box has **B / I / U** buttons (and Cmd/Ctrl+B, I, U) plus one that drops
+in a `____` blank. Pictures upload straight from the form: they land in
+`docs/img/local/` in a checkout or `%APPDATA%/MixerM8/img/` on the booth
+machine, both of which git ignores, and are written into the guide as
+`img/local/<name>` either way — so a guide written on a Mac and copied across
+keeps working.
 
 There are two places it can save, and it says which at the top:
 

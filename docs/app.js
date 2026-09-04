@@ -55,44 +55,44 @@ const icon = (name) =>
  * handful of words the shell needs before any content has loaded. */
 const UI = {
   pick:       { en: "Which station are you on today?", ko: "오늘 어느 자리에서 봉사하시나요?" },
-  tabHome:    { en: "Home",      ko: "홈" },
-  tabCheck:   { en: "Before",    ko: "예배 전" },
-  tabProblem: { en: "Problems",  ko: "문제 해결" },
-  tabFlow:    { en: "Order",     ko: "진행 순서" },
-  tabEquip:   { en: "Equipment", ko: "장비" },
-  tabMixer:   { en: "Mixer",     ko: "믹서" },
-  navCheck:   { en: "What to do before the service starts.",
-                ko: "예배가 시작되기 전에 할 일입니다." },
-  navProblem: { en: "Something is wrong right now.",
-                ko: "지금 문제가 생겼을 때 보세요." },
-  navFlow:    { en: "The order of a normal Sunday, with times.",
-                ko: "평소 주일의 진행 순서와 시간입니다." },
-  navEquip:   { en: "What each piece of gear here is, and where it lives.",
-                ko: "이 자리의 각 장비가 무엇이고 어디에 있는지 알려줍니다." },
-  navMixer:   { en: "Every screen on the desk, and what it does.",
-                ko: "콘솔의 모든 화면과 그 기능입니다." },
-  ledeCheck:  { en: "Work down the list. Ticks clear themselves each day.",
-                ko: "위에서부터 하나씩 하세요. 체크는 매일 자동으로 지워집니다." },
-  ledeProblem:{ en: "Tap whatever matches what you are hearing.",
-                ko: "지금 들리는 상황에 맞는 항목을 누르세요." },
-  ledeFlow:   { en: "The order of a normal Sunday. Tap a step to open it.",
-                ko: "평소 주일의 진행 순서입니다. 각 단계를 눌러 펼치세요." },
-  ledeEquip:  { en: "Tap a box to read what it does and where it is.",
-                ko: "장비를 눌러 무슨 역할을 하고 어디에 있는지 확인하세요." },
-  ledeMixer:  { en: "Every screen on the desk, and what it does.",
-                ko: "콘솔의 모든 화면과 그 기능입니다." },
+  tabHome:    { en: "Home", ko: "홈" },
   faqHead:    { en: "Questions people ask", ko: "자주 묻는 질문" },
   openAll:    { en: "Open every step",  ko: "모두 펼치기" },
   closeAll:   { en: "Close every step", ko: "모두 접기" },
   reset:      { en: "Clear the ticks", ko: "체크 지우기" },
   back:       { en: "← Back", ko: "← 뒤로" },
+  next:       { en: "Next", ko: "다음" },
   done:       { en: "All done.", ko: "모두 완료했습니다." },
+};
+
+/* What a page says before anyone has written its own lede. A page can
+ * override this, and most of the shipped ones do; a page somebody added
+ * this morning gets something sensible rather than a blank strip. */
+const LEDE = {
+  checklist: { en: "Work down the list. Ticks clear themselves each day.",
+               ko: "위에서부터 하나씩 하세요. 체크는 매일 자동으로 지워집니다." },
+  problems:  { en: "Tap whatever matches what you are hearing.",
+               ko: "지금 들리는 상황에 맞는 항목을 누르세요." },
+  flow:      { en: "Tap a step to open it.", ko: "각 단계를 눌러 펼치세요." },
+  equipment: { en: "Tap a box to read what it does and where it is.",
+               ko: "장비를 눌러 무슨 역할을 하고 어디에 있는지 확인하세요." },
+  cards:     { en: "", ko: "" },
+  mixer:     { en: "Every screen on the desk, and what it does.",
+               ko: "콘솔의 모든 화면과 그 기능입니다." },
+};
+
+/* Which <section> draws each kind of page. Two pages of the same kind share
+ * a section and are told apart by the page they are handed, so a station can
+ * have two checklists without the app growing a second checklist view. */
+const DRAWN_BY = {
+  checklist: "checklist", problems: "problems", flow: "flow",
+  equipment: "equipment", cards: "cards", mixer: "now",
 };
 
 const state = {
   roles: null,
   role: null,        // the role object from roles.json
-  data: null,        // that role's home text, questions, and layers
+  data: null,        // that role's home text, questions and pages
   guides: null,      // console screen guides, sound station only
   cache: {},         // role id -> loaded content
   local: false,      // is any loaded file this church's own copy?
@@ -100,9 +100,8 @@ const state = {
   snap: null,
   lang: 0,
   follow: true,
-  view: "pick",
-  problem: null,     // index of an open problem
-  gear: null,        // index of an open equipment page
+  page: "pick",      // "pick", "home", or the id of a page in this station
+  open: null,        // index of the item opened on a drill-down page
   pinned: null,      // a console guide opened by hand
   flowOpen: false,   // has the reader asked for every step at once?
   ticks: new Set(),
@@ -127,7 +126,25 @@ const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) =>
  * It is shown as a gap rather than guessed at: a volunteer who reads
  * "select ____" asks someone, where one who reads an invented scene name
  * loads the wrong scene in the middle of a service. */
-const fill = (s) => esc(s).replace(/_{4,}/g, '<span class="blank">____</span>');
+/* Inline emphasis, written into the wording itself:
+ *
+ *     **bold**      *italic*      ++underline++
+ *
+ * Deliberately not `_underscores_`: four or more of those already mean an
+ * unfilled blank, and one character cannot carry both conventions without
+ * the guide occasionally underlining a gap instead of showing it. Applied
+ * after esc(), so the only tags that can reach the page are these three. */
+const RICH = [
+  [/\*\*([^*\n]+)\*\*/g, "<b>$1</b>"],
+  [/\*([^*\n]+)\*/g, "<i>$1</i>"],
+  [/\+\+([^+\n]+)\+\+/g, "<u>$1</u>"],
+];
+
+const fill = (s) => {
+  let out = esc(s).replace(/_{4,}/g, '<span class="blank">____</span>');
+  for (const [pattern, tag] of RICH) out = out.replace(pattern, tag);
+  return out;
+};
 
 const langs = () => LANGS[state.lang].show;
 const t = (key) => langs().map((l) => UI[key]?.[l]).filter(Boolean);
@@ -176,12 +193,14 @@ function wireDiagrams(root) {
   });
 }
 
+const BADGE = { ok: "Safe", caution: "Careful", danger: "Do not change", info: "Note" };
+
 /* ---------- cards (console screen guides) ---------- */
 
 function card(entry, extraClass = "") {
   if (!entry) return "";
   const level = entry.level || "info";
-  const badge = { ok: "Safe", caution: "Careful", danger: "Do not change", info: "Note" }[level];
+  const badge = BADGE[level];
 
   let html = `<div class="card ${extraClass}" data-level="${level}">`;
   html += `<span class="badge">${esc(badge)}</span>`;
@@ -195,6 +214,39 @@ function card(entry, extraClass = "") {
 
 function plainCard(level, title, body, action) {
   return card({ level, title: { en: title }, body: { en: body }, action: action ? { en: action } : null });
+}
+
+/* ---------- pages ----------
+ * A station's tabs are its `pages`, in the order they are written, named by
+ * whatever they are named in the file. Home is not one of them on purpose:
+ * it is what a QR sticker lands on, so it cannot be reordered away, hidden
+ * or deleted. Everything else is the guide's own business. */
+
+/* A page earns a tab when it is not hidden and has something in it. That
+ * second half is why adding a page no longer breaks the guide: a half-built
+ * page is invisible until it is worth reading, so somebody can add one on a
+ * Tuesday and fill it in over three Sundays. */
+function visiblePages() {
+  return (state.data?.pages || []).filter((pg) =>
+    !pg.hidden && (pg.kind === "mixer" ? state.role?.console : (pg.items || []).length));
+}
+
+function pageById(id) {
+  return (state.data?.pages || []).find((pg) => pg.id === id) || null;
+}
+
+function currentPage() {
+  return pageById(state.page);
+}
+
+function homeLabel() {
+  return state.data?.home?.label || UI.tabHome;
+}
+
+/* Home first, then the station's own pages. */
+function tabs() {
+  return [{ id: "home", label: homeLabel(), blurb: state.data?.home?.blurb },
+          ...visiblePages()];
 }
 
 /* ---------- station picker ---------- */
@@ -245,13 +297,12 @@ function renderHome() {
   // The nav repeats the tab bar in a form that explains itself. Someone who
   // has never been in the booth does not know what "Order" means until they
   // have opened it once; here it says so before they tap.
-  const nav = tabsFor(r).filter((tb) => tb.view !== "home");
-  $("home-nav").innerHTML = nav.map((tb) =>
-    `<button class="navcard" data-view="${tb.view}">` +
-    `<b>${esc(t1(tb.key))}</b><span>${esc(t1(tb.nav))}</span></button>`
+  $("home-nav").innerHTML = visiblePages().map((pg) =>
+    `<button class="navcard" data-page="${esc(pg.id)}">` +
+    `<b>${esc(one(pg.label))}</b><span>${esc(one(pg.blurb))}</span></button>`
   ).join("");
   $("home-nav").querySelectorAll(".navcard").forEach((el) => {
-    el.onclick = () => setView(el.dataset.view);
+    el.onclick = () => setPage(el.dataset.page);
   });
 
   const faq = d.faq || [];
@@ -291,21 +342,29 @@ function todayStamp() {
   return `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
 }
 
-function loadTicks(roleId) {
+function tickKey() {
+  return `ticks.${state.role.id}.${state.page}`;
+}
+
+function loadTicks() {
   // Ticks from last Sunday are worse than no ticks at all, so they expire.
-  const saved = store.get("ticks." + roleId, null);
+  const saved = store.get(tickKey(), null);
   if (!saved || saved.date !== todayStamp()) return new Set();
   return new Set(saved.done);
 }
 
 function saveTicks() {
-  store.set("ticks." + state.role.id, { date: todayStamp(), done: [...state.ticks] });
+  store.set(tickKey(), { date: todayStamp(), done: [...state.ticks] });
 }
 
-function renderChecklist() {
-  $("checklist-lede").textContent = t1("ledeCheck");
+function lede(pg) {
+  return one(pg.lede) || one(LEDE[pg.kind]);
+}
+
+function renderChecklist(pg) {
+  $("checklist-lede").textContent = lede(pg);
   $("reset").textContent = t1("reset");
-  const items = state.data.checklist || [];
+  const items = pg.items || [];
 
   $("checklist").innerHTML = items.map((item, i) => {
     const on = state.ticks.has(i);
@@ -327,12 +386,12 @@ function renderChecklist() {
 
 /* ---------- something is wrong ---------- */
 
-function renderProblems() {
-  $("problems-lede").textContent = t1("ledeProblem");
-  const list = state.data.problems || [];
+function renderProblems(pg) {
+  $("problems-lede").textContent = lede(pg);
+  const list = pg.items || [];
 
-  if (state.problem !== null && list[state.problem]) {
-    const p = list[state.problem];
+  if (state.open !== null && list[state.open]) {
+    const p = list[state.open];
     $("problems").innerHTML = "";
     // Emergency steps are never collapsed. Somebody is reading this while a
     // microphone squeals; a card they have to open first is a card in the way.
@@ -346,7 +405,7 @@ function renderProblems() {
       `<ol class="steps">` +
       (p.steps || []).map((s) => `<li>${lines(s)}</li>`).join("") +
       `</ol>` + diagram(p.diagram) + `</div>`;
-    $("pback").onclick = () => { state.problem = null; renderProblems(); };
+    $("pback").onclick = () => { state.open = null; renderProblems(pg); };
     wireDiagrams($("view-problems"));
     return;
   }
@@ -361,8 +420,8 @@ function renderProblems() {
 
   $("problems").querySelectorAll(".tile").forEach((el) => {
     el.onclick = () => {
-      state.problem = Number(el.dataset.i);
-      renderProblems();
+      state.open = Number(el.dataset.i);
+      renderProblems(pg);
       window.scrollTo(0, 0);
     };
   });
@@ -370,10 +429,10 @@ function renderProblems() {
 
 /* ---------- running order ---------- */
 
-function renderFlow() {
-  $("flow-lede").textContent = t1("ledeFlow");
+function renderFlow(pg) {
+  $("flow-lede").textContent = lede(pg);
   $("expand").textContent = t1(state.flowOpen ? "closeAll" : "openAll");
-  $("flow").innerHTML = (state.data.flow || []).map((s) =>
+  $("flow").innerHTML = (pg.items || []).map((s) =>
     `<li${s.todo ? ' class="unfilled"' : ""}>` +
     step({ summary: s.title, aside: one(s.when), body: lines(s.detail, "detail"),
            entry: s, open: state.flowOpen }) +
@@ -388,12 +447,12 @@ function renderFlow() {
  * its Mixer tab already is the sound desk's equipment page, and the boxes
  * behind the desk are not something a volunteer touches. */
 
-function renderEquipment() {
-  $("equipment-lede").textContent = t1("ledeEquip");
-  const list = state.data.equipment || [];
+function renderEquipment(pg) {
+  $("equipment-lede").textContent = lede(pg);
+  const list = pg.items || [];
 
-  if (state.gear !== null && list[state.gear]) {
-    const item = list[state.gear];
+  if (state.open !== null && list[state.open]) {
+    const item = list[state.open];
     $("equipment").innerHTML = "";
     // Not a <details>: there is one card on screen and nothing to collapse
     // it against, and "where is it" is the reason the page was opened.
@@ -408,7 +467,7 @@ function renderEquipment() {
       diagram(item.diagram) +
       (item.action ? `<div class="action">${lines(item.action)}</div>` : "") +
       `</div>`;
-    $("gback").onclick = () => { state.gear = null; renderEquipment(); };
+    $("gback").onclick = () => { state.open = null; renderEquipment(pg); };
     wireDiagrams($("view-equipment"));
     return;
   }
@@ -423,16 +482,37 @@ function renderEquipment() {
 
   $("equipment").querySelectorAll(".tile").forEach((el) => {
     el.onclick = () => {
-      state.gear = Number(el.dataset.i);
-      renderEquipment();
+      state.open = Number(el.dataset.i);
+      renderEquipment(pg);
       window.scrollTo(0, 0);
     };
   });
 }
 
+/* ---------- a page of plain cards ----------
+ * The general case. Checklists, problem pages and equipment are all this
+ * with a particular job; `cards` is what is left when a page does not have
+ * one -- a contact sheet, a policy, a page of photos of the room. */
+
+function renderCards(pg) {
+  $("cards-lede").textContent = lede(pg);
+  $("cards").innerHTML = (pg.items || []).map((item) =>
+    `<div class="card" data-level="${item.level || "info"}">` +
+    `<span class="badge">${esc(BADGE[item.level || "info"])}</span>` +
+    `<h2>${esc(one(item.title))}</h2>` +
+    (two(item.title) ? `<h2 class="ko">${esc(two(item.title))}</h2>` : "") +
+    todo(item) +
+    lines(item.body, "body") +
+    diagram(item.diagram) +
+    (item.action ? `<div class="action">${lines(item.action)}</div>` : "") +
+    `</div>`
+  ).join("");
+  wireDiagrams($("view-cards"));
+}
+
 /* ---------- the mixer (sound station only) ---------- */
 
-function renderNow() {
+function renderNow(pg) {
   const box = $("now");
   const where = $("where");
   const s = state.snap;
@@ -447,11 +527,11 @@ function renderNow() {
       `<button class="tile" data-key="${esc(key)}" data-level="${entry.level || "info"}">` +
       `<b>${esc(one(entry.title) || key)}</b></button>`;
     $("screens").innerHTML =
-      `<div class="group-head">${esc(t1("ledeMixer"))}</div>` +
+      `<div class="group-head">${esc(lede(pg || { kind: "mixer" }))}</div>` +
       Object.entries(g.pages).map(([k, v]) => tile(k, v)).join("") +
       Object.entries(g.screens).map(([k, v]) => tile(k, v)).join("");
     $("screens").querySelectorAll(".tile").forEach((el) => {
-      el.onclick = () => { state.pinned = el.dataset.key; renderNow(); window.scrollTo(0, 0); };
+      el.onclick = () => { state.pinned = el.dataset.key; renderNow(pg); window.scrollTo(0, 0); };
     });
   }
 
@@ -459,7 +539,7 @@ function renderNow() {
     const entry = g.pages[state.pinned] || g.screens[state.pinned];
     where.textContent = "";
     box.innerHTML = card(entry) + `<button class="chip" id="unpin">${esc(t1("back"))}</button>`;
-    $("unpin").onclick = () => { state.pinned = null; renderNow(); };
+    $("unpin").onclick = () => { state.pinned = null; renderNow(pg); };
     wireDiagrams($("view-now"));
     return;
   }
@@ -526,35 +606,45 @@ function setStatus(kind, label) {
 /* Which tabs a station has is declared per role in roles.json, because
  * `misc` is questions and policies with no equipment behind it, and a tab
  * bar offering an empty checklist is worse than no tab. */
-function tabsFor(role) {
-  const tabs = [{ view: "home", key: "tabHome", nav: "tabHome" }];
-  const layers = role.layers || [];
-  if (layers.includes("checklist")) tabs.push({ view: "checklist", key: "tabCheck", nav: "navCheck" });
-  if (layers.includes("problems")) tabs.push({ view: "problems", key: "tabProblem", nav: "navProblem" });
-  if (layers.includes("flow")) tabs.push({ view: "flow", key: "tabFlow", nav: "navFlow" });
-  if (layers.includes("equipment")) tabs.push({ view: "equipment", key: "tabEquip", nav: "navEquip" });
-  // The mixer tab exists for the sound station whether or not a bridge is
-  // answering: the screen guides are worth reading on a Tuesday too, and a
-  // dead bridge must never take a tab away mid-service.
-  if (role.console) tabs.push({ view: "now", key: "tabMixer", nav: "navMixer" });
-  return tabs;
-}
-
 function renderTabs() {
-  const tabs = tabsFor(state.role);
+  const row = tabs();
   const nav = $("tabs");
-  // One tab is not a choice, so misc gets no tab bar and the extra height
-  // goes to the questions instead.
-  nav.hidden = tabs.length < 2;
-  nav.style.gridTemplateColumns = `repeat(${tabs.length}, 1fr)`;
-  nav.dataset.count = String(tabs.length);
-  nav.innerHTML = tabs.map((tb) =>
-    `<button class="tab" data-view="${tb.view}" role="tab" ` +
-    `aria-selected="${state.view === tb.view}">${esc(t1(tb.key))}</button>`
+  // One tab is not a choice, so a station with no pages gets no tab bar and
+  // the extra height goes to its questions instead.
+  nav.hidden = row.length < 2;
+  nav.dataset.count = String(row.length);
+  // Up to five share the width evenly, which is the shape the booth tablet
+  // was designed around. Past that they take the width they need and the row
+  // scrolls, because squeezing eight names into 780px makes none of them
+  // readable and this is a page somebody reads at arm's length.
+  nav.classList.toggle("scrolls", row.length > 5);
+  nav.style.gridTemplateColumns = row.length > 5
+    ? `repeat(${row.length}, minmax(max-content, 1fr))` : `repeat(${row.length}, 1fr)`;
+  nav.innerHTML = row.map((pg) =>
+    `<button class="tab" data-page="${esc(pg.id)}" role="tab" ` +
+    `aria-selected="${state.page === pg.id}">${esc(one(pg.label))}</button>`
   ).join("");
   nav.querySelectorAll(".tab").forEach((el) => {
-    el.onclick = () => setView(el.dataset.view);
+    el.onclick = () => setPage(el.dataset.page);
   });
+  nav.querySelector('.tab[aria-selected="true"]')
+     ?.scrollIntoView({ block: "nearest", inline: "nearest" });
+}
+
+/* The Next button. A first-timer who has never been in the booth should be
+ * able to keep going without working out which tab comes after this one, so
+ * a page can name its own successor -- and a page that names nothing simply
+ * does not get a button. */
+function renderNext(pg) {
+  const box = $("pagenext");
+  const target = pg && pg.next ? pageById(pg.next) : null;
+  const shown = target && visiblePages().includes(target);
+  box.hidden = !shown;
+  if (!shown) return;
+  box.innerHTML = `<button class="nextbtn" type="button">` +
+    `<span class="nextlabel">${esc(t1("next"))}</span>` +
+    `<b>${esc(one(target.label))}</b><span class="arrow" aria-hidden="true">→</span></button>`;
+  box.querySelector(".nextbtn").onclick = () => setPage(target.id);
 }
 
 function renderLangs() {
@@ -575,16 +665,20 @@ function setLang(i) {
   else render();
 }
 
-const VIEWS = ["pick", "home", "checklist", "problems", "flow", "equipment", "now"];
+const SECTIONS = ["pick", "home", "checklist", "problems", "flow",
+                  "equipment", "cards", "now"];
 
-function setView(view) {
-  state.view = view;
-  if (view !== "problems") state.problem = null;
-  if (view !== "equipment") state.gear = null;
-  if (view !== "now") state.pinned = null;
-  VIEWS.forEach((v) => { $("view-" + v).hidden = v !== view; });
+/* `id` is "pick", "home", or the id of one of this station's own pages. */
+function setPage(id) {
+  state.page = id;
+  state.open = null;
+  if (state.role) state.ticks = loadTicks();
+  if (id !== "mixer") state.pinned = null;
+  const pg = pageById(id);
+  const section = id === "pick" || id === "home" ? id : DRAWN_BY[pg?.kind] || "home";
+  SECTIONS.forEach((name) => { $("view-" + name).hidden = name !== section; });
   $("tabs").querySelectorAll(".tab").forEach((el) => {
-    el.setAttribute("aria-selected", String(el.dataset.view === view));
+    el.setAttribute("aria-selected", String(el.dataset.page === id));
   });
   render();
   window.scrollTo(0, 0);
@@ -607,7 +701,7 @@ function render() {
   document.documentElement.lang = LANGS[state.lang].html;
   renderLangs();
 
-  if (state.view === "pick" || !state.role) {
+  if (state.page === "pick" || !state.role) {
     // The picker belongs to no station, so it wears the neutral palette.
     delete document.documentElement.dataset.theme;
     $("back").hidden = true;
@@ -619,12 +713,15 @@ function render() {
     $("back").hidden = false;
     $("brand-text").textContent = one(state.role.label) || state.role.id;
     renderTabs();
-    if (state.view === "home") renderHome();
-    if (state.view === "checklist") renderChecklist();
-    if (state.view === "problems") renderProblems();
-    if (state.view === "flow") renderFlow();
-    if (state.view === "equipment") renderEquipment();
-    if (state.view === "now") renderNow();
+    const pg = currentPage();
+    if (state.page === "home") renderHome();
+    else if (pg?.kind === "checklist") renderChecklist(pg);
+    else if (pg?.kind === "problems") renderProblems(pg);
+    else if (pg?.kind === "flow") renderFlow(pg);
+    else if (pg?.kind === "equipment") renderEquipment(pg);
+    else if (pg?.kind === "cards") renderCards(pg);
+    else if (pg?.kind === "mixer") renderNow(pg);
+    renderNext(pg);
   }
   setFoot();
 }
@@ -686,7 +783,7 @@ async function route() {
   const role = (state.roles?.roles || []).find((r) => r.id === roleId);
   if (!role) {
     state.role = null;
-    setView("pick");
+    setPage("pick");
     return;
   }
 
@@ -694,29 +791,28 @@ async function route() {
   // so cycling EN/KO does not kick you back to the top of the checklist.
   const switched = state.role?.id !== role.id;
   if (switched) {
-    state.problem = null;
-    state.gear = null;
+    state.open = null;
     state.pinned = null;
-    state.view = "home";
+    state.page = "home";
   }
 
   state.role = role;
-  state.ticks = loadTicks(role.id);
   try {
     state.data = await ensureRole(role);
   } catch {
     failed(`The guide for "${role.id}"`);
     state.role = null;
-    setView("pick");
+    setPage("pick");
     return;
   }
 
   // The station's own front page is the landing view, and the Mixer tab
   // never is: a station has to work when the bridge is down, so the first
   // thing a volunteer sees must not depend on a UDP reply.
-  const keep = VIEWS.includes(state.view) && state.view !== "pick";
-  const offered = tabsFor(role).some((tb) => tb.view === state.view);
-  setView(keep && offered ? state.view : "home");
+  // Stay where you were if that page still exists and is still shown --
+  // renaming a page or hiding it must not leave somebody on a dead tab.
+  const offered = tabs().some((pg) => pg.id === state.page);
+  setPage(offered && state.page !== "pick" ? state.page : "home");
 }
 
 /* ---------- live connection ---------- */
@@ -728,7 +824,7 @@ function connect() {
     state.snap = JSON.parse(e.data);
     setStatus(state.snap.ok ? "live" : "waiting",
               state.snap.ok ? "Following" : "No mixer");
-    if (state.view === "now") renderNow();
+    if (currentPage()?.kind === "mixer") renderNow(currentPage());
     setFoot();
   };
   src.onerror = () => {
@@ -772,29 +868,29 @@ window.addEventListener("hashchange", route);
 // One step up the hierarchy, not straight out of it: from a tab back to the
 // station's front page, and only from there back to the station list.
 $("back").onclick = () => {
-  if (state.role && state.view !== "home") { setView("home"); return; }
+  if (state.role && state.page !== "home") { setPage("home"); return; }
   state.role = null;
-  state.view = "pick";
+  state.page = "pick";
   location.hash = "";
-  setView("pick");
+  setPage("pick");
 };
 
 $("expand").onclick = () => {
   state.flowOpen = !state.flowOpen;
-  renderFlow();
+  renderFlow(currentPage());
 };
 
 $("follow").onchange = (e) => {
   state.follow = e.target.checked;
   store.set("follow", state.follow);
   state.pinned = null;
-  renderNow();
+  renderNow(currentPage());
 };
 
 $("reset").onclick = () => {
   state.ticks = new Set();
   saveTicks();
-  renderChecklist();
+  renderChecklist(currentPage());
 };
 
 boot();

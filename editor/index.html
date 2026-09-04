@@ -24,11 +24,14 @@
 </header>
 
 <main class="cols">
-  <nav class="tree" id="tree" aria-label="Everything in the guide"></nav>
+  <nav class="tree-col" aria-label="Everything in the guide">
+    <div class="filterbox">
+      <input id="filter" type="search" placeholder="Filter…  (press /)" aria-label="Filter">
+    </div>
+    <div class="tree" id="tree"></div>
+  </nav>
 
-  <section class="form" id="form">
-    <p class="empty">Pick something on the left to edit it.</p>
-  </section>
+  <section class="form" id="form"></section>
 
   <aside class="preview">
     <div class="preview-bar">
@@ -36,13 +39,18 @@
       <div class="seg" id="device" role="group" aria-label="Preview size"></div>
       <button class="btn" id="refresh" type="button" title="Reload the preview">↻</button>
     </div>
-    <div class="screen" id="screen">
+    <p class="nopreview" id="nopreview" hidden>
+      This page has no tab yet — it is hidden, or there is nothing in it.
+      The preview is showing the station's front page instead.
+    </p>
+    <div class="screen">
       <iframe id="frame" title="The tablet guide, with your unsaved edits"></iframe>
     </div>
   </aside>
 </main>
 
 <footer class="problems" id="problems"></footer>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <script src="editor.js"></script>
 </body>

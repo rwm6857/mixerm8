@@ -43,37 +43,53 @@ This is why the bridge serves its own copy, and why the app auto-detects
 "bridge" vs "reference" mode instead of being configured. Any proposal to have
 the Pages copy talk to the bridge runs into this; don't re-litigate it.
 
-## Four stations, and where the console sits
+## Four stations, and pages inside them
 
 The guide is the product; the console bridge is an add-on. Keep it that way —
 three of the four stations have no console at all.
 
-| Station | Data file | Palette | Tabs |
+| Station | Data file | Palette | Pages as shipped |
 | --- | --- | --- | --- |
 | `audio` | `docs/data/audio.json` | green | Home · Before · Problems · Order · Mixer |
 | `media` | `docs/data/media.json` | amber | Home · Before · Problems · Order · Equipment |
 | `livestream` | `docs/data/livestream.json` | violet | Home · Before · Problems · Order · Equipment |
 | `misc` | `docs/data/misc.json` | slate | Home |
 
-**A station's tabs come from `layers` in `roles.json`, never from an
-assumption.** `misc` is questions and policies with no equipment behind it, so
-it declares no layers and gets no tab bar — one tab is not a choice.
-`test_a_role_declares_exactly_the_layers_its_file_carries` pins it in both
-directions: a declared layer must be complete, and an undeclared one must be
-absent, because a tab offering an empty checklist is worse than no tab.
+**A station's tabs are its `pages`, in the order they are written.** Each
+page carries its own `id`, `kind`, bilingual `label`, optional `blurb` (the
+line on the front page) and `lede` (the line under the tab), an optional
+`next` naming the page its Next button goes to, and an optional `hidden`.
+Nothing about the tab bar is hardcoded any more, so a station can be given a
+fifth page, have two checklists, or call "Order" something else, without
+touching `app.js`.
 
-Every station has a **home page** (`intro` + `faq`) and the four optional
-layers are `checklist`, `problems`, `flow` and `equipment`.
-**Audio declares no `equipment` layer**: the Mixer tab already is the sound
+The `kind` decides which renderer draws it: `checklist`, `problems`, `flow`,
+`equipment`, `cards`, or `mixer`. `cards` is the general one — a titled card
+with severity, body, an optional action and an optional picture — and every
+other kind is that with a particular job. `mixer` holds no items; its content
+is `guides.json`.
+
+**An empty page hides its own tab rather than being an error.** This replaced
+the old rule that a declared layer had to be complete, which was right about
+the tablet and wrong about the editor: the only way to build a page is to
+make an empty one first, and the old rule made that a validation failure with
+no way to fix it from the UI. The guarantee a volunteer cares about — never a
+tab onto nothing — now lives in `validate.visible_pages()`, so a half-built
+page is invisible instead of invalid.
+`test_an_empty_page_hides_itself_instead_of_breaking_the_guide` pins it.
+
+**Home is not one of the pages, on purpose.** It is `intro` + `faq` at the top
+of the station file, it is always first, and it cannot be reordered away,
+hidden or deleted — it is what a QR sticker lands on.
+
+**Audio ships no `equipment` page**: the Mixer page already is the sound
 desk's equipment page, and the boxes behind the desk are not a volunteer's
 to touch. The two stations with no console needed somewhere to say what the
-gear in front of them is, which is what the layer is for — one card per box,
-with `where` a required field. A blank there is a fine answer (nobody wrote
-it down) but silence is not, so it is never simply absent. Two layers by design: the
-checklist is for the volunteer who has done this before, the problem pages are
-for the one who has not. Problem titles are *symptoms* ("Someone is too
+gear in front of them is — one card per box, with `where` a required field.
+A blank there is a fine answer (nobody wrote it down) but silence is not, so
+it is never simply absent. Problem titles are *symptoms* ("Someone is too
 quiet"), never component names ("Gate") — a page called "Gate" only helps
-someone who already knows the word, and that person is not who the layer is
+someone who already knows the word, and that person is not who the kind is
 for. `test_the_problem_pages_are_problem_shaped` guards it.
 
 Routing is the hash, because a QR sticker is the whole user interface:
@@ -146,6 +162,13 @@ to run, so a draft that would fail CI is reported in the editor before it
 is ever written. Adding a content rule means adding it there; the test that
 names it stays, as the argument for why it exists.
 
+**Emphasis is `**bold**`, `*italic*` and `++underline++`,** parsed in
+`fill()` after escaping, so those three tags are the only ones that can
+reach the page. Underscores are deliberately not used for it: four or more
+of them already mean an unfilled blank, and one character cannot carry both
+conventions without the guide occasionally underlining a gap instead of
+showing it.
+
 **Unfilled values are blanks, never guesses.** A run of four or more
 underscores renders as a visible gap (`fill()` in `app.js`), and the entry
 carries a bilingual `todo` saying what is missing.
@@ -168,6 +191,21 @@ would put "rewrite the guide" one URL away from every volunteer holding a
 tablet mid-service. The editor binds 127.0.0.1, checks the `Host` header,
 and never opens a socket to the console at all — so it runs on a Mac with
 no X32 in the building, which is where the writing actually happens.
+
+**Pages are managed from the tree.** Add one, name it, choose its kind,
+drag it earlier or later, hide it, point a Next button at it, delete it.
+A new page is valid the moment it exists — it seeds no `blurb` or `lede`,
+because seeding them empty would make a page that is invalid as soon as it
+is born — and the page-settings form carries "+ Add the first one" so an
+empty page is never a dead end.
+
+**Pictures upload to `img/local/`,** which is one path in the JSON and two
+places on disk: `docs/img/local/` in a checkout, `%APPDATA%/MixerM8/img/`
+on the booth machine. Both are outside git. This widened the bridge's
+override from JSON-only, which had been judged not to pay for itself — a
+photo of the actual booth changed that — but only into the same shape of
+lookup: one prefix, one filename, no slashes, no `..`, and an extension on
+`server.IMAGE_TYPES`. It is still not a file server.
 
 **Two places to save, and the difference is the whole point:**
 
@@ -211,7 +249,7 @@ surprising the next person who saves.
 
 ```bash
 pip install -e ".[dev]"    # stdlib only at runtime; this adds pytest + ruff
-pytest                     # 68 tests, ~7s
+pytest                     # 85 tests, ~8s
 ruff check .               # line length 100
 mixerm8 --discover         # find consoles on the network
 mixerm8 --edit             # the guide editor, localhost only, no console needed
