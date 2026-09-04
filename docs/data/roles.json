@@ -19,7 +19,7 @@
     {
       "id": "audio",
       "label": { "en": "Sound", "ko": "음향" },
-      "where": { "en": "The mixing desk in the booth", "ko": "부스의 믹싱 콘솔" },
+      "where": { "en": "", "ko": "" },
       "theme": "green",
       "icon": "fader",
       "console": true,
@@ -28,7 +28,7 @@
     {
       "id": "media",
       "label": { "en": "Media", "ko": "미디어" },
-      "where": { "en": "The computer running the projector", "ko": "프로젝터를 켜는 컴퓨터" },
+      "where": { "en": "", "ko": "" },
       "theme": "amber",
       "icon": "screen",
       "console": false,
@@ -37,7 +37,7 @@
     {
       "id": "livestream",
       "label": { "en": "Livestream", "ko": "실시간 방송" },
-      "where": { "en": "The streaming computer and cameras", "ko": "방송용 컴퓨터와 카메라" },
+      "where": { "en": "", "ko": "" },
       "theme": "violet",
       "icon": "camera",
       "console": false,
@@ -46,7 +46,7 @@
     {
       "id": "misc",
       "label": { "en": "Misc", "ko": "기타" },
-      "where": { "en": "Questions about serving here", "ko": "봉사에 관한 질문" },
+      "where": { "en": "", "ko": "" },
       "theme": "slate",
       "icon": "question",
       "console": false,
