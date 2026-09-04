@@ -47,6 +47,21 @@ def override_dir() -> Path:
     return config.config_dir() / "data"
 
 
+def resolve_within(root: Path, path: str) -> Path | None:
+    """Resolve a URL path under `root`, or None if it climbs out.
+
+    Compared as paths, not as a string prefix -- a sibling directory whose
+    name merely starts with the web root's would pass a prefix test. The
+    editor serves the same files from a second process, so it asks here
+    rather than keeping its own copy of the guard.
+    """
+    root = root.resolve()
+    target = (root / path.lstrip("/")).resolve()
+    if target != root and root not in target.parents:
+        return None
+    return target
+
+
 def local_ip() -> str:
     """Best guess at this machine's LAN address, for the printed URL."""
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -126,12 +141,8 @@ class Handler(http.server.BaseHTTPRequestHandler):
                                      "application/json; charset=utf-8")
                     return
 
-        root = self.root.resolve()
-        target = (root / path.lstrip("/")).resolve()
-        # Refuse anything that climbs out of the web root. Compared as paths,
-        # not as a string prefix -- a sibling directory whose name merely
-        # starts with the web root's would pass a prefix test.
-        if target != root and root not in target.parents:
+        target = resolve_within(self.root, path)
+        if target is None:
             self.send_error(403)
             return
         if not target.is_file():

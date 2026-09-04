@@ -24,6 +24,7 @@ than widening the encoder. `/node` is unsupported for exactly this reason.
 | --------------- | --------------------------------------- | ------------------------------ |
 | `docs/`         | The tablet app (vanilla HTML/CSS/JS)    | GitHub Pages + bundled in wheel |
 | `src/mixerm8/`  | The bridge (stdlib only)                | PyPI + PyInstaller exe         |
+| `editor/`       | The guide editor (vanilla HTML/CSS/JS)  | Bundled in wheel + exe, never Pages |
 | `content/`      | Source material, shipped nowhere        | —                              |
 | `packaging/`    | PyInstaller spec, Windows install script | —                             |
 
@@ -31,6 +32,10 @@ than widening the encoder. `/node` is unsupported for exactly this reason.
 directly; hatchling `force-include` copies it into the wheel as
 `mixerm8/webroot`, and the PyInstaller spec bundles it as `webroot`.
 `server.webroot()` resolves all three cases. Do not duplicate these files.
+
+`editor/` ships the same way minus Pages, and `editor.editorroot()` resolves
+it. It is **not** under `docs/` on purpose: Pages is a static host, so an
+editor served from there would be a Save button with nothing behind it.
 
 **GitHub Pages cannot host the live booth page.** It is HTTPS, and an HTTPS page
 may not open `http://`/`ws://` connections to a LAN address — mixed content.
@@ -46,8 +51,8 @@ three of the four stations have no console at all.
 | Station | Data file | Palette | Tabs |
 | --- | --- | --- | --- |
 | `audio` | `docs/data/audio.json` | green | Home · Before · Problems · Order · Mixer |
-| `media` | `docs/data/media.json` | amber | Home · Before · Problems · Order |
-| `livestream` | `docs/data/livestream.json` | violet | Home · Before · Problems · Order |
+| `media` | `docs/data/media.json` | amber | Home · Before · Problems · Order · Equipment |
+| `livestream` | `docs/data/livestream.json` | violet | Home · Before · Problems · Order · Equipment |
 | `misc` | `docs/data/misc.json` | slate | Home |
 
 **A station's tabs come from `layers` in `roles.json`, never from an
@@ -57,8 +62,14 @@ it declares no layers and gets no tab bar — one tab is not a choice.
 directions: a declared layer must be complete, and an undeclared one must be
 absent, because a tab offering an empty checklist is worse than no tab.
 
-Every station has a **home page** (`intro` + `faq`) and the three optional
-layers are `checklist`, `problems` and `flow`. Two layers by design: the
+Every station has a **home page** (`intro` + `faq`) and the four optional
+layers are `checklist`, `problems`, `flow` and `equipment`.
+**Audio declares no `equipment` layer**: the Mixer tab already is the sound
+desk's equipment page, and the boxes behind the desk are not a volunteer's
+to touch. The two stations with no console needed somewhere to say what the
+gear in front of them is, which is what the layer is for — one card per box,
+with `where` a required field. A blank there is a fine answer (nobody wrote
+it down) but silence is not, so it is never simply absent. Two layers by design: the
 checklist is for the volunteer who has done this before, the problem pages are
 for the one who has not. Problem titles are *symptoms* ("Someone is too
 quiet"), never component names ("Gate") — a page called "Gate" only helps
@@ -128,6 +139,13 @@ not load rather than leaving a broken-image icon on a tablet in a dark booth.
 `test_every_diagram_points_at_a_file_that_ships` catches a committed one that
 does not resolve.
 
+**The rules live in `src/mixerm8/validate.py`, not in the tests.**
+`tests/test_content.py` calls them and so does the editor, which is the
+point: a media director rewording a checklist in a browser has no `pytest`
+to run, so a draft that would fail CI is reported in the editor before it
+is ever written. Adding a content rule means adding it there; the test that
+names it stays, as the argument for why it exists.
+
 **Unfilled values are blanks, never guesses.** A run of four or more
 underscores renders as a visible gap (`fill()` in `app.js`), and the entry
 carries a bilingual `todo` saying what is missing.
@@ -135,6 +153,47 @@ carries a bilingual `todo` saying what is missing.
 fails the suite. The reason is concrete — the flow used to instruct volunteers
 to load "the Sunday scene", which nobody had confirmed exists, and loading the
 wrong scene resets every fader mid-service.
+
+## Editing the guide
+
+`mixerm8 --edit` opens a three-column editor: everything in the guide, a
+form for the entry, and the real tablet app beside it showing the unsaved
+draft. The preview is `docs/` served from the same files the bridge serves,
+answering `/data/*.json` from memory — so it is the guide, not a mock-up of
+it, and `app.js` needed no editor-shaped hooks to make that work.
+
+**It is a separate command from the bridge, and that is the design.** The
+bridge listens on the LAN so tablets can reach it; a write endpoint there
+would put "rewrite the guide" one URL away from every volunteer holding a
+tablet mid-service. The editor binds 127.0.0.1, checks the `Host` header,
+and never opens a socket to the console at all — so it runs on a Mac with
+no X32 in the building, which is where the writing actually happens.
+
+**Two places to save, and the difference is the whole point:**
+
+| Target | Writes | Who |
+| --- | --- | --- |
+| `repo` | `docs/data/<name>.json` | you, in a checkout; git's business |
+| `local` | `%APPDATA%/MixerM8/data/<name>.local.json` | the church, on the booth machine |
+
+`repo` is only offered in a source checkout, because a wheel and a frozen
+exe are both replaced wholesale by an update and wording written into one
+would be lost. **Local wording is not pushable, and the editor has no button
+that could make it so.** It is outside the repo in fact, not only by
+`.gitignore`, so no pull and no MixerM8 update overwrites it and no push
+publishes it. For `repo` the editor prints the git commands and stops;
+running them is yours, so you see the branch first.
+`test_the_editor_offers_no_way_to_commit_or_push` pins that every `git`
+call in `editor.py` names a read.
+
+**`editor.dumps()` is how a guide file is written, and the committed files
+are already in that form.** Short `{ "en": …, "ko": … }` blocks stay inline,
+long ones open up, measured in display columns because a Korean glyph is two
+of them. This is not tidiness: without it the first press of Save reformats
+all six files and buries the sentence somebody changed.
+`test_the_editor_writes_the_files_exactly_as_they_are` pins it — so a file
+hand-edited into a shape the editor would churn fails the suite rather than
+surprising the next person who saves.
 
 ## Constraints
 
@@ -152,9 +211,10 @@ wrong scene resets every fader mid-service.
 
 ```bash
 pip install -e ".[dev]"    # stdlib only at runtime; this adds pytest + ruff
-pytest                     # 37 tests, ~3s
+pytest                     # 68 tests, ~7s
 ruff check .               # line length 100
 mixerm8 --discover         # find consoles on the network
+mixerm8 --edit             # the guide editor, localhost only, no console needed
 python -m http.server -d docs 8000   # the app in reference mode, no mixer
 ```
 

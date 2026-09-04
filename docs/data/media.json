@@ -66,20 +66,14 @@
       }
     },
     {
-      "text": {
-        "en": "Turn on the computer and log in.",
-        "ko": "컴퓨터를 켜고 로그인하세요."
-      }
+      "text": { "en": "Turn on the computer and log in.", "ko": "컴퓨터를 켜고 로그인하세요." }
     },
     {
       "todo": {
         "en": "Fill in where this week's slides are kept, and who sends them.",
         "ko": "이번 주 슬라이드가 어디에 있고 누가 보내주는지 채워주세요."
       },
-      "text": {
-        "en": "Open this week's slides from ____.",
-        "ko": "____에서 이번 주 슬라이드를 여세요."
-      }
+      "text": { "en": "Open this week's slides from ____.", "ko": "____에서 이번 주 슬라이드를 여세요." }
     },
     {
       "text": {
@@ -159,10 +153,7 @@
     {
       "level": "caution",
       "title": { "en": "The slides will not advance", "ko": "슬라이드가 넘어가지 않습니다" },
-      "symptom": {
-        "en": "You click and nothing happens.",
-        "ko": "클릭해도 아무 일도 일어나지 않습니다."
-      },
+      "symptom": { "en": "You click and nothing happens.", "ko": "클릭해도 아무 일도 일어나지 않습니다." },
       "steps": [
         {
           "en": "Click once on the slide itself first. If you clicked on anything else, PowerPoint stopped listening to the keyboard.",
@@ -279,6 +270,77 @@
       "detail": {
         "en": "Press Escape to end the show, close the file, then turn the projector off. Leave the computer as you found it.",
         "ko": "Esc를 눌러 쇼를 종료하고 파일을 닫은 뒤 프로젝터를 끄세요. 컴퓨터는 원래 상태로 두세요."
+      }
+    }
+  ],
+
+  "equipment": [
+    {
+      "level": "ok",
+      "title": { "en": "The projector", "ko": "프로젝터" },
+      "todo": {
+        "en": "Fill in where the projector is and how it is switched on — a remote, a wall switch, or a button on the projector itself.",
+        "ko": "프로젝터가 어디에 있고 어떻게 켜는지 채워주세요 — 리모컨인지, 벽 스위치인지, 본체 버튼인지."
+      },
+      "where": { "en": "____", "ko": "____" },
+      "body": {
+        "en": "This is what puts the slides on the big screen. It takes a minute or two to warm up and about as long to cool down, so it goes on first and off last.",
+        "ko": "슬라이드를 큰 화면에 띄우는 장비입니다. 예열에 1~2분, 식는 데도 비슷한 시간이 걸리므로 가장 먼저 켜고 가장 나중에 끕니다."
+      },
+      "action": {
+        "en": "If the screen stays blank, press the Source or Input button until the computer appears.",
+        "ko": "화면이 계속 비어 있으면 Source 또는 Input 버튼을 눌러 컴퓨터 화면이 나올 때까지 바꾸세요."
+      }
+    },
+    {
+      "level": "ok",
+      "title": { "en": "The slides computer", "ko": "슬라이드 컴퓨터" },
+      "todo": {
+        "en": "Fill in where this computer is, and how someone signs in to it if it is locked.",
+        "ko": "이 컴퓨터가 어디에 있는지, 잠겨 있을 때 어떻게 로그인하는지 채워주세요."
+      },
+      "where": { "en": "____", "ko": "____" },
+      "body": {
+        "en": "The computer that runs the presentation. The projector is a second screen attached to it, not a copy of it — Windows key + P and Extend is what makes that true, and Windows forgets the setting every time it restarts.",
+        "ko": "발표를 실행하는 컴퓨터입니다. 프로젝터는 이 컴퓨터의 복사본이 아니라 두 번째 화면입니다 — Windows 키 + P를 눌러 '확장'을 선택하면 그렇게 되며, Windows는 재시작할 때마다 이 설정을 잊어버립니다."
+      },
+      "action": {
+        "en": "Leave it signed in and awake once you have set up. Sleep drops the projector.",
+        "ko": "설정을 마친 뒤에는 로그인 상태로 켜둔 채로 두세요. 절전 모드가 되면 프로젝터 화면이 꺼집니다."
+      }
+    },
+    {
+      "level": "caution",
+      "title": { "en": "The cable to the projector", "ko": "프로젝터로 가는 케이블" },
+      "todo": {
+        "en": "Fill in what kind of cable this is and where it runs — straight to the projector, or into a wall plate.",
+        "ko": "이 케이블이 어떤 종류이고 어디로 연결되는지 채워주세요 — 프로젝터로 바로 가는지, 벽면 단자로 가는지."
+      },
+      "where": { "en": "____", "ko": "____" },
+      "body": {
+        "en": "One cable carries the picture from the computer to the projector. If it is loose the picture flickers or drops out entirely, and it always seems to happen mid-song.",
+        "ko": "케이블 하나가 컴퓨터에서 프로젝터로 화면을 전달합니다. 헐거워지면 화면이 깜빡이거나 완전히 꺼지는데, 꼭 찬양 도중에 그런 일이 생깁니다."
+      },
+      "action": {
+        "en": "Push both ends in firmly rather than pulling it out to check. Never borrow this cable for a laptop.",
+        "ko": "확인하려고 빼지 말고 양쪽 끝을 단단히 밀어 넣으세요. 이 케이블을 노트북용으로 가져다 쓰지 마세요."
+      }
+    },
+    {
+      "level": "ok",
+      "title": { "en": "The clicker", "ko": "슬라이드 리모컨" },
+      "todo": {
+        "en": "Fill in where the clicker lives between services, so the next person can find it.",
+        "ko": "예배와 예배 사이에 리모컨을 어디에 두는지 채워주세요. 다음 사람이 찾을 수 있도록."
+      },
+      "where": { "en": "____", "ko": "____" },
+      "body": {
+        "en": "The handheld remote that advances the slides, so you are not tied to the keyboard. It runs on batteries and gives no warning before they die.",
+        "ko": "슬라이드를 넘기는 손에 드는 리모컨입니다. 덕분에 키보드 앞에 묶여 있지 않아도 됩니다. 건전지로 작동하며, 다 되기 전에 아무 경고도 없습니다."
+      },
+      "action": {
+        "en": "Click it once before the service to check it still works. The keyboard arrow keys always work as a backup.",
+        "ko": "예배 전에 한 번 눌러 작동하는지 확인하세요. 키보드 화살표 키는 언제나 예비 수단으로 쓸 수 있습니다."
       }
     }
   ]

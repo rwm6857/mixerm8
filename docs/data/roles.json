@@ -1,11 +1,11 @@
 {
   "version": 2,
   "note": {
-    "en": "The stations a volunteer can be on. Each one loads <id>.json for its own home page, questions, and whichever of checklist/problems/flow it declares in `layers`.",
-    "ko": "봉사자가 맡을 수 있는 자리 목록입니다. 각 자리는 <id>.json에서 자기 홈 화면과 질문, 그리고 `layers`에 선언된 체크리스트·문제 해결·진행 순서를 불러옵니다."
+    "en": "The stations a volunteer can be on. Each one loads <id>.json for its own home page, questions, and whichever of checklist/problems/flow/equipment it declares in `layers`.",
+    "ko": "봉사자가 맡을 수 있는 자리 목록입니다. 각 자리는 <id>.json에서 자기 홈 화면과 질문, 그리고 `layers`에 선언된 체크리스트·문제 해결·진행 순서·장비를 불러옵니다."
   },
-  "languages": ["en", "ko"],
 
+  "languages": ["en", "ko"],
   "hero": {
     "image": "img/hero.jpg",
     "title": { "en": "Sunday Booth Guide", "ko": "주일 부스 안내" },
@@ -32,7 +32,7 @@
       "theme": "amber",
       "icon": "screen",
       "console": false,
-      "layers": ["checklist", "problems", "flow"]
+      "layers": ["checklist", "problems", "flow", "equipment"]
     },
     {
       "id": "livestream",
@@ -41,7 +41,7 @@
       "theme": "violet",
       "icon": "camera",
       "console": false,
-      "layers": ["checklist", "problems", "flow"]
+      "layers": ["checklist", "problems", "flow", "equipment"]
     },
     {
       "id": "misc",

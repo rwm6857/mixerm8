@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MixerM8 — Guide editor</title>
+<link rel="stylesheet" href="editor.css">
+</head>
+<body>
+
+<header class="bar">
+  <div class="brand"><span class="mark" aria-hidden="true"></span> Guide editor</div>
+
+  <div class="bar-mid">
+    <div class="seg" id="target" role="group" aria-label="Where a save goes"></div>
+    <span class="dest" id="dest"></span>
+  </div>
+
+  <div class="bar-right">
+    <span class="count" id="dirty"></span>
+    <button class="btn" id="revert" type="button">Discard changes</button>
+    <button class="btn primary" id="save" type="button" disabled>Save</button>
+  </div>
+</header>
+
+<main class="cols">
+  <nav class="tree" id="tree" aria-label="Everything in the guide"></nav>
+
+  <section class="form" id="form">
+    <p class="empty">Pick something on the left to edit it.</p>
+  </section>
+
+  <aside class="preview">
+    <div class="preview-bar">
+      <div class="seg" id="lang" role="group" aria-label="Preview language"></div>
+      <div class="seg" id="device" role="group" aria-label="Preview size"></div>
+      <button class="btn" id="refresh" type="button" title="Reload the preview">↻</button>
+    </div>
+    <div class="screen" id="screen">
+      <iframe id="frame" title="The tablet guide, with your unsaved edits"></iframe>
+    </div>
+  </aside>
+</main>
+
+<footer class="problems" id="problems"></footer>
+
+<script src="editor.js"></script>
+</body>
+</html>
