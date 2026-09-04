@@ -12,19 +12,14 @@ OSC_PORT = 10023
 RESUBSCRIBE_EVERY = 8.0     # the X32 drops /xremote subscribers after ~10s
 POLL_EVERY = 2.0            # ask outright too, in case a push is missed
 
-# Confirmed against the X32 node list order.
-SCREENS = {
-    0: "Home", 1: "Meters", 2: "Routing", 3: "Setup", 4: "Library",
-    5: "Effects", 6: "Monitor", 7: "USB", 8: "Scenes", 9: "Assign",
-}
+CHANNEL_SCREEN = 0          # the channel strip; its tab decides what shows
 
-# UNCONFIRMED on the Compact. Numbers that arrive without a mapping surface
-# in the tablet UI as "not mapped yet" so they can be identified at the desk
-# and corrected here. See the "Mapping the tabs" section of the README.
-CHAN_PAGES = {
-    0: "Home", 1: "Config", 2: "Gate", 3: "Dynamics",
-    4: "EQ", 5: "Sends", 6: "Main",
-}
+# This module reports numbers and nothing else. Which screen a number *is*
+# lives in docs/data/guides.json, on the guide for that screen, because the
+# numbers are unverified on the Compact and a church correcting one should
+# not need a new release to do it. The tablet does the lookup, so a remap
+# takes effect on a reload without restarting the bridge. `mixerm8 --learn`
+# records them from the desk.
 
 # Polled every POLL_EVERY seconds. All argument-less, therefore all reads.
 _POLLED = (
@@ -84,7 +79,7 @@ class Console(threading.Thread):
         self.version = 0
         self._state = {
             "ok": False, "screen": None, "page": None,
-            "channel": None, "name": None, "seen": {}, "last_seen": 0.0,
+            "channel": None, "name": None, "seen": [], "last_seen": 0.0,
         }
         self._name_asked: int | None = None
         self._stopping = threading.Event()
@@ -164,9 +159,12 @@ class Console(threading.Thread):
                     self._state[key] = value
                     if key != "last_seen":
                         dirty = True
+            # Every tab number this desk has reported, whether or not a guide
+            # claims it. Kept sorted so the value-compare in snapshot() stays
+            # stable and an unchanged console never pushes a frame.
             page = self._state["page"]
-            if page is not None and str(page) not in self._state["seen"]:
-                self._state["seen"][str(page)] = CHAN_PAGES.get(page, "unknown")
+            if page is not None and page not in self._state["seen"]:
+                self._state["seen"] = sorted(self._state["seen"] + [page])
                 dirty = True
             if dirty:
                 self.version += 1
@@ -176,13 +174,14 @@ class Console(threading.Thread):
     def snapshot(self) -> dict:
         with self.changed:
             s = dict(self._state)
-            s["seen"] = dict(s["seen"])
+            s["seen"] = list(s["seen"])
             s["version"] = self.version
         s.pop("last_seen", None)
-        s["screen_name"] = SCREENS.get(s["screen"])
-        s["page_name"] = CHAN_PAGES.get(s["page"])
         # A channel page is only meaningful while the Home screen is showing.
-        s["on_channel"] = s["screen"] == 0
+        # This one stays here rather than moving into the guide with the
+        # names: it decides which reading to believe, so a content edit must
+        # not be able to make the bridge report a tab the desk is not on.
+        s["on_channel"] = s["screen"] == CHANNEL_SCREEN
         return s
 
     def wait_for_change(self, since: int, timeout: float) -> int:

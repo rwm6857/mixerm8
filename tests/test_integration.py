@@ -63,8 +63,8 @@ def test_it_reports_what_the_desk_is_showing(monkeypatch):
     try:
         snap, _ = _run_against_fake(desk, {"ok": True, "page": 4, "channel": 7})
 
-        assert snap["screen_name"] == "Home"
-        assert snap["page_name"] == "EQ"
+        assert snap["screen"] == 0
+        assert snap["page"] == 4
         assert snap["on_channel"] is True
         assert snap["channel"] == 7     # selidx 6 is channel 7 on the desk
     finally:
@@ -72,15 +72,18 @@ def test_it_reports_what_the_desk_is_showing(monkeypatch):
 
 
 def test_an_unmapped_tab_is_surfaced_rather_than_hidden(monkeypatch):
-    """CHAN_PAGES is unverified, so an unknown number has to reach the UI."""
+    """The bridge reports numbers; the tablet decides which have guides.
+
+    An unclaimed number still has to reach the UI, because that is how a tab
+    nobody has written about gets identified at the desk.
+    """
     desk = fake_x32.FakeX32(port=0)
-    desk.pos = 3                       # page 9, deliberately not in CHAN_PAGES
+    desk.pos = 3                       # page 9, which no guide claims
     monkeypatch.setattr(console_mod, "OSC_PORT", desk.port)
     try:
         snap, _ = _run_against_fake(desk, {"ok": True, "page": 9})
 
-        assert snap["page_name"] is None, "9 should not be mapped"
-        assert snap["seen"].get("9") == "unknown", snap["seen"]
+        assert 9 in snap["seen"], snap["seen"]
     finally:
         desk.close()
 

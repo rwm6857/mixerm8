@@ -432,6 +432,18 @@ function renderEquipment() {
 
 /* ---------- the mixer (sound station only) ---------- */
 
+/* The desk reports a number; the guide says which screen that number is.
+ *
+ * The mapping used to be a dict in console.py, which meant correcting a wrong
+ * number needed a new release. It lives on the guide entry now, so it can be
+ * fixed in the editor or in a *.local.json, and a scan of sixteen entries is
+ * cheaper than a reverse index that could go stale when the editor's preview
+ * reloads a draft under us. */
+function guideFor(group, n) {
+  if (n === null || n === undefined || !state.guides) return null;
+  return Object.values(state.guides[group] || {}).find((e) => e.number === n) || null;
+}
+
 function renderNow() {
   const box = $("now");
   const where = $("where");
@@ -464,6 +476,16 @@ function renderNow() {
     return;
   }
 
+  // Without the guide there is nothing to follow the desk with. Say so,
+  // rather than throwing on the first lookup and blanking the whole tab.
+  if (!g) {
+    where.textContent = "";
+    box.innerHTML = plainCard("danger", "The screen guides did not load",
+      "This tab needs data/guides.json, and it could not be read.",
+      "Reload the page. If it keeps happening, tell whoever set this up.");
+    return;
+  }
+
   if (!state.bridge) {
     where.textContent = "";
     box.innerHTML = plainCard("info", "Not connected to the mixer",
@@ -486,33 +508,39 @@ function renderNow() {
     return;
   }
 
-  let loc = s.screen_name || (s.screen === null ? "" : "screen " + s.screen);
+  // One lookup, used for both the breadcrumb and the card below it. On the
+  // channel screen the breadcrumb names the *tab*, because the tab is what
+  // changed when the volunteer pressed a button -- and it comes from the
+  // guide's own title, so a Korean reader gets a Korean word.
+  const n = s.on_channel ? s.page : s.screen;
+  const entry = guideFor(s.on_channel ? "pages" : "screens", n);
+  const label = entry ? one(entry.title)
+                      : (n === null ? "" : (s.on_channel ? "Tab " : "Screen ") + n);
+
+  let loc = label;
   if (s.on_channel && s.channel) {
-    loc += " · CH " + s.channel + (s.name ? " — " + s.name : "");
+    loc += (loc ? " · " : "") + "CH " + s.channel + (s.name ? " — " + s.name : "");
   }
   where.textContent = loc;
 
-  if (s.on_channel) {
-    if (s.page_name && g.pages[s.page_name]) {
-      box.innerHTML = card(g.pages[s.page_name]);
-    } else if (s.page !== null) {
-      // Discovery mode: CHAN_PAGES is unconfirmed on the Compact.
-      box.innerHTML = plainCard("info", `Tab ${s.page} — not mapped yet`,
-        `The tab you just pressed reports as number ${s.page}, and there is no guide ` +
-        `attached to that number yet.`,
-        `Write it down, then add it to CHAN_PAGES in src/mixerm8/console.py.`);
-    } else {
-      box.innerHTML = card(g.pages.Home);
-    }
-    wireDiagrams($("view-now"));
-    return;
+  if (entry) {
+    box.innerHTML = card(entry);
+  } else if (n === null) {
+    box.innerHTML = plainCard("info", "Waiting for the desk",
+      "The console has not said which screen it is showing yet.");
+  } else if (s.on_channel) {
+    // How a wrong or missing number gets found: the desk names it, somebody
+    // writes it down, and the guide it belongs to gets that number.
+    box.innerHTML = plainCard("info", `Tab ${n} — not mapped yet`,
+      `The tab you just pressed reports as number ${n}, and no guide is attached ` +
+      `to that number yet.`,
+      `Write it down, then attach a guide to that number in the guide editor.`);
+  } else {
+    box.innerHTML = plainCard("info", `Screen ${n} — not mapped yet`,
+      `This screen reports as number ${n}, and no guide is attached to that ` +
+      `number yet.`,
+      `Press HOME to get back to the channel pages.`);
   }
-
-  const entry = g.screens[s.screen_name];
-  box.innerHTML = entry ? card(entry) : plainCard("info",
-    s.screen_name || "Screen " + s.screen,
-    "No guide written for this screen yet.",
-    "Press HOME to get back to the channel pages.");
   wireDiagrams($("view-now"));
 }
 
@@ -592,9 +620,9 @@ function setView(view) {
 
 function setFoot() {
   const bits = [];
-  const seen = state.snap?.seen ? Object.keys(state.snap.seen) : [];
+  const seen = state.snap?.seen ?? [];
   if (state.bridge && seen.length) {
-    bits.push("Tab numbers seen: " + seen.sort((a, b) => a - b).join(", "));
+    bits.push("Tab numbers seen: " + seen.join(", "));
   }
   bits.push(state.local ? "Showing this church's own wording."
                         : "Showing the example wording — blanks are not filled in yet.");

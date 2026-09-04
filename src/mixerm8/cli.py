@@ -8,6 +8,7 @@ import time
 import webbrowser
 
 from . import __version__, config, editor, update
+from . import learn as learn_mod
 from .console import Console, discover
 from .server import local_ip, serve
 
@@ -25,6 +26,8 @@ def build_parser() -> argparse.ArgumentParser:
                    help=f"port to serve the tablet app on (default {DEFAULT_PORT})")
     p.add_argument("--discover", action="store_true",
                    help="list consoles on the network and exit")
+    p.add_argument("--learn", action="store_true",
+                   help="walk the desk's channel tabs and record their numbers")
     p.add_argument("--edit", action="store_true",
                    help="open the guide editor in a browser on this machine")
     p.add_argument("--edit-port", type=int, default=editor.DEFAULT_PORT,
@@ -53,6 +56,55 @@ def resolve_ip(requested: str | None) -> str | None:
     label = " ".join(x for x in (c["model"], c["name"]) if x)
     print(f"Found {label or 'a console'} at {c['ip']}")
     return c["ip"]
+
+
+def learn(args) -> int:
+    """Record the tab numbers from a real desk. The mirror image of edit().
+
+    The editor never opens a socket to the console; this one has to, because
+    the numbers can only come from a desk. What it never does is serve
+    anything -- there is no port here and nothing on the LAN can reach it.
+    Read-only holds throughout: it runs the same watcher the bridge runs.
+    """
+    # A frozen build started without a console has no stdin at all, which is
+    # `None` rather than a closed file -- hence the truthiness check first.
+    if not (sys.stdin and sys.stdin.isatty()):
+        print("--learn needs a keyboard and a screen. Run it from a terminal.")
+        return 1
+
+    ip = resolve_ip(args.ip)
+    if not ip:
+        print("Could not find a console, and none was given.")
+        print("Find the IP on the desk: SETUP -> Network, then run:")
+        print("    mixerm8 --learn 192.168.1.50")
+        return 1
+
+    guide = editor.Guide()
+    console = Console(ip)
+    console.start()
+    config.save(ip=ip)
+    print()
+    print(f"  Learning the channel tabs on the desk at {ip}  (read-only)")
+    if guide.target == editor.LOCAL:
+        print("  This is not a source checkout, so the numbers go in this")
+        print("  church's own copy of the guide, which is never published.")
+    try:
+        code = learn_mod.walk(console, guide)
+    except (KeyboardInterrupt, EOFError):
+        # Ctrl-C, or a stdin that went away mid-walk. Either way there is no
+        # keyboard left to confirm with, and nothing is written without one.
+        print("\nStopping. Nothing was written.")
+        code = 1
+    finally:
+        console.stop()
+
+    if code == 0 and guide.target == editor.REPO:
+        git = editor.git_status(guide)
+        if git.get("available") and git.get("commands"):
+            print()
+            for line in git["commands"]:
+                print(f"      {line}")
+    return code
 
 
 def edit(args) -> int:
@@ -98,6 +150,12 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.edit:
         return edit(args)
+
+    # Ordered by reach: --edit touches no network, --learn opens a socket to
+    # the desk but serves nothing, --discover broadcasts, the bridge serves
+    # the LAN.
+    if args.learn:
+        return learn(args)
 
     if args.discover:
         found = discover()
@@ -151,12 +209,14 @@ def main(argv: list[str] | None = None) -> int:
         console.stop()
         server.shutdown()
 
+    # The bridge no longer knows which of these have guides -- the tablet
+    # decides that -- so report them all and let the reader compare.
     seen = console.snapshot()["seen"]
-    unmapped = {k: v for k, v in seen.items() if v == "unknown"}
-    if unmapped:
-        print("\nUnmapped tab numbers seen this session: "
-              + ", ".join(sorted(unmapped, key=int)))
-        print("Add them to CHAN_PAGES in src/mixerm8/console.py.")
+    if seen:
+        print("\nTab numbers this desk reported this session: "
+              + ", ".join(str(n) for n in seen))
+        print('Anything without a guide showed as "not mapped yet" on the tablet.')
+        print("Record them all with mixerm8 --learn.")
     return 0
 
 

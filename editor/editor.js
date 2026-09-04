@@ -36,7 +36,13 @@ const DIAGRAM = { key: "diagram", label: "Diagram", type: "diagram", optional: t
 
 const LEVEL = { key: "level", label: "Severity", type: "level" };
 
-const GUIDE_FIELDS = [LEVEL, BI("title", "Title"), TODO, BI("body", "What this screen is"),
+/* The number the desk reports for this screen. It is the join between what
+ * the console says and which guide comes up, which is why it sits on the
+ * entry rather than in a table somewhere -- see console.py. */
+const NUMBER = { key: "number", label: "Number the desk reports", type: "number" };
+
+const GUIDE_FIELDS = [NUMBER, LEVEL, BI("title", "Title"), TODO,
+                      BI("body", "What this screen is"),
                       BI("action", "What to do", { optional: true }), DIAGRAM];
 
 const SECTIONS = {
@@ -88,12 +94,14 @@ const SECTIONS = {
   },
   pages: {
     label: "Channel tabs", kind: "map", fields: GUIDE_FIELDS,
-    hint: "The key has to match the name console.py reports for that tab.",
+    hint: "The number the desk reports for this tab. Record them all with " +
+          "`mixerm8 --learn`, or press the tab at the desk and read the " +
+          "number off the tablet.",
     blank: () => ({ level: "info", title: bi(), body: bi() }),
   },
   screens: {
     label: "Main screens", kind: "map", fields: GUIDE_FIELDS,
-    hint: "The key has to match the name in SCREENS in console.py.",
+    hint: "The number the desk reports for this screen.",
     blank: () => ({ level: "info", title: bi(), body: bi() }),
   },
   roles: {
@@ -363,6 +371,12 @@ function renderField(f, entry) {
       `<input type="text" data-path="${esc(f.key)}" value="${esc(value || "")}">`, f.hint);
   }
 
+  if (f.type === "number") {
+    return field(f.label,
+      `<input type="number" min="0" step="1" data-path="${esc(f.key)}" ` +
+      `value="${value === undefined ? "" : esc(String(value))}">`, f.hint);
+  }
+
   if (f.type === "bool") {
     return field(f.label,
       `<label><input type="checkbox" data-path="${esc(f.key)}"${value ? " checked" : ""}> ` +
@@ -423,6 +437,17 @@ function wireForm(entry, spec) {
       grow(el);
       setAt(entry, el.dataset.path, el.value);
       el.classList.toggle("has-blank", BLANK.test(el.value));
+      touched(sel.doc);
+    };
+  });
+
+  box.querySelectorAll("input[type=number]").forEach((el) => {
+    // Blank means "not recorded yet", which is an absent key. A null would
+    // land in the saved file and read as a number nobody can press.
+    el.oninput = () => {
+      const raw = el.value.trim();
+      if (raw === "") delete entry[el.dataset.path];
+      else setAt(entry, el.dataset.path, Number(raw));
       touched(sel.doc);
     };
   });

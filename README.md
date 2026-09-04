@@ -57,7 +57,7 @@ the tablet can follow the desk:
 | --- | --- |
 | Console | Behringer X32 Compact |
 | Firmware tested | **not yet tested against a console** |
-| Channel-tab numbers | **unverified** — see [Mapping the tabs](#mapping-the-tabs) |
+| Channel-tab numbers | **unverified** — record yours with [`mixerm8 --learn`](#mapping-the-tabs) |
 
 Everything here is written from the community's reverse-engineering of the
 X32's OSC protocol, which Behringer does not document. The read-only guarantee
@@ -113,6 +113,7 @@ you need to be explicit, the IP is on the console under **SETUP → Network**:
 ```powershell
 MixerM8.exe 192.168.1.50
 mixerm8 --discover        # list every console answering on the network
+mixerm8 --learn           # record which number the desk gives each channel tab
 ```
 
 ## Development
@@ -167,13 +168,27 @@ string argument, and that would cost the invariant more than it is worth.
 
 ## Mapping the tabs
 
-`SCREENS` in `src/mixerm8/console.py` is confirmed. `CHAN_PAGES` — the numbers
-for CONFIG / GATE / DYNAMICS / EQ / SENDS — is **a guess that needs checking on a
-real Compact.**
+The desk reports a number when it changes screen; the guide says which screen
+that number is. The numbers for CONFIG / GATE / DYNAMICS / EQ / SENDS are **a
+guess that needs checking on a real Compact** — so they live in the guide with
+the wording, not in the code, and fixing one needs no new release.
 
-Stand at the desk with the tablet visible and press each tab. Anything unmapped
-shows as *"Tab 4 — not mapped yet"* along with its number. Write the numbers
-down, correct `CHAN_PAGES`, and the guides attach themselves.
+Stand at the desk and run:
+
+```bash
+mixerm8 --learn
+```
+
+It names each tab in turn, waits for you to press it, and records the number
+the desk reports. Nothing is written until it shows you the result and asks.
+It only ever fills in numbers for tabs the guide already describes — if the
+desk reports a number nothing accounts for, it says so and leaves the writing
+to you, because what that tab *is* is not something it can know.
+
+You can also do it by hand: press a tab with the tablet visible, and anything
+unaccounted for shows as *"Tab 4 — not mapped yet"* along with its number.
+Put that number on the right screen in `mixerm8 --edit` and the guide attaches
+itself on the next reload — no restart, no reinstall.
 
 ## Your own wording
 
@@ -186,7 +201,7 @@ file and reload the page.
     docs/data/livestream.json  the streaming station
     docs/data/misc.json        questions and policies, no equipment
     docs/data/roles.json       the stations, their colours and their tabs
-    docs/data/guides.json      what each screen on the mixer does
+    docs/data/guides.json      what each screen on the mixer does, and its number
 
 Each station file holds that station's home page (`intro` and `faq`) and
 whichever of `checklist`, `problems`, `flow` and `equipment` it declares in

@@ -261,15 +261,59 @@ def guides_missing_language(docs: dict[str, dict]) -> list[str]:
     return missing
 
 
-def unguided_channel_pages(docs: dict[str, dict]) -> list[str]:
-    """A tab the console can report should have something to say about it."""
-    from .console import CHAN_PAGES
+def _guide_groups(docs: dict[str, dict]):
+    """Each ("pages"|"screens", key, entry) of the guide, if there is one."""
+    for group in ("pages", "screens"):
+        for key, entry in ((docs.get("guides") or {}).get(group) or {}).items():
+            if isinstance(entry, dict):
+                yield group, key, entry
 
-    if "guides" not in docs:
-        return []
-    pages = (docs["guides"].get("pages")) or {}
-    return [f"no guide written for channel tab {name}"
-            for name in CHAN_PAGES.values() if name not in pages]
+
+def guides_without_a_number(docs: dict[str, dict]) -> list[str]:
+    """The number is how the desk asks for a guide, so a guide without one
+    can never be brought up. `bool` is excluded because it is an `int`."""
+    orphans: list[str] = []
+    for group, key, entry in _guide_groups(docs):
+        n = entry.get("number")
+        if isinstance(n, bool) or not isinstance(n, int) or n < 0:
+            orphans.append(f"guides.{group}.{key} has no number the desk could "
+                           f"report, so it can never come up")
+    return orphans
+
+
+def numbers_claimed_twice(docs: dict[str, dict]) -> list[str]:
+    """Two guides on one number means one of them is dead content.
+
+    The groups are separate namespaces -- the desk reports a channel tab and
+    a screen on different addresses -- so this never compares across them.
+    """
+    clashes: list[str] = []
+    for group in ("pages", "screens"):
+        claimed: dict[int, str] = {}
+        for g, key, entry in _guide_groups(docs):
+            if g != group:
+                continue
+            n = entry.get("number")
+            if isinstance(n, bool) or not isinstance(n, int):
+                continue        # guides_without_a_number has this one
+            if n in claimed:
+                clashes.append(f"guides.{group}: {key} and {claimed[n]} both "
+                               f"claim number {n}")
+            else:
+                claimed[n] = key
+    return clashes
+
+
+def channel_screen_guided_as_a_screen(docs: dict[str, dict]) -> list[str]:
+    """Screen 0 is the channel strip, where the tab decides what shows.
+
+    A `screens` entry numbered 0 is therefore invisible: the app reads the
+    channel tab instead and never looks it up. Its guide belongs in `pages`.
+    """
+    return [f"guides.screens.{key} is numbered 0, the channel screen, where "
+            f"the channel tab decides what shows -- it belongs in pages"
+            for group, key, entry in _guide_groups(docs)
+            if group == "screens" and entry.get("number") == 0]
 
 
 def broken_diagrams(docs: dict[str, dict], root: Path | None = None) -> list[str]:
@@ -308,7 +352,9 @@ ALL_CHECKS = (
     component_shaped_problem_titles,
     bad_levels,
     guides_missing_language,
-    unguided_channel_pages,
+    guides_without_a_number,
+    numbers_claimed_twice,
+    channel_screen_guided_as_a_screen,
     broken_diagrams,
 )
 
