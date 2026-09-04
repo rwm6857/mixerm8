@@ -17,7 +17,7 @@ class _StubConsole:
     """Enough of a Console for the HTTP layer to start."""
 
     def snapshot(self):
-        return {"ok": False, "version": 0, "seen": {}}
+        return {"ok": False, "version": 0, "seen": []}
 
     def wait_for_change(self, since, timeout):
         return 0

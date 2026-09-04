@@ -21,8 +21,8 @@ import time
 
 OSC_PORT = 10023
 
-# screen, CHAN page, selidx. Tab 9 is deliberately absent from CHAN_PAGES so
-# the tablet's "not mapped yet" path gets exercised too.
+# screen, CHAN page, selidx. No guide claims tab 9, deliberately, so the
+# tablet's "not mapped yet" path gets exercised too.
 SCRIPT = [
     (0, 0, 6),
     (0, 4, 6),
@@ -68,7 +68,8 @@ def encode(address: str, typ: str, value) -> bytes:
 class FakeX32:
     """Answers the queries MixerM8 makes, and records anything it should not."""
 
-    def __init__(self, port: int = OSC_PORT, channel_name: str = "Pastor"):
+    def __init__(self, port: int = OSC_PORT, channel_name: str = "Pastor",
+                 script: list | None = None):
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.sock.bind(("127.0.0.1", port))
@@ -76,10 +77,14 @@ class FakeX32:
         self.channel_name = channel_name
         self.writes: list[tuple[str, str]] = []   # the thing that must stay empty
         self.asked: dict[str, int] = {}
+        # A test that walks the tabs needs more of them than the shipped
+        # script offers, and appending to that would move the numbers the
+        # other tests select by position.
+        self.script = script or SCRIPT
         self.pos = 0
 
     def state(self) -> tuple[int, int, int]:
-        return SCRIPT[self.pos]
+        return self.script[self.pos]
 
     def serve_once(self, timeout: float = 0.4) -> str | None:
         """Handle one packet. Returns the address, or None on timeout."""
@@ -119,7 +124,7 @@ def _standalone() -> int:
     def advance():
         while True:
             time.sleep(4.0)
-            desk.pos = (desk.pos + 1) % len(SCRIPT)
+            desk.pos = (desk.pos + 1) % len(desk.script)
             s, p, _ = desk.state()
             print(f"  desk moved to screen={s} page={p}")
 

@@ -75,9 +75,21 @@ def test_every_guide_is_bilingual(docs):
     assert validate.guides_missing_language(docs) == []
 
 
-def test_guides_cover_every_mapped_channel_page(docs):
-    """A tab the console can report should have something to say about it."""
-    assert validate.unguided_channel_pages(docs) == []
+def test_every_screen_guide_carries_the_number_the_desk_reports(docs):
+    """The number is the join. Python no longer holds a table of them, so a
+    guide without one is a page the desk can never bring up."""
+    assert validate.guides_without_a_number(docs) == []
+
+
+def test_no_two_guides_claim_the_same_number(docs):
+    """One would silently win and the other would be dead content."""
+    assert validate.numbers_claimed_twice(docs) == []
+
+
+def test_the_channel_screen_has_no_guide_of_its_own(docs):
+    """On screen 0 the channel tab decides what shows, so a screens entry
+    numbered 0 could never appear."""
+    assert validate.channel_screen_guided_as_a_screen(docs) == []
 
 
 def test_every_diagram_points_at_a_file_that_ships(docs, root):

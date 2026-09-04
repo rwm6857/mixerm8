@@ -195,6 +195,43 @@ all six files and buries the sentence somebody changed.
 hand-edited into a shape the editor would churn fails the suite rather than
 surprising the next person who saves.
 
+## Which screen the desk is showing
+
+The console reports **numbers**: `/-stat/screen/screen` and
+`/-stat/screen/CHAN/page`. Which screen a number *is* lives on the guide
+entry, as `"number"`, and the tablet does the lookup. `console.py` holds no
+table of names at all.
+
+This is deliberate and worth not undoing. The numbers are unverified on the
+Compact, so the thing most likely to be wrong was the thing that needed a new
+release to fix. As content it can be corrected in `mixerm8 --edit`, overridden
+per-church in a `*.local.json`, and it takes effect on a tablet reload without
+restarting the bridge. Having the bridge resolve names instead would mean
+reimplementing the tablet's `.local.json` fallback *and* the override dir in a
+second place, and the two could then disagree about what tab 4 is called.
+
+What stays in Python is protocol rather than label: the polled addresses, and
+`on_channel = screen == CHANNEL_SCREEN`. That one decides *which reading to
+believe* — a channel tab number is stale while the desk shows Routing — so a
+content edit must not be able to make the bridge report a tab the desk is not
+on. Three rules in `validate.py` guard the data side: every guide carries a
+number, no two claim one, and none claims screen 0.
+
+**`mixerm8 --learn` is the third command, and it is the mirror of `--edit`.**
+The editor writes guide files and never opens a socket to the desk, because
+the writing happens on a Mac with no X32 in the building. Learn opens the
+watcher's socket and never serves anything, because the numbers can only come
+from a desk. It reuses `editor.Guide`, so a save goes through the same
+formatter and the same repo-vs-local target logic as pressing Save.
+
+Writing to the *committed* example is right here, where it is wrong for
+wording: a tab number is a fact about the model of desk in the room, carrying
+no staff name and no channel layout, so the privacy argument does not apply.
+A checkout standing at a real Compact is exactly how the gotcha gets retired.
+Learn will not invent a guide entry, though — an empty body fails the content
+checks, and titling one "Tab 7" would be a guess about what tab 7 is, so it
+reports the number and stops.
+
 ## Constraints
 
 - **No runtime dependencies.** `dependencies = []` is deliberate: it keeps
@@ -211,10 +248,11 @@ surprising the next person who saves.
 
 ```bash
 pip install -e ".[dev]"    # stdlib only at runtime; this adds pytest + ruff
-pytest                     # 68 tests, ~7s
+pytest                     # 86 tests, ~17s
 ruff check .               # line length 100
 mixerm8 --discover         # find consoles on the network
 mixerm8 --edit             # the guide editor, localhost only, no console needed
+mixerm8 --learn            # record the tab numbers from a real desk
 python -m http.server -d docs 8000   # the app in reference mode, no mixer
 ```
 
@@ -228,9 +266,12 @@ from where the desk stands rather than from our own code.
 
 ## Gotchas
 
-- `CHAN_PAGES` in `console.py` is **unverified against real hardware.** Unmapped
-  numbers surface in the UI as "not mapped yet" on purpose; that is the
-  discovery mechanism, not a bug to hide.
+- **The channel-tab numbers are unverified against real hardware.** They live
+  on the guide entries in `docs/data/guides.json` (`"number"`), not in
+  `console.py`, so correcting one is a content edit rather than a release.
+  A number no guide claims surfaces in the UI as "not mapped yet" on purpose;
+  that is the discovery mechanism, not a bug to hide. `mixerm8 --learn` is
+  how it gets retired.
 - The X32 drops `/xremote` subscribers after ~10s, hence `RESUBSCRIBE_EVERY = 8`.
 - Version lives in `pyproject.toml` and `src/mixerm8/__init__.py`. Bump both.
 - The exe can only be built on Windows, so `.github/workflows/release.yml` is
