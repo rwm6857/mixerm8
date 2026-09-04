@@ -6,6 +6,58 @@
     "ko": "예시 문구입니다. media.local.json으로 복사한 뒤 그 파일을 수정하세요. 복사한 파일은 커밋되지 않습니다. 밑줄 네 개로 표시된 부분은 각 교회에 맞게 채워야 합니다."
   },
 
+  "intro": {
+    "en": "You put the words on the wall. The congregation looks at your screen more than at anything else in the building, so being one slide behind is more noticeable than being a little late to start.",
+    "ko": "이 자리는 화면에 가사와 글을 띄우는 자리입니다. 회중은 건물 안 어떤 것보다 이 화면을 오래 봅니다. 그래서 시작이 조금 늦는 것보다 한 장 뒤처지는 것이 훨씬 눈에 띕니다."
+  },
+
+  "faq": [
+    {
+      "q": {
+        "en": "Do I advance the slides, or does the worship leader?",
+        "ko": "슬라이드는 제가 넘기나요, 아니면 인도자가 넘기나요?"
+      },
+      "todo": {
+        "en": "Fill in who drives during the songs, and whether that changes for the sermon. Getting this wrong means either two people advancing at once or nobody advancing at all.",
+        "ko": "찬양 중에 누가 넘기는지, 설교 때는 달라지는지 채워주세요. 이 부분이 틀리면 두 사람이 동시에 넘기거나, 아무도 넘기지 않게 됩니다."
+      },
+      "a": {
+        "en": "During the songs, ____ drives. During the sermon, ____. Agree it out loud before the service rather than working it out mid-verse.",
+        "ko": "찬양 중에는 ____가 넘깁니다. 설교 중에는 ____입니다. 찬양 도중에 눈치로 맞추지 말고 예배 전에 말로 정해두세요."
+      }
+    },
+    {
+      "q": {
+        "en": "The song order changed at the last minute.",
+        "ko": "찬양 순서가 마지막에 바뀌었습니다."
+      },
+      "a": {
+        "en": "This is normal, not a crisis. Do not try to reorder the file while people are walking in — leave it as it is and jump between songs by hand. A wrong slide for two seconds is recoverable; a file you were editing when the service started is not.",
+        "ko": "흔한 일이며 큰일이 아닙니다. 사람들이 입장하는 중에 파일 순서를 바꾸려 하지 마세요. 그대로 두고 찬양 사이를 직접 이동하세요. 슬라이드가 2초 잘못 나오는 것은 회복할 수 있지만, 예배가 시작될 때 편집 중이던 파일은 회복하기 어렵습니다."
+      }
+    },
+    {
+      "q": {
+        "en": "Can everyone see my email while I set up?",
+        "ko": "준비하는 동안 제 이메일이 화면에 보이나요?"
+      },
+      "a": {
+        "en": "They can, if the projector is showing your desktop rather than the presentation. Get into the black or logo screen before you open anything else, and treat that screen as the resting state between every part of the service.",
+        "ko": "프로젝터가 발표 화면이 아니라 바탕화면을 비추고 있다면 보입니다. 다른 것을 열기 전에 먼저 검은 화면이나 로고 화면으로 전환하세요. 예배의 각 순서 사이에는 항상 그 화면을 기본 상태로 두세요."
+      }
+    },
+    {
+      "q": {
+        "en": "I lost my place and I cannot find it again.",
+        "ko": "지금 어디인지 놓쳤고 다시 찾지 못하겠습니다."
+      },
+      "a": {
+        "en": "Go to black rather than flicking through slides in front of everyone. A blank screen for ten seconds reads as intentional; a fast scroll through next week's slides does not. The Problems tab has the longer version of this.",
+        "ko": "모두가 보는 앞에서 슬라이드를 넘겨가며 찾지 말고 검은 화면으로 전환하세요. 10초 동안 빈 화면은 의도한 것처럼 보이지만, 다음 주 슬라이드를 빠르게 넘기는 것은 그렇지 않습니다. 문제 해결 탭에 더 자세한 설명이 있습니다."
+      }
+    }
+  ],
+
   "checklist": [
     {
       "text": {

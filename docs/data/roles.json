@@ -1,28 +1,56 @@
 {
-  "version": 1,
+  "version": 2,
   "note": {
-    "en": "The stations a volunteer can be on. Each one loads <id>.json for its own checklist, problems and running order.",
-    "ko": "봉사자가 맡을 수 있는 자리 목록입니다. 각 자리는 <id>.json에서 자기 체크리스트, 문제 해결, 진행 순서를 불러옵니다."
+    "en": "The stations a volunteer can be on. Each one loads <id>.json for its own home page, questions, and whichever of checklist/problems/flow it declares in `layers`.",
+    "ko": "봉사자가 맡을 수 있는 자리 목록입니다. 각 자리는 <id>.json에서 자기 홈 화면과 질문, 그리고 `layers`에 선언된 체크리스트·문제 해결·진행 순서를 불러옵니다."
   },
   "languages": ["en", "ko"],
+
+  "hero": {
+    "image": "img/hero.jpg",
+    "title": { "en": "Sunday Booth Guide", "ko": "주일 부스 안내" },
+    "blurb": {
+      "en": "Pick the station you are on. Everything for it is inside — what to do before, what to do when something goes wrong, and the order of the service.",
+      "ko": "오늘 맡은 자리를 선택하세요. 예배 전 준비, 문제가 생겼을 때 할 일, 예배 진행 순서가 모두 들어 있습니다."
+    }
+  },
+
   "roles": [
     {
       "id": "audio",
       "label": { "en": "Sound", "ko": "음향" },
       "where": { "en": "The mixing desk in the booth", "ko": "부스의 믹싱 콘솔" },
-      "console": true
+      "theme": "green",
+      "icon": "fader",
+      "console": true,
+      "layers": ["checklist", "problems", "flow"]
     },
     {
       "id": "media",
-      "label": { "en": "Slides", "ko": "화면" },
+      "label": { "en": "Media", "ko": "미디어" },
       "where": { "en": "The computer running the projector", "ko": "프로젝터를 켜는 컴퓨터" },
-      "console": false
+      "theme": "amber",
+      "icon": "screen",
+      "console": false,
+      "layers": ["checklist", "problems", "flow"]
     },
     {
       "id": "livestream",
       "label": { "en": "Livestream", "ko": "실시간 방송" },
       "where": { "en": "The streaming computer and cameras", "ko": "방송용 컴퓨터와 카메라" },
-      "console": false
+      "theme": "violet",
+      "icon": "camera",
+      "console": false,
+      "layers": ["checklist", "problems", "flow"]
+    },
+    {
+      "id": "misc",
+      "label": { "en": "Misc", "ko": "기타" },
+      "where": { "en": "Questions about serving here", "ko": "봉사에 관한 질문" },
+      "theme": "slate",
+      "icon": "question",
+      "console": false,
+      "layers": []
     }
   ]
 }

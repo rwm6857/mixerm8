@@ -180,14 +180,27 @@ def test_every_todo_is_bilingual():
 
 
 # ---------------------------------------------------------------------------
-# The three stations. A QR code on a wall points at one of these, so a role
-# whose file is missing is a volunteer standing at a station with a broken
-# page and no way to fix it.
+# The stations. A QR code on a wall points at one of these, so a role whose
+# file is missing is a volunteer standing at a station with a broken page and
+# no way to fix it.
+#
+# Which layers a station has is declared per role, not assumed: `misc` is
+# questions and policies with no equipment behind it, so it has none of the
+# three. What is pinned is that a declared layer is complete and an
+# undeclared one is absent, because a tab offering an empty checklist is
+# worse than no tab at all.
 # ---------------------------------------------------------------------------
 
+LAYERS = ("checklist", "problems", "flow")
+
+
+def _roles():
+    return _load(server.webroot() / "data" / "roles.json")["roles"]
+
+
 def test_every_role_has_a_content_file():
-    roles = _load(server.webroot() / "data" / "roles.json")["roles"]
-    assert [r["id"] for r in roles] == ["audio", "media", "livestream"]
+    roles = _roles()
+    assert [r["id"] for r in roles] == ["audio", "media", "livestream", "misc"]
     for role in roles:
         path = server.webroot() / "data" / f"{role['id']}.json"
         assert path.is_file(), f"no content file for role {role['id']}"
@@ -197,25 +210,89 @@ def test_role_ids_survive_being_put_in_a_url():
     """They end up in a QR code as "#audio/ko", so keep them boring."""
     import re
 
-    roles = _load(server.webroot() / "data" / "roles.json")["roles"]
-    for role in roles:
+    for role in _roles():
         assert re.fullmatch(r"[a-z][a-z0-9-]*", role["id"]), role["id"]
 
 
-def test_every_role_has_all_three_layers_in_both_languages():
-    roles = _load(server.webroot() / "data" / "roles.json")["roles"]
-    for role in roles:
+def test_a_role_declares_exactly_the_layers_its_file_carries():
+    for role in _roles():
         data = _load(server.webroot() / "data" / f"{role['id']}.json")
-        assert data["checklist"], f"{role['id']} has no checklist"
-        assert data["problems"], f"{role['id']} has no problem pages"
-        assert data["flow"], f"{role['id']} has no running order"
+        declared = set(role["layers"])
+        assert declared <= set(LAYERS), f"{role['id']} declares an unknown layer"
+        for layer in LAYERS:
+            if layer in declared:
+                assert data.get(layer), f"{role['id']} declares {layer} but has none"
+            else:
+                assert layer not in data, \
+                    f"{role['id']} carries a {layer} it does not declare, so nothing shows it"
 
-        for i, item in enumerate(data["checklist"]):
+
+def test_every_station_introduces_itself_and_answers_questions():
+    """The station's front page is the landing view, so it is never empty."""
+    for role in _roles():
+        data = _load(server.webroot() / "data" / f"{role['id']}.json")
+        for lang in ("en", "ko"):
+            assert data["intro"].get(lang), f"{role['id']}.intro missing {lang}"
+        assert data["faq"], f"{role['id']} has no questions on its front page"
+        for i, item in enumerate(data["faq"]):
+            for lang in ("en", "ko"):
+                assert item["q"].get(lang), f"{role['id']}.faq[{i}].q missing {lang}"
+                assert item["a"].get(lang), f"{role['id']}.faq[{i}].a missing {lang}"
+
+
+def test_the_app_can_draw_every_theme_and_icon_a_role_asks_for():
+    """roles.json names them; app.js and styles.css have to know them.
+
+    Drift here is invisible in the suite otherwise, and shows up on the
+    tablet as a station with no icon or the wrong colour.
+    """
+    app = (server.webroot() / "app.js").read_text("utf-8")
+    css = (server.webroot() / "styles.css").read_text("utf-8")
+    themes = set()
+    for role in _roles():
+        assert f'{role["icon"]}:' in app, f"app.js has no icon named {role['icon']!r}"
+        assert f'[data-theme="{role["theme"]}"]' in css, \
+            f"styles.css has no palette named {role['theme']!r}"
+        themes.add(role["theme"])
+    assert len(themes) == len(_roles()), "two stations share a palette"
+
+
+def test_every_diagram_points_at_a_file_that_ships():
+    """A diagram is optional, but a broken one is a broken image on a tablet."""
+    missing = []
+
+    def walk(where, node):
+        if isinstance(node, dict):
+            fig = node.get("diagram")
+            src = fig.get("src") if isinstance(fig, dict) else None
+            if src:
+                if not (server.webroot() / src).is_file():
+                    missing.append(f"{where}.diagram -> {src} does not exist")
+                for lang in ("en", "ko"):
+                    assert node["diagram"]["alt"].get(lang), f"{where}.diagram.alt missing {lang}"
+            for k, v in node.items():
+                walk(f"{where}.{k}", v)
+        elif isinstance(node, list):
+            for i, item in enumerate(node):
+                walk(f"{where}[{i}]", item)
+
+    for path in _data_files():
+        walk(path.name, _load(path))
+
+    assert not missing, missing
+
+
+def test_every_declared_layer_is_complete_in_both_languages():
+    for role in _roles():
+        data = _load(server.webroot() / "data" / f"{role['id']}.json")
+        layers = role["layers"]
+
+        for i, item in enumerate(data["checklist"] if "checklist" in layers else []):
             for lang in ("en", "ko"):
                 assert item["text"].get(lang), \
                     f"{role['id']}.checklist[{i}] missing {lang}"
 
-        for i, prob in enumerate(data["problems"]):
+        for i, prob in enumerate(data["problems"] if "problems" in layers else []):
             for lang in ("en", "ko"):
                 assert prob["title"].get(lang), \
                     f"{role['id']}.problems[{i}].title missing {lang}"
@@ -227,7 +304,7 @@ def test_every_role_has_all_three_layers_in_both_languages():
                     assert step.get(lang), \
                         f"{role['id']}.problems[{i}].steps[{j}] missing {lang}"
 
-        for i, step in enumerate(data["flow"]):
+        for i, step in enumerate(data["flow"] if "flow" in layers else []):
             for key in ("when", "title", "detail"):
                 for lang in ("en", "ko"):
                     assert step[key].get(lang), \
@@ -241,8 +318,9 @@ def test_the_problem_pages_are_problem_shaped():
     The layer exists for the volunteer who does not, so each title has to
     read as a complaint.
     """
-    roles = _load(server.webroot() / "data" / "roles.json")["roles"]
-    for role in roles:
+    for role in _roles():
+        if "problems" not in role["layers"]:
+            continue
         data = _load(server.webroot() / "data" / f"{role['id']}.json")
         for prob in data["problems"]:
             title = prob["title"]["en"]

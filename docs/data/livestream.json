@@ -6,6 +6,62 @@
     "ko": "예시 문구입니다. livestream.local.json으로 복사한 뒤 그 파일을 수정하세요. 복사한 파일은 커밋되지 않습니다. 밑줄 네 개로 표시된 부분은 각 교회에 맞게 채워야 합니다."
   },
 
+  "intro": {
+    "en": "You are the service for whoever could not come — someone ill at home, or a family member in another country. Sound matters more than picture to them: a steady camera with clear audio beats a clever shot they cannot hear.",
+    "ko": "이 자리는 오지 못한 분들에게 예배 그 자체입니다. 집에서 아픈 분일 수도, 다른 나라에 있는 가족일 수도 있습니다. 그분들에게는 화면보다 소리가 더 중요합니다. 잘 들리지 않는 멋진 화면보다, 소리가 또렷한 고정된 화면이 낫습니다."
+  },
+
+  "faq": [
+    {
+      "q": {
+        "en": "What software actually runs the stream?",
+        "ko": "방송은 어떤 프로그램으로 진행되나요?"
+      },
+      "todo": {
+        "en": "Fill in the name of the program and where its shortcut is. Nobody has written this down, and the rest of this station's guide reads oddly without it.",
+        "ko": "사용하는 프로그램 이름과 바로가기 위치를 채워주세요. 아직 아무도 적어두지 않았고, 이 항목이 없으면 이 자리의 안내 전체가 어색하게 읽힙니다."
+      },
+      "a": {
+        "en": "____, and its shortcut is ____. Open only that. Anything else running on the streaming computer competes with it for the machine.",
+        "ko": "____이며, 바로가기는 ____에 있습니다. 그것만 여세요. 방송용 컴퓨터에서 다른 프로그램이 돌아가면 서로 자원을 나눠 쓰게 됩니다."
+      }
+    },
+    {
+      "q": {
+        "en": "Does the stream start by itself?",
+        "ko": "방송은 저절로 시작되나요?"
+      },
+      "a": {
+        "en": "No. Someone presses go live every week, and the only proof it worked is watching the stream come up on a phone. Do that before the service starts, not after somebody messages to ask where it is.",
+        "ko": "아닙니다. 매주 누군가 방송 시작을 눌러야 하며, 제대로 되었는지 확인하는 유일한 방법은 휴대전화로 방송이 나오는지 직접 보는 것입니다. 누군가 왜 방송이 안 나오냐고 연락하기 전에, 예배가 시작되기 전에 확인하세요."
+      }
+    },
+    {
+      "q": {
+        "en": "How rough is too rough?",
+        "ko": "화면이 어느 정도까지 허용되나요?"
+      },
+      "a": {
+        "en": "A slightly wide shot that stays still all service is fine. What is not fine is silence, a frozen picture, or a camera pointed at the floor — those are worth interrupting yourself to fix. Leave everything else until afterwards.",
+        "ko": "화면이 조금 넓게 잡혀 있어도 예배 내내 흔들리지 않으면 괜찮습니다. 문제가 되는 것은 소리가 없거나, 화면이 멈추거나, 카메라가 바닥을 향하는 경우입니다. 그런 상황은 하던 일을 멈추고 바로 고칠 가치가 있습니다. 나머지는 예배 후에 하세요."
+      }
+    },
+    {
+      "q": {
+        "en": "Should I stop the stream during the announcements or the offering?",
+        "ko": "광고나 헌금 순서에 방송을 멈춰야 하나요?"
+      },
+      "todo": {
+        "en": "Fill this in. If there is no rule, write \"no rule — leave it running\", which is a real answer and stops each volunteer deciding differently.",
+        "ko": "이 항목을 채워주세요. 정해진 규칙이 없다면 \"규칙 없음 — 계속 방송\"이라고 적어주세요. 그것도 분명한 답이며, 봉사자마다 다르게 판단하는 일을 막아줍니다."
+      },
+      "a": {
+        "en": "____. Whatever the answer is, do the same thing every week so the people watching at home know what to expect.",
+        "ko": "____. 어떤 답이든 매주 똑같이 하세요. 그래야 집에서 보는 분들이 무엇을 예상할지 알 수 있습니다."
+      }
+    }
+  ],
+
   "checklist": [
     {
       "todo": {

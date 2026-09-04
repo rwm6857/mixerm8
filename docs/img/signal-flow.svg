@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 340 452" role="img"
+     aria-label="Sound travels from the microphone through a cable to a mixer channel, then the main fader, the amplifier, and the speakers.">
+  <style>
+    .box  { fill: #1e222a; stroke: #333a46; stroke-width: 1.5; }
+    .look { fill: #241f16; stroke: #e8a33d; stroke-width: 2; }
+    .t    { fill: #f2f4f7; font: 600 15px system-ui, -apple-system, "Segoe UI", sans-serif; }
+    .s    { fill: #98a1b0; font: 400 11.5px system-ui, -apple-system, "Segoe UI", sans-serif; }
+    .w    { fill: #f0c078; font: 600 11.5px system-ui, -apple-system, "Segoe UI", sans-serif; }
+    .arrow{ stroke: #6b7482; stroke-width: 2; fill: none; }
+  </style>
+  <defs>
+    <marker id="tip" viewBox="0 0 10 10" refX="8" refY="5"
+            markerWidth="5" markerHeight="5" orient="auto">
+      <path d="M0 0 L10 5 L0 10 z" fill="#6b7482"/>
+    </marker>
+  </defs>
+
+  <rect class="box"  x="10"  y="8"   width="320" height="54" rx="9"/>
+  <text class="t" x="26" y="32">Microphone</text>
+  <text class="s" x="26" y="50">Switched on? Battery good?</text>
+  <path class="arrow" d="M170 62 L170 78" marker-end="url(#tip)"/>
+
+  <rect class="box"  x="10"  y="82"  width="320" height="54" rx="9"/>
+  <text class="t" x="26" y="106">Cable and wall socket</text>
+  <text class="s" x="26" y="124">Plugged in at both ends</text>
+  <path class="arrow" d="M170 136 L170 152" marker-end="url(#tip)"/>
+
+  <rect class="look" x="10"  y="156" width="320" height="60" rx="9"/>
+  <text class="t" x="26" y="180">The channel on the desk</text>
+  <text class="w" x="26" y="200">Watch the meter here while they talk</text>
+  <path class="arrow" d="M170 216 L170 232" marker-end="url(#tip)"/>
+
+  <rect class="box"  x="10"  y="236" width="320" height="54" rx="9"/>
+  <text class="t" x="26" y="260">Main fader</text>
+  <text class="s" x="26" y="278">Up where it normally sits?</text>
+  <path class="arrow" d="M170 290 L170 306" marker-end="url(#tip)"/>
+
+  <rect class="box"  x="10"  y="310" width="320" height="54" rx="9"/>
+  <text class="t" x="26" y="334">Amplifier</text>
+  <text class="s" x="26" y="352">Switched on, after the mixer</text>
+  <path class="arrow" d="M170 364 L170 380" marker-end="url(#tip)"/>
+
+  <rect class="box"  x="10"  y="384" width="320" height="54" rx="9"/>
+  <text class="t" x="26" y="408">Speakers in the room</text>
+  <text class="s" x="26" y="426">What the congregation actually hears</text>
+</svg>

@@ -7,15 +7,17 @@ A volunteer scans the QR code at their station and gets steps for their own
 job, on their own phone, in their own language. No account, no app, no
 subscription, nothing to install for the person reading it.
 
-Three stations, each with the same two layers — a short list to tick off
-before the service, and problem-shaped pages for when something goes wrong
-mid-service:
+Each station opens on a short front page — what the job is, where to go, and
+the questions people actually ask — and behind it two layers: a list to tick
+off before the service, and problem-shaped pages for when something goes wrong
+mid-service.
 
 | Station | Covers | "Something is wrong" reads like |
 | --- | --- | --- |
 | **Sound** | the mixing desk | *Someone is too quiet* · *A squeal or a howl* |
-| **Slides** | the projector computer | *Everyone can see my desktop* |
+| **Media** | the projector computer | *Everyone can see my desktop* |
 | **Livestream** | the cameras and stream | *No sound on the stream* |
+| **Misc** | serving here in general | — questions and policies only |
 
 In the sound booth there is optionally a wall-mounted tablet and a small
 bridge program that reads which screen the mixer is showing and turns to the
@@ -182,11 +184,13 @@ file and reload the page.
     docs/data/audio.json       the sound desk station
     docs/data/media.json       the projector station
     docs/data/livestream.json  the streaming station
-    docs/data/roles.json       the names of the three stations
+    docs/data/misc.json        questions and policies, no equipment
+    docs/data/roles.json       the stations, their colours and their tabs
     docs/data/guides.json      what each screen on the mixer does
 
-Each station file holds that station's `checklist`, its `problems`, and its
-`flow` — the three tabs a volunteer sees.
+Each station file holds that station's home page (`intro` and `faq`) and
+whichever of `checklist`, `problems` and `flow` it declares in `roles.json`.
+`misc` declares none of the three: it is questions and policies only.
 
 **Do not edit those directly.** They are the generic example that ships with
 MixerM8. Your own version goes in a file with `.local` in the name, one per
@@ -204,6 +208,27 @@ your church, not on the internet. The `.local.json` files are listed in
 `.gitignore`, so they are never committed and never appear on GitHub Pages —
 whereas anything you type into `guides.json` would be published the moment
 you push.
+
+### Diagrams
+
+Any entry can carry a picture, and the wording beside it always says the same
+thing so the page still reads if the picture is missing:
+
+    "diagram": {
+      "src": "img/signal-flow.svg",
+      "alt":     { "en": "...", "ko": "..." },
+      "caption": { "en": "...", "ko": "..." }
+    }
+
+Two generic ones ship in `docs/img/`. Your own — a real channel layout, your
+camera chain — go in `docs/img/local/`, which is gitignored for the same
+reason the wording is, and are referenced from a `.local.json` as
+`img/local/whatever.svg`. Note that this one works in a source checkout only:
+the bridge's override folder deliberately serves `.json` and nothing else.
+
+If you want to see every element the guide is built from — cards, checklists,
+collapsing steps, all four station colours — open `docs/kit.html`. It is not
+linked from the app; it is there for whoever maintains the guide.
 
 ### On the booth computer
 

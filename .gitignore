@@ -30,3 +30,8 @@ htmlcov/
 # so it stays on their machine: never committed, never served by Pages.
 # The committed docs/data/*.json are the generic example.
 docs/data/*.local.json
+
+# A church's own diagrams, for the same reason: a real channel-layout or
+# camera-chain drawing names the room and the gear in it. The committed
+# docs/img/*.svg are generic. A *.local.json can point at img/local/....
+docs/img/local/

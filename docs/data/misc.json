@@ -1,0 +1,140 @@
+{
+  "version": 1,
+  "role": "misc",
+  "note": {
+    "en": "Example wording. Copy this to misc.local.json and edit that copy — it is never committed. A run of four underscores marks something that still needs filling in for your church. Almost everything on this page is one of those: how a church runs its rota is not something this file can guess.",
+    "ko": "예시 문구입니다. misc.local.json으로 복사한 뒤 그 파일을 수정하세요. 복사한 파일은 커밋되지 않습니다. 밑줄 네 개는 각 교회에 맞게 채워야 하는 부분입니다. 이 페이지는 대부분이 그런 항목입니다 — 봉사 일정 운영 방식은 이 파일이 추측할 수 없습니다."
+  },
+
+  "intro": {
+    "en": "Everything that is not one station's job: how the rota works, when to arrive, and who to ask. If you are looking for what to press, go back and pick your station instead.",
+    "ko": "특정 자리에 속하지 않는 내용입니다: 봉사 일정, 도착 시간, 문의처. 무엇을 눌러야 하는지 찾고 계신다면 뒤로 돌아가 맡은 자리를 선택하세요."
+  },
+
+  "faq": [
+    {
+      "q": {
+        "en": "I have never done this before. Where do I start?",
+        "ko": "처음 봉사합니다. 어디서부터 시작하나요?"
+      },
+      "a": {
+        "en": "Go back, pick your station, and work down its Before list from the top. It is written for someone who has never touched the equipment. If something goes wrong during the service, the Problems tab is a list of what you are hearing or seeing, not a list of equipment names.",
+        "ko": "뒤로 가서 맡은 자리를 선택한 뒤, 예배 전 목록을 위에서부터 하나씩 하세요. 장비를 한 번도 만져본 적 없는 사람을 위해 쓰인 목록입니다. 예배 중 문제가 생기면 문제 해결 탭을 보세요. 장비 이름이 아니라, 지금 들리거나 보이는 상황으로 정리되어 있습니다."
+      }
+    },
+    {
+      "q": {
+        "en": "How do I sign up, and how do I know which week I am on?",
+        "ko": "봉사 신청은 어떻게 하고, 제가 몇 주차인지 어떻게 아나요?"
+      },
+      "todo": {
+        "en": "Fill in how your rota is run — the app or sheet, and who keeps it.",
+        "ko": "봉사 일정 운영 방식을 채워주세요 — 사용하는 앱이나 시트, 그리고 담당자를 적어주세요."
+      },
+      "a": {
+        "en": "The rota is kept in ____, and ____ puts it together. Ask them to add you.",
+        "ko": "봉사 일정은 ____에서 관리하며, ____가 작성합니다. 추가해 달라고 요청하세요."
+      }
+    },
+    {
+      "q": {
+        "en": "What time should I arrive?",
+        "ko": "몇 시까지 도착해야 하나요?"
+      },
+      "todo": {
+        "en": "Fill in the arrival time. Every station's running order counts backwards from the service, so this is the one number that makes the rest usable.",
+        "ko": "도착 시간을 채워주세요. 모든 자리의 진행 순서가 예배 시작 시각을 기준으로 거꾸로 계산되므로, 이 숫자가 있어야 나머지가 쓸모 있습니다."
+      },
+      "a": {
+        "en": "____ before the service starts. The Before list at your station takes about that long the first few times, and less once you know it.",
+        "ko": "예배 시작 ____ 전입니다. 처음 몇 번은 각 자리의 예배 전 목록에 그 정도 시간이 걸리고, 익숙해지면 더 짧아집니다."
+      }
+    },
+    {
+      "q": {
+        "en": "What do I do if I cannot make it on my week?",
+        "ko": "제 봉사 주간에 올 수 없으면 어떻게 하나요?"
+      },
+      "todo": {
+        "en": "Fill in who to tell and how far ahead. A booth with nobody in it is noticed halfway through the first song, so this one is worth being specific about.",
+        "ko": "누구에게, 얼마나 미리 알려야 하는지 채워주세요. 부스가 비어 있으면 첫 찬양 도중에 드러나므로, 이 항목은 구체적으로 적을 가치가 있습니다."
+      },
+      "a": {
+        "en": "Tell ____ at least ____ ahead, and do not assume someone else has noticed. Finding cover is easier the earlier you ask.",
+        "ko": "____에게 최소 ____ 전에 알려주세요. 다른 사람이 알아차렸을 것이라고 짐작하지 마세요. 일찍 말할수록 대신할 사람을 찾기 쉽습니다."
+      }
+    },
+    {
+      "q": {
+        "en": "Can I break something by pressing the wrong button?",
+        "ko": "잘못된 버튼을 눌러서 무언가 망가뜨릴 수 있나요?"
+      },
+      "a": {
+        "en": "Almost certainly not. Nearly everything in the booth can be undone, and this guide is read-only — it watches the equipment and cannot change it. What is worth being careful about is anything that changes a lot at once, like loading a scene on the sound desk in the middle of a service. Those are marked in red where they come up.",
+        "ko": "거의 그렇지 않습니다. 부스에 있는 것 대부분은 되돌릴 수 있고, 이 안내 화면은 읽기 전용이라 장비를 지켜볼 뿐 바꾸지 못합니다. 조심할 것은 한 번에 많은 것을 바꾸는 조작입니다. 예를 들어 예배 중에 음향 콘솔에서 씬을 불러오는 것이 그렇습니다. 그런 항목은 해당 화면에서 빨간색으로 표시되어 있습니다."
+      }
+    },
+    {
+      "q": {
+        "en": "Something is broken and it is not in the Problems list.",
+        "ko": "문제가 생겼는데 문제 해결 목록에 없습니다."
+      },
+      "todo": {
+        "en": "Fill in who to escalate to during a service, and who to tell afterwards. These are often two different people.",
+        "ko": "예배 중에 연락할 사람과 예배 후에 알릴 사람을 채워주세요. 보통 서로 다른 사람입니다."
+      },
+      "a": {
+        "en": "During the service, get ____. Afterwards, write down what happened and tell ____ — including the ones you managed to fix, because a problem that keeps coming back is the useful kind to hear about.",
+        "ko": "예배 중에는 ____를 불러주세요. 예배 후에는 무슨 일이 있었는지 적어 ____에게 알려주세요. 직접 해결한 문제도 포함해서 알려주세요. 반복해서 생기는 문제일수록 알아야 할 가치가 있습니다."
+      }
+    },
+    {
+      "q": {
+        "en": "Where are the spare batteries and cables kept?",
+        "ko": "여분 건전지와 케이블은 어디에 있나요?"
+      },
+      "todo": {
+        "en": "Fill in where the spares live. If there is no stock of spare batteries, say that instead — it is better than sending someone to look for a drawer that does not exist.",
+        "ko": "여분이 있는 위치를 채워주세요. 여분 건전지가 없다면 없다고 적어주세요. 존재하지 않는 서랍을 찾게 하는 것보다 낫습니다."
+      },
+      "a": {
+        "en": "Spares are kept in ____. Put a fresh battery in a wireless microphone before the service rather than during it.",
+        "ko": "여분은 ____에 있습니다. 무선 마이크 건전지는 예배 중이 아니라 예배 전에 새것으로 갈아주세요."
+      }
+    },
+    {
+      "q": {
+        "en": "Is there anything I should wear or avoid wearing?",
+        "ko": "복장에 지켜야 할 것이 있나요?"
+      },
+      "todo": {
+        "en": "Fill this in, or delete the question. An answer of \"nothing in particular\" is a real answer and worth writing down; a blank just makes people guess.",
+        "ko": "채우거나 이 질문을 삭제하세요. \"특별히 없습니다\"도 진짜 답이므로 적어둘 가치가 있습니다. 비워두면 사람들이 짐작하게 됩니다."
+      },
+      "a": {
+        "en": "____. If you will be on camera at any point, the livestream station's Before list says where the cameras point.",
+        "ko": "____. 카메라에 잡힐 수 있다면, 실시간 방송 자리의 예배 전 목록에 카메라가 향하는 방향이 적혀 있습니다."
+      }
+    },
+    {
+      "q": {
+        "en": "The guide says a word I do not know.",
+        "ko": "안내에 모르는 단어가 나옵니다."
+      },
+      "a": {
+        "en": "That is a fault in the guide, not in you. Write the word down and tell whoever keeps this guide — the wording is meant to be readable by someone on their first Sunday, and every word that is not gets rewritten.",
+        "ko": "그것은 여러분이 아니라 안내문의 잘못입니다. 그 단어를 적어 이 안내를 관리하는 사람에게 알려주세요. 이 안내는 첫 주일에 오는 사람도 읽을 수 있어야 하고, 그렇지 않은 표현은 모두 고쳐 씁니다."
+      }
+    },
+    {
+      "q": {
+        "en": "Why does the Sound station say it is not connected to the mixer?",
+        "ko": "음향 자리에서 믹서에 연결되지 않았다고 나오는 이유는 무엇인가요?"
+      },
+      "a": {
+        "en": "Because you are reading the copy on the internet rather than the one in the booth. The booth tablet runs a small bridge on the media computer that watches the desk and follows along. Everything else on the page works exactly the same either way.",
+        "ko": "부스에 있는 화면이 아니라 인터넷에 올라온 사본을 보고 계시기 때문입니다. 부스 태블릿은 미디어 컴퓨터에서 작은 프로그램이 콘솔을 지켜보며 화면을 따라갑니다. 그 외의 내용은 어느 쪽에서 보든 똑같이 작동합니다."
+      }
+    }
+  ]
+}
