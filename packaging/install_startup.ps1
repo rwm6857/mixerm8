@@ -2,6 +2,13 @@
 #   - installs MixerM8.exe to %LOCALAPPDATA%\MixerM8
 #   - starts it automatically at login, minimized
 #   - puts a "Booth Guide" shortcut on the desktop that opens the page
+#   - puts a "Restart MixerM8" shortcut next to it, for when it has crashed
+#
+# The bridge no longer quits because the console is off -- it serves the
+# guide and hunts for a desk in the background -- so a crash is the only
+# reason left to restart it, and a desktop shortcut is the answer a
+# volunteer can act on. A Scheduled Task with restart-on-failure would hide
+# the window, and "is it running?" has to stay answerable from the booth.
 #
 # Run on the media computer, from the folder holding MixerM8.exe:
 #     powershell -ExecutionPolicy Bypass -File install_startup.ps1
@@ -22,9 +29,11 @@ $startup    = [Environment]::GetFolderPath("Startup")
 $desktop    = [Environment]::GetFolderPath("Desktop")
 $startLink  = Join-Path $startup "MixerM8 Bridge.lnk"
 $deskLink   = Join-Path $desktop "Booth Guide.lnk"
+$restartCmd = Join-Path $installDir "restart.cmd"
+$restartLnk = Join-Path $desktop "Restart MixerM8.lnk"
 
 if ($Uninstall) {
-    foreach ($p in @($startLink, $deskLink)) {
+    foreach ($p in @($startLink, $deskLink, $restartLnk)) {
         if (Test-Path $p) { Remove-Item $p -Force; Write-Host "Removed $p" }
     }
     if (Test-Path $installDir) { Remove-Item $installDir -Recurse -Force; Write-Host "Removed $installDir" }
@@ -60,6 +69,26 @@ $lnk2.TargetPath  = "http://127.0.0.1:$Port"
 $lnk2.Description = "Open the booth guide"
 $lnk2.Save()
 
+# "Restart MixerM8": stop whatever is running and start it again. No console
+# address is passed -- the bridge reads the remembered one from
+# %APPDATA%\MixerM8\config.json and hunts for a desk if there is none, so
+# this shortcut stays correct even after the console changes address.
+@"
+@echo off
+rem Stop MixerM8 and start it again. Made by install_startup.ps1.
+taskkill /IM MixerM8.exe /F >nul 2>&1
+ping -n 2 127.0.0.1 >nul
+start "" "%~dp0MixerM8.exe" --port $Port
+"@ | Set-Content -Path $restartCmd -Encoding ASCII
+
+$lnk3 = $shell.CreateShortcut($restartLnk)
+$lnk3.TargetPath       = $restartCmd
+$lnk3.WorkingDirectory = $installDir
+$lnk3.WindowStyle      = 7          # minimized
+$lnk3.Description      = "Stop MixerM8 and start it again"
+$lnk3.Save()
+Write-Host "Put a 'Restart MixerM8' shortcut on the desktop." -ForegroundColor Green
+
 Write-Host ""
 Write-Host "Done. Starting it now..." -ForegroundColor Cyan
 Start-Process -FilePath $target -ArgumentList (
@@ -69,3 +98,7 @@ Start-Process -FilePath $target -ArgumentList (
 Write-Host ""
 Write-Host "On the tablet, open:  http://$($env:COMPUTERNAME):$Port" -ForegroundColor Yellow
 Write-Host "(or the IP address the MixerM8 window prints)"
+Write-Host ""
+Write-Host "The desk does not have to be on. If MixerM8 starts first it keeps" -ForegroundColor Cyan
+Write-Host "looking, and the Mixer tab has a Connect button for the volunteer" -ForegroundColor Cyan
+Write-Host "who wants it to happen right now." -ForegroundColor Cyan
