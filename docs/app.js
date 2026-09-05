@@ -87,6 +87,26 @@ const UI = {
   reset:      { en: "Clear the ticks", ko: "체크 지우기" },
   back:       { en: "← Back", ko: "← 뒤로" },
   done:       { en: "All done.", ko: "모두 완료했습니다." },
+
+  /* The connection words. These are the ones a volunteer reads when they
+     walk in and the desk is still cold, so unlike the other messages in
+     this tab they are written in both languages. */
+  refTitle:   { en: "Not connected to the mixer",
+                ko: "믹서에 연결되어 있지 않습니다" },
+  refBody:    { en: "This copy cannot follow along, so pick a screen below to read about it. In the booth, open the address the bridge prints on the media computer and this page will follow the desk by itself.",
+                ko: "이 사본은 콘솔을 따라갈 수 없습니다. 아래에서 화면을 골라 설명을 읽으세요. 부스에서는 미디어 컴퓨터에 표시된 주소를 열면 이 페이지가 콘솔을 자동으로 따라갑니다." },
+  huntTitle:  { en: "Looking for the mixer",
+                ko: "믹서를 찾고 있습니다" },
+  huntBody:   { en: "Nothing has answered yet. Switch the desk on, then press the button below.",
+                ko: "아직 응답이 없습니다. 콘솔의 전원을 켠 다음 아래 버튼을 누르세요." },
+  quietTitle: { en: "No answer from the mixer",
+                ko: "믹서가 응답하지 않습니다" },
+  quietBody:  { en: "The bridge is running and knows where the desk is, but the desk is not replying.",
+                ko: "브리지는 실행 중이고 콘솔의 주소도 알고 있지만, 콘솔이 응답하지 않습니다." },
+  quietDo:    { en: "Check the desk is switched on and its network cable is plugged in, then press the button below.",
+                ko: "콘솔의 전원이 켜져 있고 네트워크 케이블이 연결되어 있는지 확인한 뒤 아래 버튼을 누르세요." },
+  connect:    { en: "Connect to the mixer", ko: "믹서에 연결하기" },
+  connecting: { en: "Looking…", ko: "찾는 중…" },
 };
 
 const state = {
@@ -98,6 +118,7 @@ const state = {
   local: false,      // is any loaded file this church's own copy?
   bridge: false,
   snap: null,
+  connecting: false, // a Connect press, held long enough to be seen
   lang: 0,
   follow: true,
   view: "pick",
@@ -184,7 +205,12 @@ function card(entry, extraClass = "") {
   const badge = { ok: "Safe", caution: "Careful", danger: "Do not change", info: "Note" }[level];
 
   let html = `<div class="card ${extraClass}" data-level="${level}">`;
-  html += `<span class="badge">${esc(badge)}</span>`;
+  // "Safe" / "Careful" / "Do not change" are about touching the desk. The
+  // status cards below borrow the severity colour, which has to keep
+  // meaning the same thing everywhere, but a card about the bridge being
+  // down is not telling anyone not to change something -- so it opts out
+  // of the word and keeps the colour.
+  if (entry.badge !== false) html += `<span class="badge">${esc(badge)}</span>`;
   html += `<h2>${esc(one(entry.title))}</h2>`;
   html += todo(entry);
   html += lines(entry.body, "body");
@@ -488,8 +514,8 @@ function renderNow() {
 
   if (!state.bridge) {
     where.textContent = "";
-    box.innerHTML = plainCard("info", "Not connected to the mixer",
-      "This copy cannot follow along, so pick a screen below to read about it. In the booth, open the address the bridge prints on the media computer and this page will follow the desk by itself.");
+    box.innerHTML = card({ level: "info", badge: false,
+                           title: UI.refTitle, body: UI.refBody });
     return;
   }
 
@@ -500,11 +526,24 @@ function renderNow() {
     return;
   }
 
+  // The bridge is up but the desk is not answering. Two different problems
+  // wearing one message would send somebody to check a cable that is fine,
+  // so they are told apart: a known address that has gone quiet is a desk
+  // to switch on, and no address at all is a desk that has never been found.
   if (!s || !s.ok) {
     where.textContent = "";
-    box.innerHTML = plainCard("danger", "No answer from the mixer",
-      "The bridge is running, but the console is not replying.",
-      "Check the desk is switched on and the network cable is plugged in.");
+    box.innerHTML = (s && s.ip
+      ? card({ level: "danger", badge: false, title: UI.quietTitle,
+               body: UI.quietBody, action: UI.quietDo })
+      : card({ level: "caution", badge: false,
+               title: UI.huntTitle, body: UI.huntBody }))
+      + `<button class="chip wide" id="connect" type="button"` +
+        (state.connecting ? " disabled" : "") + `>` +
+        esc(t1(state.connecting ? "connecting" : "connect")) + `</button>`;
+    // Never disabled by the bridge's own "still searching" flag: that one
+    // stays true for as long as nothing answers, and a button that is grey
+    // every time you need it is not a button.
+    $("connect").onclick = reconnect;
     return;
   }
 
@@ -626,6 +665,7 @@ function setFoot() {
   }
   bits.push(state.local ? "Showing this church's own wording."
                         : "Showing the example wording — blanks are not filled in yet.");
+  if (state.bridge && state.snap?.ip) bits.push("Mixer: " + state.snap.ip);
   bits.push(state.bridge ? "Connected to the booth bridge — read-only, it cannot change the desk."
                          : "Reference copy. github.com/rwm6857/mixerm8");
   $("foot").textContent = bits.join(" · ");
@@ -749,19 +789,52 @@ async function route() {
 
 /* ---------- live connection ---------- */
 
+/* Three things can be wrong at once and they are not the same thing:
+ * no bridge (this is the Pages copy), a bridge that has never found a desk,
+ * and a desk that was found and has gone quiet. The pill says which. */
+function showStatus() {
+  const s = state.snap;
+  if (!state.bridge) return setStatus("ref", "Reference");
+  if (s?.ok) return setStatus("live", "Following");
+  if (state.connecting || s?.searching) return setStatus("waiting", "Looking");
+  setStatus("waiting", "No mixer");
+}
+
 function connect() {
   const src = new EventSource("events");
   src.onmessage = (e) => {
     state.bridge = true;
     state.snap = JSON.parse(e.data);
-    setStatus(state.snap.ok ? "live" : "waiting",
-              state.snap.ok ? "Following" : "No mixer");
+    showStatus();
     if (state.view === "now") renderNow();
     setFoot();
   };
   src.onerror = () => {
+    // The browser reconnects an EventSource by itself; this only says so.
     if (state.bridge) setStatus("offline", "Reconnecting");
   };
+}
+
+/* The Connect button. The bridge hunts on its own too, on a backoff, but
+ * a volunteer walking in wants it to happen now rather than within thirty
+ * seconds -- and wants to see that pressing it did something. */
+async function reconnect() {
+  state.connecting = true;
+  renderNow();
+  showStatus();
+  try {
+    const r = await fetch("reconnect", { method: "POST", cache: "no-store" });
+    if (r.ok) state.snap = await r.json();
+  } catch { /* the stream already reports a bridge that went away */ }
+  // A broadcast and its reply take about a second. Holding the label for
+  // longer than that is deliberate: a button that snapped back instantly
+  // would read as having done nothing at all.
+  setTimeout(() => {
+    state.connecting = false;
+    if (state.view === "now") renderNow();
+    showStatus();
+    setFoot();
+  }, 2500);
 }
 
 async function boot() {
@@ -783,12 +856,11 @@ async function boot() {
     if (!r.ok) throw new Error("no bridge");
     state.snap = await r.json();
     state.bridge = true;
-    setStatus("live", "Following");
     connect();
   } catch {
     state.bridge = false;
-    setStatus("ref", "Reference");
   }
+  showStatus();
 
   await route();
 }

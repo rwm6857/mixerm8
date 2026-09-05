@@ -165,7 +165,10 @@ it, and `app.js` needed no editor-shaped hooks to make that work.
 **It is a separate command from the bridge, and that is the design.** The
 bridge listens on the LAN so tablets can reach it; a write endpoint there
 would put "rewrite the guide" one URL away from every volunteer holding a
-tablet mid-service. The editor binds 127.0.0.1, checks the `Host` header,
+tablet mid-service. The bridge has exactly one endpoint that changes
+anything — `POST /reconnect`, which broadcasts for a console and can do
+nothing else — argued for under "The desk is not always on" rather than
+being the start of a trend. The editor binds 127.0.0.1, checks the `Host` header,
 and never opens a socket to the console at all — so it runs on a Mac with
 no X32 in the building, which is where the writing actually happens.
 
@@ -232,6 +235,55 @@ Learn will not invent a guide entry, though — an empty body fails the content
 checks, and titling one "Tab 7" would be a guess about what tab 7 is, so it
 reports the number and stops.
 
+## The desk is not always on
+
+The media PC boots before the sound desk on most Sundays, and three of the
+four stations never had a console to begin with. So the bridge starts
+without one.
+
+- **`mixerm8` no longer resolves an address before it serves anything.** It
+  starts the watcher with whatever it remembers — possibly nothing — and
+  brings the web server up immediately, so the guide loads whether or not a
+  desk exists. The old behaviour was to print "could not find a console"
+  and exit 1, from a window the install script minimises, so the visible
+  symptom was a tablet that would not load at all.
+- **There is nothing to sit and listen for.** The X32 has no mDNS record
+  and sends no beacon: it answers `/info` when broadcast at, and pushes
+  changes only for the ~10s an `/xremote` subscription lasts. Finding a desk
+  means shouting for one, which is why `Console._hunt()` broadcasts on a
+  backoff (2s, doubling to 30s) instead of waiting for an announcement that
+  never comes.
+- **It hunts until a desk answers, even when it remembered an address.**
+  Last week's address is not evidence about this week's, and a desk on a new
+  DHCP lease used to mean a bridge that sat polling a dead address all
+  morning. The first reply ends the hunt, from a broadcast or an ordinary
+  poll alike.
+- **It never restarts the hunt on its own, and that asymmetry is the
+  point.** A desk that goes quiet mid-service is still the desk we want: the
+  watcher keeps polling its address and it comes back by itself when the
+  power does. Hunting at that moment could instead latch onto a second
+  console in the building and follow the wrong one without anybody noticing.
+- **`POST /reconnect` is the tablet's Connect button, and the only endpoint
+  on the LAN server that changes anything.** It is the deliberate exception
+  to the rule that keeps the editor on loopback, and it is narrow: it can
+  broadcast `/info` and re-point the watcher, and that is all. It cannot
+  reach the desk with anything but a read — `encode_query` still takes no
+  arguments — it cannot touch a file, and `Console.reconnect()` debounces
+  it, so a volunteer leaning on the button is one broadcast.
+  `test_reconnect_is_the_only_post_the_bridge_answers` pins that nothing
+  has joined it.
+- **The snapshot carries `ip` and `searching`** so the tablet can tell apart
+  three states that used to share one message: no bridge (the Pages copy),
+  a bridge that has never found a desk, and a desk that was found and has
+  gone quiet. Only the last one means "go and switch something on", and
+  sending someone to check a cable that is fine costs a Sunday morning.
+
+On the booth machine `install_startup.ps1` still starts the bridge at login
+from the Startup folder, and now also installs a **Restart MixerM8** desktop
+shortcut next to the Booth Guide one. A Scheduled Task with restart-on-
+failure was the alternative; it hides the window, and "is it running?" has
+to stay answerable by looking.
+
 ## Constraints
 
 - **No runtime dependencies.** `dependencies = []` is deliberate: it keeps
@@ -248,7 +300,7 @@ reports the number and stops.
 
 ```bash
 pip install -e ".[dev]"    # stdlib only at runtime; this adds pytest + ruff
-pytest                     # 86 tests, ~17s
+pytest                     # 94 tests, ~26s
 ruff check .               # line length 100
 mixerm8 --discover         # find consoles on the network
 mixerm8 --edit             # the guide editor, localhost only, no console needed
@@ -262,7 +314,10 @@ is deliberately unmapped so the "not mapped yet" path gets exercised), and
 asserts every inbound packet has an empty typetag. Run it standalone against
 a real bridge and browser, or let `tests/test_integration.py` drive it
 in-process — that is where the read-only guarantee is verified end to end,
-from where the desk stands rather than from our own code.
+from where the desk stands rather than from our own code. A loopback socket
+never receives a subnet broadcast, so the tests that exercise the hunt point
+`console.BROADCAST` at `127.0.0.1`; that tuple exists as a seam for them and
+for nothing else.
 
 ## Gotchas
 

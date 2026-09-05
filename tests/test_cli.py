@@ -44,3 +44,43 @@ def test_learning_the_tabs_never_starts_the_update_check(monkeypatch):
     monkeypatch.setattr(cli.learn_mod, "walk", lambda *a, **k: 0)
 
     assert cli.main(["--learn"]) == 0
+
+
+def test_the_bridge_serves_the_guide_even_with_no_console(monkeypatch):
+    """The media PC boots before the sound desk most Sundays.
+
+    Quitting at that moment would take the guide down with it -- for all
+    four stations, three of which have no console at all -- and it would do
+    it in a window that is minimised, so nobody would see why.
+    """
+    from mixerm8 import cli, config, update
+
+    built = {}
+
+    class _Watcher:
+        def __init__(self, ip):
+            built["ip"] = ip
+            self.ip = None
+        def start(self): pass
+        def stop(self): pass
+        def snapshot(self): return {"seen": []}
+
+    served = []
+
+    def _sleep(_seconds):
+        raise KeyboardInterrupt        # stands in for closing the window
+
+    monkeypatch.setattr(config, "load", dict)
+    monkeypatch.setattr(config, "save", lambda **_: None)
+    monkeypatch.setattr(cli, "Console", _Watcher)
+    monkeypatch.setattr(cli, "discover", lambda *a, **k: (_ for _ in ()).throw(
+        AssertionError("the bridge blocked on discovery before serving")))
+    monkeypatch.setattr(cli, "serve", lambda console, port: served.append(port) or
+                        types.SimpleNamespace(shutdown=lambda: None))
+    monkeypatch.setattr(cli, "local_ip", lambda: "192.0.2.9")
+    monkeypatch.setattr(update, "check_in_background", lambda *_a, **_k: None)
+    monkeypatch.setattr(cli.time, "sleep", _sleep)
+
+    assert cli.main([]) == 0
+    assert built["ip"] is None, "it invented an address rather than hunting"
+    assert served == [8080], "the app was never served"

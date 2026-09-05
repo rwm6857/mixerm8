@@ -12,6 +12,19 @@ OSC_PORT = 10023
 RESUBSCRIBE_EVERY = 8.0     # the X32 drops /xremote subscribers after ~10s
 POLL_EVERY = 2.0            # ask outright too, in case a push is missed
 
+# The desk announces nothing. It has no mDNS record and sends no beacon: it
+# answers /info when broadcast at, and pushes changes only for the ~10s an
+# /xremote subscription lasts. So there is nothing to sit and listen for,
+# and finding a console means shouting for one. The cost of shouting is
+# three small datagrams, which is why the backoff below tops out where it
+# does rather than giving up.
+BROADCAST = ("255.255.255.255", "<broadcast>")
+SEARCH_TIMEOUT = 0.6        # how long one broadcast waits for an answer
+SEARCH_FIRST = 2.0          # first hunt this soon after coming up cold
+SEARCH_MAX = 30.0           # ...backing off to this while nothing answers
+RECONNECT_EVERY = 2.0       # a volunteer leaning on the button is one press
+SILENT_AFTER = 5.0          # no reply for this long and the desk is "off"
+
 CHANNEL_SCREEN = 0          # the channel strip; its tab decides what shows
 
 # This module reports numbers and nothing else. Which screen a number *is*
@@ -36,7 +49,7 @@ def discover(timeout: float = 1.5) -> list[dict]:
     sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
     sock.settimeout(0.3)
     try:
-        for addr in ("255.255.255.255", "<broadcast>"):
+        for addr in BROADCAST:
             try:
                 sock.sendto(encode_query("/info"), (addr, OSC_PORT))
             except OSError:
@@ -68,8 +81,12 @@ class Console(threading.Thread):
 
     daemon = True
 
-    def __init__(self, ip: str):
+    def __init__(self, ip: str | None = None):
         super().__init__(name="x32-watcher")
+        # `ip` is None when nobody has told us where the desk is and nothing
+        # has answered yet. The watcher runs anyway: the media PC boots
+        # before the sound desk does most Sundays, and a bridge that gave up
+        # at that moment would take the whole guide down with it.
         self.ip = ip
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.sock.settimeout(0.4)
@@ -78,15 +95,31 @@ class Console(threading.Thread):
         self.changed = threading.Condition()
         self.version = 0
         self._state = {
-            "ok": False, "screen": None, "page": None,
+            # Searching until a desk has actually answered, even when an
+            # address was remembered from last week: nothing here is
+            # evidence that address is still right, and a desk on a new DHCP
+            # lease is the ordinary way for it to be wrong. Once one answers
+            # this stays off -- see _hunt().
+            "ok": False, "ip": ip, "searching": True,
+            "screen": None, "page": None,
             "channel": None, "name": None, "seen": [], "last_seen": 0.0,
         }
         self._name_asked: int | None = None
         self._stopping = threading.Event()
+        # Hunt bookkeeping. `_hunt_now` and `_hunt_delay` are also written
+        # by reconnect() from an HTTP thread; the worst a race can do is
+        # delay a broadcast by one pass of the loop.
+        self._hunt_at = 0.0
+        self._hunt_delay = SEARCH_FIRST
+        self._hunt_now = False
+        self._last_press = 0.0
+        self._last_sub = self._last_poll = 0.0
 
     # -- outgoing -------------------------------------------------------
     def _query(self, address: str) -> None:
         """Send one argument-less OSC message. Cannot carry a value."""
+        if not self.ip:
+            return
         try:
             self.sock.sendto(encode_query(address), (self.ip, OSC_PORT))
         except OSError:
@@ -96,22 +129,75 @@ class Console(threading.Thread):
     def stop(self) -> None:
         self._stopping.set()
 
+    def reconnect(self) -> bool:
+        """Hunt for the desk right now. False if asked again too soon.
+
+        This is what the tablet's Connect button reaches. It is the only
+        way back into search mode once a console has answered, which is
+        deliberate -- see _hunt().
+        """
+        now = time.time()
+        if now - self._last_press < RECONNECT_EVERY:
+            return False
+        self._last_press = now
+        self._hunt_delay = SEARCH_FIRST
+        self._hunt_now = True
+        self._update(searching=True)
+        return True
+
+    def _hunt(self) -> None:
+        """Broadcast for a desk. The only thing that ever sets self.ip.
+
+        Hunting runs until a desk answers and never restarts on its own. It
+        covers the two ways an address can be missing at startup -- none
+        remembered, or one remembered that has since moved -- and stops for
+        good at the first reply, from a broadcast or an ordinary poll alike.
+
+        It does not restart when a desk goes quiet later, and that asymmetry
+        is the point: a desk that stops answering mid-service is still the
+        desk we want, we keep polling its address, and it comes back by
+        itself when the power does. Hunting at that moment could instead
+        latch onto a second console in the building and follow the wrong one
+        without anybody noticing. Getting back out is the button's job.
+        """
+        self._hunt_now = False
+        self._hunt_at = time.time() + self._hunt_delay
+        self._hunt_delay = min(self._hunt_delay * 2, SEARCH_MAX)
+
+        found = [c["ip"] for c in discover(SEARCH_TIMEOUT)]
+        if not found:
+            return
+
+        ip = self.ip if self.ip in found else found[0]
+        self._hunt_delay = SEARCH_FIRST
+        if ip != self.ip:
+            # Whatever the last desk was showing is not this one's business.
+            self.ip = ip
+            self._name_asked = None
+            self._update(ip=ip, ok=False, screen=None, page=None,
+                         channel=None, name=None, seen=[])
+        self._update(searching=False)
+        self._last_sub = self._last_poll = 0.0    # subscribe and poll at once
+
     def run(self) -> None:
-        last_sub = last_poll = 0.0
         while not self._stopping.is_set():
             now = time.time()
 
-            if now - last_sub > RESUBSCRIBE_EVERY:
-                self._query("/xremote")
-                last_sub = now
+            if self._hunt_now or (self._state["searching"] and now >= self._hunt_at):
+                self._hunt()
+                now = time.time()
 
-            if now - last_poll > POLL_EVERY:
+            if now - self._last_sub > RESUBSCRIBE_EVERY:
+                self._query("/xremote")
+                self._last_sub = now
+
+            if now - self._last_poll > POLL_EVERY:
                 for address in _POLLED:
                     self._query(address)
-                last_poll = now
+                self._last_poll = now
 
             # Console has gone quiet: report it rather than showing stale state.
-            if self._state["ok"] and now - self._state["last_seen"] > 5.0:
+            if self._state["ok"] and now - self._state["last_seen"] > SILENT_AFTER:
                 self._update(ok=False)
 
             try:
@@ -128,7 +214,9 @@ class Console(threading.Thread):
             self._handle(*msg)
 
     def _handle(self, address: str, args: list) -> None:
-        fields: dict = {"ok": True, "last_seen": time.time()}
+        # A reply is the proof the hunt was after, whoever asked for it --
+        # a broadcast or an ordinary poll of a remembered address.
+        fields: dict = {"ok": True, "searching": False, "last_seen": time.time()}
 
         if address == "/-stat/screen/screen":
             fields["screen"] = args[0]

@@ -71,6 +71,7 @@ body {
   font: inherit; font-size: .85rem; font-weight: 600; cursor: pointer;
 }
 .chip:active { background: var(--line); }
+.chip[disabled] { opacity: .55; cursor: default; }
 
 /* ---------- language flip ----------
    Three fixed segments in the same place on every view. Cycling through a
@@ -387,6 +388,10 @@ code {
 .item { flex: 1; }
 .item .text { margin-bottom: 2px; }
 .chip.wide { display: block; width: 100%; min-height: var(--tap); }
+/* The Connect button is the one thing a volunteer walking into a cold
+   booth has to find, so it is a full-width tap target rather than a
+   chip tucked under a card. */
+#connect { margin-top: 14px; font-size: 1rem; }
 
 /* ---------- problem pages ---------- */
 .symptom { color: var(--muted); margin-bottom: 14px; }

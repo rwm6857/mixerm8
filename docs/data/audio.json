@@ -50,8 +50,8 @@
         "ko": "믹서 탭에 연결되지 않았다고 나옵니다. 고장인가요?"
       },
       "a": {
-        "en": "Not necessarily. That tab follows along only when you open this page from the booth's own address. Opened from the internet it still explains every screen on the desk; it just cannot show you which one you are on.",
-        "ko": "꼭 그렇지는 않습니다. 이 탭은 부스 자체 주소로 이 페이지를 열었을 때만 콘솔을 따라갑니다. 인터넷에서 열어도 콘솔의 모든 화면 설명은 그대로 볼 수 있고, 지금 어느 화면에 있는지만 표시되지 않습니다."
+        "en": "Not necessarily. That tab follows along only when you open this page from the booth's own address. Opened from the internet it still explains every screen on the desk; it just cannot show you which one you are on. If you did open it from the booth, the desk is probably not switched on yet — switch it on, then press Connect to the mixer on that tab.",
+        "ko": "꼭 그렇지는 않습니다. 이 탭은 부스 자체 주소로 이 페이지를 열었을 때만 콘솔을 따라갑니다. 인터넷에서 열어도 콘솔의 모든 화면 설명은 그대로 볼 수 있고, 지금 어느 화면에 있는지만 표시되지 않습니다. 부스 주소로 열었는데도 그렇게 나온다면 콘솔이 아직 켜져 있지 않을 가능성이 큽니다. 전원을 켠 다음 그 탭에서 '믹서에 연결하기'를 누르세요."
       }
     },
     {
