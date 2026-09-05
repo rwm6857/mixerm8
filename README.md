@@ -28,7 +28,7 @@ and nothing about a broken bridge can stop a volunteer reading their steps.
 the codebase takes an address and no arguments, and on the X32 a message
 without arguments is a read. See [Read-only by construction](#read-only-by-construction).
 
-## The QR codes
+## The QR codes 
 
 Everything after the `#` picks the station and the language. Make one sticker
 per station per language and put it where that volunteer stands.
