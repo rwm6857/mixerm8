@@ -21,7 +21,10 @@ a = Analysis(
                    "mixerm8.editor", "mixerm8.validate"],
     hookspath=[],
     runtime_hooks=[],
-    excludes=["tkinter", "unittest", "pydoc", "email", "xml", "pdb"],
+    # email stays: http.server imports it at module load, and stripping it
+    # crashes the exe before it prints anything. The smoke test in
+    # release.yml is what catches a bad excludes list.
+    excludes=["tkinter", "unittest", "pydoc", "xml", "pdb"],
     noarchive=False,
 )
 pyz = PYZ(a.pure)
