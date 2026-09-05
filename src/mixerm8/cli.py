@@ -167,16 +167,20 @@ def main(argv: list[str] | None = None) -> int:
             print(f"  {c['ip']:<16} {c['model']} {c['name']} {c['firmware']}")
         return 0
 
-    ip = resolve_ip(args.ip)
-    if not ip:
-        print("Could not find a console, and none was given.")
-        print("Find the IP on the desk: SETUP -> Network, then run:")
-        print("    mixerm8 192.168.1.50")
-        return 1
+    # No blocking discovery here, and no exit when nothing answers. The
+    # media PC boots before the sound desk on most Sundays, and the bridge
+    # serves the guide as well as the console state -- quitting because the
+    # desk is off would take the checklist down with it, for all four
+    # stations, none of which have a console at all. The watcher hunts in
+    # the background instead and the tablet says which of the two it is.
+    ip = args.ip or config.load().get("ip")
+    if ip and not args.ip:
+        print(f"Using remembered console address {ip}")
 
     console = Console(ip)
     console.start()
-    config.save(ip=ip)
+    if ip:
+        config.save(ip=ip)
 
     try:
         server = serve(console, args.port)
@@ -187,7 +191,12 @@ def main(argv: list[str] | None = None) -> int:
 
     url = f"http://{local_ip()}:{args.port}"
     print()
-    print(f"  Watching the console at {ip}  (read-only)")
+    if ip:
+        print(f"  Watching the console at {ip}  (read-only)")
+    else:
+        print("  Looking for a console on the network  (read-only)")
+        print("  If it never finds one, read the IP off the desk")
+        print("  (SETUP -> Network) and run:  mixerm8 192.168.1.50")
     print(f"  Open this on the tablet:  {url}")
     print()
 
@@ -203,6 +212,13 @@ def main(argv: list[str] | None = None) -> int:
     try:
         while True:
             time.sleep(1.0)
+            # The watcher is what finds a desk, whether at startup or when
+            # somebody presses Connect on the tablet. Remember the address
+            # it settled on so the next boot starts pointed at it.
+            if console.ip and console.ip != ip:
+                ip = console.ip
+                config.save(ip=ip)
+                print(f"  Found the console at {ip}")
     except KeyboardInterrupt:
         print("\nStopping.")
     finally:

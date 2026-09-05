@@ -106,6 +106,40 @@ class Handler(http.server.BaseHTTPRequestHandler):
         except (BrokenPipeError, ConnectionResetError):
             pass    # tablet went to sleep or wandered off the network
 
+    def do_POST(self) -> None:
+        """The one endpoint on this server that changes anything.
+
+        Everything else here is a read, and that is the reason the guide
+        editor is a separate command bound to loopback: a write endpoint on
+        the LAN would put "rewrite the guide" one URL away from every
+        volunteer holding a tablet. This one is judged worth the exception
+        because of what it can actually do -- broadcast /info and point the
+        watcher at whoever answers. It cannot reach the desk with anything
+        but a read (`encode_query` still takes no arguments), it cannot
+        touch a file, and the console debounces it, so a volunteer leaning
+        on the button is one broadcast rather than a flood.
+        """
+        path = self.path.split("?", 1)[0]
+        try:
+            if path == "/reconnect":
+                self._reconnect()
+            else:
+                self.send_error(404)
+        except (BrokenPipeError, ConnectionResetError):
+            pass
+
+    def _reconnect(self) -> None:
+        # Drain any body first, or the next request on this keep-alive
+        # connection starts reading from the middle of this one.
+        length = int(self.headers.get("Content-Length") or 0)
+        if length:
+            self.rfile.read(length)
+        started = self.console.reconnect()
+        snap = self.console.snapshot()
+        snap["started"] = started
+        self._send_bytes(json.dumps(snap).encode(),
+                         "application/json; charset=utf-8")
+
     def _stream(self) -> None:
         """Push a snapshot whenever the console changes. One thread per tablet."""
         self.send_response(200)

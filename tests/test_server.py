@@ -7,40 +7,93 @@ def test_webroot_resolves_to_the_app():
     assert (root / "data" / "guides.json").is_file()
 
 
-# ---------------------------------------------------------------------------
-# A church's own wording lives outside the repo. These tests pin the
-# precedence, because getting it backwards would either publish a staff
-# member's name or silently ignore the file someone just edited.
-# ---------------------------------------------------------------------------
-
 class _StubConsole:
     """Enough of a Console for the HTTP layer to start."""
 
+    def __init__(self):
+        self.presses = 0
+
     def snapshot(self):
-        return {"ok": False, "version": 0, "seen": []}
+        return {"ok": False, "ip": None, "searching": True, "version": 0, "seen": []}
 
     def wait_for_change(self, since, timeout):
         return 0
 
+    def reconnect(self):
+        self.presses += 1
+        return self.presses == 1        # the real one debounces; so does this
 
-def _running_server():
+
+def _running_server(console=None):
     import contextlib
     import http.client
 
-    srv = server.serve(_StubConsole(), 0)
+    srv = server.serve(console or _StubConsole(), 0)
     port = srv.server_address[1]
 
     @contextlib.contextmanager
-    def request(path):
+    def request(path, method="GET"):
         conn = http.client.HTTPConnection("127.0.0.1", port, timeout=5)
         try:
-            conn.request("GET", path)      # sent raw: no client-side "/.." fixup
+            conn.request(method, path)    # sent raw: no client-side "/.." fixup
             yield conn.getresponse()
         finally:
             conn.close()
 
     return srv, request
 
+
+# ---------------------------------------------------------------------------
+# POST /reconnect is the only endpoint on this server that changes anything,
+# and the reason the editor is a separate command on loopback is that a write
+# endpoint here would be one URL away from every volunteer holding a tablet.
+# So the exception is pinned: what it can do, and that nothing else joined it.
+# ---------------------------------------------------------------------------
+
+def test_a_tablet_can_ask_the_bridge_to_look_for_the_desk():
+    import json
+
+    console = _StubConsole()
+    srv, request = _running_server(console)
+    try:
+        with request("/reconnect", method="POST") as r:
+            assert r.status == 200
+            body = json.loads(r.read())
+        assert body["started"] is True
+        assert console.presses == 1
+        assert "searching" in body, "the tablet needs the state back to render"
+
+        # Leaning on the button is one press, not a broadcast storm.
+        with request("/reconnect", method="POST") as r:
+            assert json.loads(r.read())["started"] is False
+    finally:
+        srv.shutdown()
+
+
+def test_reconnect_is_the_only_post_the_bridge_answers():
+    srv, request = _running_server()
+    try:
+        for path in ("/", "/index.html", "/data/guides.json", "/state", "/events"):
+            with request(path, method="POST") as r:
+                assert r.status == 404, f"POST {path} returned {r.status}"
+    finally:
+        srv.shutdown()
+
+
+def test_only_one_endpoint_on_the_lan_server_writes_anything():
+    """A second do_POST branch should have to be argued for, not slipped in."""
+    from pathlib import Path
+    source = Path(server.__file__).read_text("utf-8")
+    branches = [ln.strip() for ln in source.splitlines()
+                if ln.strip().startswith("if path ==") or ln.strip().startswith("elif path ==")]
+    assert 'if path == "/reconnect":' in branches, branches
+
+
+# ---------------------------------------------------------------------------
+# A church's own wording lives outside the repo. These tests pin the
+# precedence, because getting it backwards would either publish a staff
+# member's name or silently ignore the file someone just edited.
+# ---------------------------------------------------------------------------
 
 def test_a_local_data_file_beats_the_bundled_example(tmp_path, monkeypatch):
     monkeypatch.setattr(server.config, "config_dir", lambda: tmp_path)
