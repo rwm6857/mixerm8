@@ -1,7 +1,7 @@
 # MixerM8
 
-A free Sunday guide for small church production teams, in plain English and
-Korean side by side.
+A free Sunday guide for small church production teams, in plain English,
+Korean, or any other language you add.
 
 A volunteer scans the QR code at their station and gets steps for their own
 job, on their own phone, in their own language. No account, no app, no
@@ -36,10 +36,12 @@ per station per language and put it where that volunteer stands.
     .../mixerm8/#audio            sound desk, reader's usual language
     .../mixerm8/#audio/en         sound desk, English
     .../mixerm8/#audio/ko         sound desk, Korean
-    .../mixerm8/#audio/both       both languages, one above the other
     .../mixerm8/#media/ko         projector computer, Korean
     .../mixerm8/#livestream/en    streaming computer, English
     .../mixerm8/                  no station — shows the picker
+
+The language after the second slash is any code you have declared — `es`,
+`pt`, `zh-Hans` — not a fixed list. See [Languages](#languages).
 
 Two stickers side by side at the same station, one `/en` and one `/ko`, is the
 point of the whole thing: nobody has to find a language setting while a
@@ -49,7 +51,7 @@ matters, and it never changes.
 In the booth, use the address the bridge prints instead of the public one, so
 the tablet can follow the desk:
 
-    http://192.168.1.20:8080/#audio/both
+    http://192.168.1.20:8080/#audio/ko
 
 ## Where this has actually run
 
@@ -192,15 +194,16 @@ itself on the next reload — no restart, no reinstall.
 
 ## Your own wording
 
-The words the volunteers read are not in the code. They are in two plain text
-files, English and Korean side by side, and there is no build step — save the
-file and reload the page.
+The words the volunteers read are not in the code. They are in plain text
+files, one block per language, and there is no build step — save the file and
+reload the page.
 
     docs/data/audio.json       the sound desk station
     docs/data/media.json       the projector station
     docs/data/livestream.json  the streaming station
     docs/data/misc.json        questions and policies, no equipment
-    docs/data/roles.json       the stations, their colours and their tabs
+    docs/data/roles.json       the languages, the stations, their colours and tabs
+    docs/data/ui.json          the app's own words — tab names, badges, messages
     docs/data/guides.json      what each screen on the mixer does, and its number
 
 Each station file holds that station's home page (`intro` and `faq`) and
@@ -228,6 +231,41 @@ your church, not on the internet. The `.local.json` files are listed in
 whereas anything you type into `guides.json` would be published the moment
 you push.
 
+### Languages
+
+Which languages the guide offers is content, not code. `roles.json` declares
+them and everything else follows — the buttons in the tablet's header, the
+codes the QR stickers can use, and what the checks insist on:
+
+```json
+"languages": [
+  { "id": "en", "label": "EN" },
+  { "id": "ko", "label": "한국어" },
+  { "id": "es", "label": "Español" }
+]
+```
+
+`id` is the code that goes in a sticker as `#audio/es` and is the key every
+block in every file is written under. `label` is what the button says; leave
+it out and the tablet fills in the usual name for the code, so `"languages":
+["en", "es"]` works too.
+
+**Adding one is a two-minute edit and then a translation job**, and the
+editor is honest about the second part. The moment you add `es`, the bar
+along the bottom lists every sentence in the guide that has no Spanish yet
+and tells you how many there are, and every text field in the editor grows a
+third column. Until a sentence is translated the tablet shows it in the first
+declared language rather than leaving a card blank — a card somebody can act
+on beats an empty one — but nothing pretends the gap is not there.
+
+The app's own words are in `docs/data/ui.json` and work the same way, which
+is the point: without it a station added in Spanish would read half in
+Spanish and half in English, with the tab names, the badges and the
+connection messages stuck in whatever the code was written in.
+
+One language is fine too. Declare only `en` and the header segment
+disappears, because a choice of one is not a choice.
+
 ### The editor
 
 Editing JSON by hand is fine if you already do that for a living. If you do
@@ -245,8 +283,13 @@ on a Mac at home with no console anywhere nearby.
 
 It checks as you type. The bar along the bottom runs exactly the rules the
 test suite runs, so it tells you about a `____` with no explanation above it,
-a sentence translated into only one language, or a problem page titled after
-a component rather than a symptom, before you save rather than after you push.
+a sentence missing one of your languages, or a problem page titled after a
+component rather than a symptom, before you save rather than after you push.
+Beside the count it shows how much of each language is actually written.
+
+Everything in the guide is reachable from the tree on the left: the stations,
+the front cover, the language list, the app's own wording, and the note at
+the top of each file explaining what that file is for.
 
 There are two places it can save, and it says which at the top:
 

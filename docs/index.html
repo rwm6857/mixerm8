@@ -16,8 +16,9 @@
     <span id="brand-text">MixerM8</span>
   </div>
   <div class="bar-right">
-    <!-- Language is a flip, not a menu: three fixed segments, always in the
-         same place on every view, so switching is one deliberate tap. -->
+    <!-- Language is a flip, not a menu: one segment per language the guide
+         declares, always in the same place on every view, so switching is
+         one deliberate tap. Hidden when only one language is declared. -->
     <div id="langs" class="langs" role="group" aria-label="Language"></div>
     <span id="status" class="status" data-state="idle">
       <span class="dot" aria-hidden="true"></span><span id="status-text">Starting</span>
@@ -77,7 +78,7 @@
       <label class="switch">
         <input id="follow" type="checkbox" checked>
         <span class="track" aria-hidden="true"><span class="knob"></span></span>
-        <span class="switch-label">Follow the mixer</span>
+        <span class="switch-label" id="follow-label">Follow the mixer</span>
       </label>
       <span id="where" class="where"></span>
     </div>

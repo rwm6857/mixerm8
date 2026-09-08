@@ -20,11 +20,11 @@ import re
 from pathlib import Path
 
 # The files that make up a guide, in the order the editor lists them.
-DOCUMENTS = ("roles", "audio", "media", "livestream", "misc", "guides")
+DOCUMENTS = ("roles", "ui", "audio", "media", "livestream", "misc", "guides")
 
 # The optional layers a station can declare in roles.json, and the fields
-# each entry of one must carry in both languages. Everything else on an
-# entry -- `where`, `action`, `diagram`, `todo` -- is optional.
+# each entry of one must carry in every declared language. Everything else
+# on an entry -- `where`, `action`, `diagram`, `todo` -- is optional.
 LAYERS = {
     "checklist": ("text",),
     "problems": ("title", "symptom"),
@@ -33,7 +33,17 @@ LAYERS = {
 }
 
 LEVELS = ("ok", "caution", "danger", "info")
-LANGUAGES = ("en", "ko")
+
+# Which languages a guide is written in is declared in roles.json, not
+# fixed here: a church adding a third one should not need a release. This
+# is only what to assume when nothing says otherwise, and it is one
+# language rather than two because a file that declares nothing is a file
+# that has said nothing about Korean either.
+DEFAULT_LANGUAGES = ("en",)
+
+# A language id ends up in a QR code as "#audio/ko", so it is kept to the
+# shape of a BCP-47 tag: a subtag of letters, optionally more after a dash.
+LANGUAGE_ID = re.compile(r"[A-Za-z]{2,8}(-[A-Za-z0-9]{2,8})*")
 
 BLANK = re.compile(r"_{4,}")
 
@@ -54,6 +64,24 @@ def load_documents(directory: Path) -> dict[str, dict]:
 
 def roles(docs: dict[str, dict]) -> list[dict]:
     return docs.get("roles", {}).get("roles", []) or []
+
+
+def languages(docs: dict[str, dict]) -> tuple[str, ...]:
+    """The languages this guide is written in, in the order it declares them.
+
+    `roles.json` is the one place that answers this, and every rule below
+    asks it rather than assuming. An entry may be a bare `"es"` or a
+    `{"id": "es", "label": "Español"}` -- the label is for the segment
+    button on the tablet and means nothing here. The first one declared is
+    what the app falls back to when a block is not translated yet, which is
+    why order is preserved instead of sorted.
+    """
+    out: list[str] = []
+    for item in docs.get("roles", {}).get("languages") or ():
+        lang = item if isinstance(item, str) else (item or {}).get("id")
+        if isinstance(lang, str) and lang.strip() and lang.strip() not in out:
+            out.append(lang.strip())
+    return tuple(out) or DEFAULT_LANGUAGES
 
 
 def station_ids(docs: dict[str, dict]) -> list[str]:
@@ -107,16 +135,78 @@ def blanks_without_todos(docs: dict[str, dict]) -> list[str]:
     return found
 
 
-def todos_not_bilingual(docs: dict[str, dict]) -> list[str]:
+def todos_missing_a_language(docs: dict[str, dict]) -> list[str]:
+    """A `todo` says what is still unknown, so it is the last thing that
+    should be readable in only some of the languages on the tablet."""
     missing: list[str] = []
+    wanted = languages(docs)
 
     def visit(where, node):
         if isinstance(node, dict) and isinstance(node.get("todo"), dict):
-            for lang in LANGUAGES:
+            for lang in wanted:
                 if not node["todo"].get(lang):
                     missing.append(f"{where}.todo missing {lang}")
 
     _walk(docs, visit)
+    return missing
+
+
+def bad_language_ids(docs: dict[str, dict]) -> list[str]:
+    """The declared languages, checked where they are declared.
+
+    An id ends up in a QR code as "#audio/ko" and as the key every block in
+    every file is written under, so a typo here is not one bad sticker --
+    it is a language the whole guide claims to be written in and never is.
+    A label may be left out (the app knows the common endonyms) but an
+    empty one would render as a nameless button.
+    """
+    problems: list[str] = []
+    declared = docs.get("roles", {}).get("languages")
+    if declared is not None and not declared:
+        problems.append("roles.json declares an empty language list; leave "
+                        "the key out to mean English alone")
+    seen: set[str] = set()
+    for i, item in enumerate(declared or ()):
+        where = f"roles.json languages[{i}]"
+        if isinstance(item, str):
+            lang, label = item, None
+        elif isinstance(item, dict):
+            lang, label = item.get("id"), item.get("label", None)
+        else:
+            problems.append(f"{where} is neither a language code nor an "
+                            f"{{id, label}} block")
+            continue
+        if not isinstance(lang, str) or not LANGUAGE_ID.fullmatch(lang.strip()):
+            problems.append(f"{where} has id {lang!r}, which is not a "
+                            f"language code a URL could carry")
+            continue
+        if "label" in (item if isinstance(item, dict) else {}) and not (
+                isinstance(label, str) and label.strip()):
+            problems.append(f"{where} has an empty label, so its button on "
+                            f"the tablet would have no name")
+        if lang.strip() in seen:
+            problems.append(f"{where} declares {lang.strip()!r} twice")
+        seen.add(lang.strip())
+    return problems
+
+
+def app_wording_missing_a_language(docs: dict[str, dict]) -> list[str]:
+    """The app's own words are content, so they obey the same rule.
+
+    ui.json carries the tab names, the badges, the status pill and the
+    connection messages. Without this check a station added in a third
+    language would render half in that language and half in the first one,
+    and nothing would say so.
+    """
+    missing: list[str] = []
+    wanted = languages(docs)
+    for key, block in ((docs.get("ui") or {}).get("strings") or {}).items():
+        if not isinstance(block, dict):
+            missing.append(f"ui.strings.{key} is not a language block")
+            continue
+        for lang in wanted:
+            if not block.get(lang):
+                missing.append(f"ui.strings.{key} missing {lang}")
     return missing
 
 
@@ -161,8 +251,9 @@ def layers_out_of_step(docs: dict[str, dict]) -> list[str]:
 
 
 def incomplete_layers(docs: dict[str, dict]) -> list[str]:
-    """Every declared layer, in both languages, all the way down."""
+    """Every declared layer, in every declared language, all the way down."""
     problems: list[str] = []
+    wanted = languages(docs)
     for role in roles(docs):
         rid = role.get("id")
         data = docs.get(rid)
@@ -178,7 +269,7 @@ def incomplete_layers(docs: dict[str, dict]) -> list[str]:
                     if not isinstance(block, dict):
                         problems.append(f"{rid}.{layer}[{i}] has no {field}")
                         continue
-                    for lang in LANGUAGES:
+                    for lang in wanted:
                         if not block.get(lang):
                             problems.append(
                                 f"{rid}.{layer}[{i}].{field} missing {lang}")
@@ -188,7 +279,7 @@ def incomplete_layers(docs: dict[str, dict]) -> list[str]:
             if not prob.get("steps"):
                 problems.append(f"{rid}.problems[{i}] has no steps")
             for j, step in enumerate(prob.get("steps") or []):
-                for lang in LANGUAGES:
+                for lang in wanted:
                     if not step.get(lang):
                         problems.append(
                             f"{rid}.problems[{i}].steps[{j}] missing {lang}")
@@ -198,12 +289,13 @@ def incomplete_layers(docs: dict[str, dict]) -> list[str]:
 def missing_home_page(docs: dict[str, dict]) -> list[str]:
     """The station's front page is the landing view, so it is never empty."""
     problems: list[str] = []
+    wanted = languages(docs)
     for rid in station_ids(docs):
         data = docs.get(rid)
         if data is None:
             continue
         intro = data.get("intro") or {}
-        for lang in LANGUAGES:
+        for lang in wanted:
             if not intro.get(lang):
                 problems.append(f"{rid}.intro missing {lang}")
         faq = data.get("faq") or []
@@ -211,7 +303,7 @@ def missing_home_page(docs: dict[str, dict]) -> list[str]:
             problems.append(f"{rid} has no questions on its front page")
         for i, item in enumerate(faq):
             for key in ("q", "a"):
-                for lang in LANGUAGES:
+                for lang in wanted:
                     if not (item.get(key) or {}).get(lang):
                         problems.append(f"{rid}.faq[{i}].{key} missing {lang}")
     return problems
@@ -253,9 +345,10 @@ def bad_levels(docs: dict[str, dict]) -> list[str]:
 
 def guides_missing_language(docs: dict[str, dict]) -> list[str]:
     missing: list[str] = []
+    wanted = languages(docs)
     for group in ("pages", "screens"):
         for key, entry in ((docs.get("guides") or {}).get(group) or {}).items():
-            for lang in LANGUAGES:
+            for lang in wanted:
                 if not (entry.get("body") or {}).get(lang):
                     missing.append(f"guides.{group}.{key} body missing {lang}")
     return missing
@@ -324,6 +417,7 @@ def broken_diagrams(docs: dict[str, dict], root: Path | None = None) -> list[str
     against -- a church's own drawing may legitimately not be here yet.
     """
     problems: list[str] = []
+    wanted = languages(docs)
 
     def visit(where, node):
         if not isinstance(node, dict):
@@ -331,7 +425,7 @@ def broken_diagrams(docs: dict[str, dict], root: Path | None = None) -> list[str
         fig = node.get("diagram")
         if not isinstance(fig, dict) or not fig.get("src"):
             return
-        for lang in LANGUAGES:
+        for lang in wanted:
             if not (fig.get("alt") or {}).get(lang):
                 problems.append(f"{where}.diagram.alt missing {lang}")
         if root is not None and not (root / fig["src"]).is_file():
@@ -343,7 +437,9 @@ def broken_diagrams(docs: dict[str, dict], root: Path | None = None) -> list[str
 
 ALL_CHECKS = (
     blanks_without_todos,
-    todos_not_bilingual,
+    todos_missing_a_language,
+    bad_language_ids,
+    app_wording_missing_a_language,
     bad_role_ids,
     roles_without_content,
     layers_out_of_step,

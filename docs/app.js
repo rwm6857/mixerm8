@@ -1,6 +1,7 @@
 /* MixerM8 — the Sunday guide.
  *
- * One page, four stations, two languages, and no build step.
+ * One page, four stations, as many languages as the guide declares, and no
+ * build step.
  *
  * ROUTING. A QR code at each station points at a hash:
  *
@@ -12,6 +13,13 @@
  * So the sticker on the wall decides the station and the language. A
  * volunteer who reads Korean scans a different code from the one next to
  * it and never touches a setting.
+ *
+ * LANGUAGES. Which ones exist is content, not code: roles.json declares
+ * them in `languages` and everything here is generated from that list, so
+ * adding one is an edit in `mixerm8 --edit` rather than a release. The
+ * app's own words -- tab names, badges, the connection messages -- are
+ * content too, in data/ui.json, because a station added in a third
+ * language would otherwise read half in that language and half in English.
  *
  * SHAPE. Picker -> station home -> a tab. The station home is the landing
  * view: it orients someone who has never been in the booth, and it is
@@ -29,11 +37,33 @@
  * data/*.local.json which is preferred when it exists. See loadData().
  */
 
-const LANGS = [
-  { id: "en",   label: "EN",     show: ["en"],       html: "en" },
-  { id: "ko",   label: "한국어",  show: ["ko"],       html: "ko" },
-  { id: "both", label: "EN·KO",  show: ["en", "ko"], html: "en" },
-];
+/* What a language calls itself, for the segment button. Chrome rather than
+ * content, like ICONS below: roles.json need only name a code, and a code
+ * this table has never heard of falls back to its own uppercase -- readable,
+ * if plain, and overridable by giving the entry an explicit `label`. */
+const LANGUAGE_NAMES = {
+  ar: "العربية", de: "Deutsch", en: "EN", es: "Español", fa: "فارسی",
+  fr: "Français", hi: "हिन्दी", id: "Bahasa", it: "Italiano", ja: "日本語",
+  ko: "한국어", nl: "Nederlands", pl: "Polski", pt: "Português",
+  ru: "Русский", sw: "Kiswahili", tl: "Tagalog", tr: "Türkçe",
+  uk: "Українська", vi: "Tiếng Việt", "zh-Hans": "简体中文",
+  "zh-Hant": "繁體中文",
+};
+
+/* roles.json may name a language either way round: "es" on its own, or
+ * { "id": "es", "label": "Español" } when the endonym above is wrong or
+ * absent. Both end up here as {id, label}. An empty or missing list means
+ * English alone, which is the one thing every copy of this file can read. */
+function normLangs(list) {
+  const out = [];
+  for (const item of Array.isArray(list) ? list : []) {
+    const id = (typeof item === "string" ? item : item?.id || "").trim();
+    if (!id || out.some((l) => l.id === id)) continue;
+    const label = (typeof item === "object" && item?.label) || LANGUAGE_NAMES[id] || id.toUpperCase();
+    out.push({ id, label });
+  }
+  return out.length ? out : [{ id: "en", label: "EN" }];
+}
 
 /* Station icons. These are chrome rather than content, so they live here and
  * roles.json only names one. They inherit the station's accent through
@@ -51,62 +81,19 @@ const icon = (name) =>
   `stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">` +
   (ICONS[name] || "") + `</svg>`;
 
-/* The page's own furniture. Content lives in data/*.json; these are the
- * handful of words the shell needs before any content has loaded. */
-const UI = {
-  pick:       { en: "Which station are you on today?", ko: "오늘 어느 자리에서 봉사하시나요?" },
-  tabHome:    { en: "Home",      ko: "홈" },
-  tabCheck:   { en: "Before",    ko: "예배 전" },
-  tabProblem: { en: "Problems",  ko: "문제 해결" },
-  tabFlow:    { en: "Order",     ko: "진행 순서" },
-  tabEquip:   { en: "Equipment", ko: "장비" },
-  tabMixer:   { en: "Mixer",     ko: "믹서" },
-  navCheck:   { en: "What to do before the service starts.",
-                ko: "예배가 시작되기 전에 할 일입니다." },
-  navProblem: { en: "Something is wrong right now.",
-                ko: "지금 문제가 생겼을 때 보세요." },
-  navFlow:    { en: "The order of a normal Sunday, with times.",
-                ko: "평소 주일의 진행 순서와 시간입니다." },
-  navEquip:   { en: "What each piece of gear here is, and where it lives.",
-                ko: "이 자리의 각 장비가 무엇이고 어디에 있는지 알려줍니다." },
-  navMixer:   { en: "Every screen on the desk, and what it does.",
-                ko: "콘솔의 모든 화면과 그 기능입니다." },
-  ledeCheck:  { en: "Work down the list. Ticks clear themselves each day.",
-                ko: "위에서부터 하나씩 하세요. 체크는 매일 자동으로 지워집니다." },
-  ledeProblem:{ en: "Tap whatever matches what you are hearing.",
-                ko: "지금 들리는 상황에 맞는 항목을 누르세요." },
-  ledeFlow:   { en: "The order of a normal Sunday. Tap a step to open it.",
-                ko: "평소 주일의 진행 순서입니다. 각 단계를 눌러 펼치세요." },
-  ledeEquip:  { en: "Tap a box to read what it does and where it is.",
-                ko: "장비를 눌러 무슨 역할을 하고 어디에 있는지 확인하세요." },
-  ledeMixer:  { en: "Every screen on the desk, and what it does.",
-                ko: "콘솔의 모든 화면과 그 기능입니다." },
-  faqHead:    { en: "Questions people ask", ko: "자주 묻는 질문" },
-  openAll:    { en: "Open every step",  ko: "모두 펼치기" },
-  closeAll:   { en: "Close every step", ko: "모두 접기" },
-  reset:      { en: "Clear the ticks", ko: "체크 지우기" },
-  back:       { en: "← Back", ko: "← 뒤로" },
-  done:       { en: "All done.", ko: "모두 완료했습니다." },
-
-  /* The connection words. These are the ones a volunteer reads when they
-     walk in and the desk is still cold, so unlike the other messages in
-     this tab they are written in both languages. */
-  refTitle:   { en: "Not connected to the mixer",
-                ko: "믹서에 연결되어 있지 않습니다" },
-  refBody:    { en: "This copy cannot follow along, so pick a screen below to read about it. In the booth, open the address the bridge prints on the media computer and this page will follow the desk by itself.",
-                ko: "이 사본은 콘솔을 따라갈 수 없습니다. 아래에서 화면을 골라 설명을 읽으세요. 부스에서는 미디어 컴퓨터에 표시된 주소를 열면 이 페이지가 콘솔을 자동으로 따라갑니다." },
-  huntTitle:  { en: "Looking for the mixer",
-                ko: "믹서를 찾고 있습니다" },
-  huntBody:   { en: "Nothing has answered yet. Switch the desk on, then press the button below.",
-                ko: "아직 응답이 없습니다. 콘솔의 전원을 켠 다음 아래 버튼을 누르세요." },
-  quietTitle: { en: "No answer from the mixer",
-                ko: "믹서가 응답하지 않습니다" },
-  quietBody:  { en: "The bridge is running and knows where the desk is, but the desk is not replying.",
-                ko: "브리지는 실행 중이고 콘솔의 주소도 알고 있지만, 콘솔이 응답하지 않습니다." },
-  quietDo:    { en: "Check the desk is switched on and its network cable is plugged in, then press the button below.",
-                ko: "콘솔의 전원이 켜져 있고 네트워크 케이블이 연결되어 있는지 확인한 뒤 아래 버튼을 누르세요." },
-  connect:    { en: "Connect to the mixer", ko: "믹서에 연결하기" },
-  connecting: { en: "Looking…", ko: "찾는 중…" },
+/* The app's own words used to be a dictionary here. They are content now,
+ * in data/ui.json, for one reason: a station added in a third language
+ * would otherwise read half in that language and half in English, and the
+ * one thing this file must never do is make a volunteer guess.
+ *
+ * FALLBACK. English alone, and only the sentences that say the guide did
+ * not load -- which is the one moment ui.json cannot be trusted to be
+ * there. Everything else comes from the file. */
+const FAILED_UI = {
+  failTitle: { en: "The guide did not load" },
+  failBody:  { en: "{what} could not be fetched, so there is nothing to show." },
+  failDo:    { en: "Reload the page. If it keeps happening, tell whoever set this up." },
+  failState: { en: "No content" },
 };
 
 const state = {
@@ -114,12 +101,13 @@ const state = {
   role: null,        // the role object from roles.json
   data: null,        // that role's home text, questions, and layers
   guides: null,      // console screen guides, sound station only
+  ui: FAILED_UI,     // the app's own words, from data/ui.json
+  langs: normLangs(null),   // {id, label} per language roles.json declares
   cache: {},         // role id -> loaded content
   local: false,      // is any loaded file this church's own copy?
   bridge: false,
   snap: null,
   connecting: false, // a Connect press, held long enough to be seen
-  lang: 0,
   follow: true,
   view: "pick",
   problem: null,     // index of an open problem
@@ -127,6 +115,7 @@ const state = {
   pinned: null,      // a console guide opened by hand
   flowOpen: false,   // has the reader asked for every step at once?
   ticks: new Set(),
+  lang: "en",        // the id of the language on screen, not an index
 };
 
 /* ---------- tiny persistence, best-effort ---------- */
@@ -150,20 +139,38 @@ const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) =>
  * loads the wrong scene in the middle of a service. */
 const fill = (s) => esc(s).replace(/_{4,}/g, '<span class="blank">____</span>');
 
-const langs = () => LANGS[state.lang].show;
-const t = (key) => langs().map((l) => UI[key]?.[l]).filter(Boolean);
-const t1 = (key) => t(key)[0] || "";
+/* Which language to read a block in, and what to read instead when it is
+ * not written yet: the one on screen first, then the rest in declared
+ * order. A gap is a content bug -- `validate.py` fails a declared language
+ * that is missing anywhere -- so this chain is a safety net rather than a
+ * feature. It exists because a card in the wrong language is still a card
+ * somebody can act on, and an empty one is not. */
+const langs = () => [state.lang, ...state.langs.map((l) => l.id).filter((id) => id !== state.lang)];
 
-/* The first available language of an {en, ko} block, as plain text. */
+/* One language of a block, as plain text. */
 const one = (node) => (node ? langs().map((l) => node[l]).filter(Boolean)[0] || "" : "");
-const two = (node) => (node ? langs().map((l) => node[l]).filter(Boolean)[1] || "" : "");
 
-/* Both languages of a {en, ko} block, as escaped-and-filled HTML lines. */
+/* Fill {n}-style placeholders. The app supplies the numbers; the wording
+ * around them is somebody's to translate, so it stays in ui.json. */
+const fmt = (text, vars) =>
+  String(text).replace(/\{(\w+)\}/g, (m, k) => (k in (vars || {}) ? String(vars[k]) : m));
+
+/* One of the app's own words, from data/ui.json. */
+const t1 = (key, vars) => (vars ? fmt(one(state.ui[key]), vars) : one(state.ui[key]));
+
+/* A ui.json string as a block, for the places that hand a whole {title,
+ * body} pair to card(). Keyed on the language on screen rather than on
+ * "en", so a guide that never declares English still resolves. */
+const u = (key, vars) => ({ [state.lang]: t1(key, vars) });
+
+/* A block as one escaped-and-filled HTML line. There used to be a second
+ * line here for the EN+KO reading, which is gone: two languages stacked in
+ * every card pushed the thing somebody needed off the bottom of a tablet,
+ * and the segment in the header was always one tap away anyway. */
 function lines(node, cls = "") {
   if (!node) return "";
-  return langs().map((l, i) =>
-    node[l] ? `<div class="${i > 0 ? "ko " + cls : cls}">${fill(node[l])}</div>` : ""
-  ).join("");
+  const text = one(node);
+  return text ? `<div class="${cls}">${fill(text)}</div>` : "";
 }
 
 function todo(entry) {
@@ -202,7 +209,8 @@ function wireDiagrams(root) {
 function card(entry, extraClass = "") {
   if (!entry) return "";
   const level = entry.level || "info";
-  const badge = { ok: "Safe", caution: "Careful", danger: "Do not change", info: "Note" }[level];
+  const badge = t1({ ok: "badgeOk", caution: "badgeCaution",
+                     danger: "badgeDanger", info: "badgeInfo" }[level]);
 
   let html = `<div class="card ${extraClass}" data-level="${level}">`;
   // "Safe" / "Careful" / "Do not change" are about touching the desk. The
@@ -219,8 +227,12 @@ function card(entry, extraClass = "") {
   return html + `</div>`;
 }
 
-function plainCard(level, title, body, action) {
-  return card({ level, title: { en: title }, body: { en: body }, action: action ? { en: action } : null });
+/* A card whose words are ui.json keys rather than guide content. Same
+ * shape, same severity colours; the only difference is where the sentence
+ * came from. `vars` fills the {n} in "Tab {n} - not mapped yet". */
+function uiCard(level, keys, vars) {
+  return card({ level, title: u(keys[0], vars), body: u(keys[1], vars),
+                action: keys[2] ? u(keys[2], vars) : null });
 }
 
 /* ---------- station picker ---------- */
@@ -234,7 +246,6 @@ function renderHero() {
   $("hero").innerHTML =
     (hero.image ? `<figure class="diagram hero-img"><img src="${esc(hero.image)}" alt=""></figure>` : "") +
     `<div class="hero-text"><h1>${esc(one(hero.title))}</h1>` +
-    (two(hero.title) ? `<h1 class="ko">${esc(two(hero.title))}</h1>` : "") +
     lines(hero.blurb, "blurb") + `</div>`;
   wireDiagrams($("hero"));
 }
@@ -243,14 +254,12 @@ function renderPick() {
   renderHero();
   $("pick-lede").textContent = t1("pick");
   $("pick").innerHTML = (state.roles?.roles || []).map((r) =>
-    `<a class="station" href="#${esc(r.id)}/${LANGS[state.lang].id}" ` +
+    `<a class="station" href="#${esc(r.id)}/${esc(state.lang)}" ` +
     `data-theme="${esc(r.theme || "")}" data-role="${esc(r.id)}">` +
     `<span class="station-icon" aria-hidden="true">${icon(r.icon)}</span>` +
     `<span class="station-text">` +
     `<b>${esc(one(r.label) || r.id)}</b>` +
-    (two(r.label) ? `<b class="ko">${esc(two(r.label))}</b>` : "") +
     `<span>${esc(one(r.where))}</span>` +
-    (two(r.where) ? `<span class="ko">${esc(two(r.where))}</span>` : "") +
     `</span></a>`
   ).join("");
 }
@@ -304,7 +313,6 @@ function step({ summary, aside, body, entry, cls = "", open = false }) {
          `<summary>` +
          (aside ? `<span class="when">${esc(aside)}</span>` : "") +
          `<span class="step-title">${esc(one(summary))}</span>` +
-         (two(summary) ? `<span class="step-title ko">${esc(two(summary))}</span>` : "") +
          `</summary>` +
          `<div class="step-body">${todo(entry)}${body}${diagram(entry?.diagram)}</div>` +
          `</details>`;
@@ -366,7 +374,6 @@ function renderProblems() {
       `<button class="chip" id="pback">${esc(t1("back"))}</button>` +
       `<div class="card" data-level="${p.level || "info"}">` +
       `<h2>${esc(one(p.title))}</h2>` +
-      (two(p.title) ? `<h2 class="ko">${esc(two(p.title))}</h2>` : "") +
       lines(p.symptom, "symptom") +
       todo(p) +
       `<ol class="steps">` +
@@ -381,7 +388,6 @@ function renderProblems() {
   $("problems").innerHTML = list.map((p, i) =>
     `<button class="tile" data-i="${i}" data-level="${p.level || "info"}">` +
     `<b>${esc(one(p.title))}</b>` +
-    (two(p.title) ? `<b class="ko">${esc(two(p.title))}</b>` : "") +
     `<span>${esc(one(p.symptom).slice(0, 70))}</span></button>`
   ).join("");
 
@@ -427,7 +433,6 @@ function renderEquipment() {
       `<button class="chip" id="gback">${esc(t1("back"))}</button>` +
       `<div class="card" data-level="${item.level || "info"}">` +
       `<h2>${esc(one(item.title))}</h2>` +
-      (two(item.title) ? `<h2 class="ko">${esc(two(item.title))}</h2>` : "") +
       lines(item.where, "spec") +
       todo(item) +
       lines(item.body, "body") +
@@ -443,7 +448,6 @@ function renderEquipment() {
   $("equipment").innerHTML = list.map((item, i) =>
     `<button class="tile" data-i="${i}" data-level="${item.level || "info"}">` +
     `<b>${esc(one(item.title))}</b>` +
-    (two(item.title) ? `<b class="ko">${esc(two(item.title))}</b>` : "") +
     `<span>${fill(one(item.where).slice(0, 70))}</span></button>`
   ).join("");
 
@@ -506,23 +510,20 @@ function renderNow() {
   // rather than throwing on the first lookup and blanking the whole tab.
   if (!g) {
     where.textContent = "";
-    box.innerHTML = plainCard("danger", "The screen guides did not load",
-      "This tab needs data/guides.json, and it could not be read.",
-      "Reload the page. If it keeps happening, tell whoever set this up.");
+    box.innerHTML = uiCard("danger", ["guidesTitle", "guidesBody", "guidesDo"]);
     return;
   }
 
   if (!state.bridge) {
     where.textContent = "";
     box.innerHTML = card({ level: "info", badge: false,
-                           title: UI.refTitle, body: UI.refBody });
+                           title: u("refTitle"), body: u("refBody") });
     return;
   }
 
   if (!state.follow) {
     where.textContent = "";
-    box.innerHTML = plainCard("info", "Following is off",
-      "Turn the switch back on and this page will follow whatever screen the mixer is showing.");
+    box.innerHTML = uiCard("info", ["offTitle", "offBody"]);
     return;
   }
 
@@ -533,10 +534,10 @@ function renderNow() {
   if (!s || !s.ok) {
     where.textContent = "";
     box.innerHTML = (s && s.ip
-      ? card({ level: "danger", badge: false, title: UI.quietTitle,
-               body: UI.quietBody, action: UI.quietDo })
+      ? card({ level: "danger", badge: false, title: u("quietTitle"),
+               body: u("quietBody"), action: u("quietDo") })
       : card({ level: "caution", badge: false,
-               title: UI.huntTitle, body: UI.huntBody }))
+               title: u("huntTitle"), body: u("huntBody") }))
       + `<button class="chip wide" id="connect" type="button"` +
         (state.connecting ? " disabled" : "") + `>` +
         esc(t1(state.connecting ? "connecting" : "connect")) + `</button>`;
@@ -554,31 +555,28 @@ function renderNow() {
   const n = s.on_channel ? s.page : s.screen;
   const entry = guideFor(s.on_channel ? "pages" : "screens", n);
   const label = entry ? one(entry.title)
-                      : (n === null ? "" : (s.on_channel ? "Tab " : "Screen ") + n);
+                      : (n === null ? ""
+                         : t1(s.on_channel ? "crumbTab" : "crumbScreen", { n }));
 
   let loc = label;
   if (s.on_channel && s.channel) {
-    loc += (loc ? " · " : "") + "CH " + s.channel + (s.name ? " — " + s.name : "");
+    loc += (loc ? " · " : "") + t1("crumbChannel", { n: s.channel }) +
+           (s.name ? " — " + s.name : "");
   }
   where.textContent = loc;
 
   if (entry) {
     box.innerHTML = card(entry);
   } else if (n === null) {
-    box.innerHTML = plainCard("info", "Waiting for the desk",
-      "The console has not said which screen it is showing yet.");
+    box.innerHTML = uiCard("info", ["waitTitle", "waitBody"]);
   } else if (s.on_channel) {
     // How a wrong or missing number gets found: the desk names it, somebody
     // writes it down, and the guide it belongs to gets that number.
-    box.innerHTML = plainCard("info", `Tab ${n} — not mapped yet`,
-      `The tab you just pressed reports as number ${n}, and no guide is attached ` +
-      `to that number yet.`,
-      `Write it down, then attach a guide to that number in the guide editor.`);
+    box.innerHTML = uiCard("info",
+      ["tabUnmappedTitle", "tabUnmappedBody", "tabUnmappedDo"], { n });
   } else {
-    box.innerHTML = plainCard("info", `Screen ${n} — not mapped yet`,
-      `This screen reports as number ${n}, and no guide is attached to that ` +
-      `number yet.`,
-      `Press HOME to get back to the channel pages.`);
+    box.innerHTML = uiCard("info",
+      ["screenUnmappedTitle", "screenUnmappedBody", "screenUnmappedDo"], { n });
   }
   wireDiagrams($("view-now"));
 }
@@ -589,6 +587,10 @@ function setStatus(kind, label) {
   $("status").dataset.state = kind;
   $("status-text").textContent = label;
 }
+
+/* True once the guide could not be loaded at all. It stops the ordinary
+ * chrome from writing over the one card that says so. */
+let broken = false;
 
 /* Which tabs a station has is declared per role in roles.json, because
  * `misc` is questions and policies with no equipment behind it, and a tab
@@ -624,21 +626,27 @@ function renderTabs() {
   });
 }
 
+/* One segment per declared language, in the order roles.json lists them.
+ * Hidden when there is only one, for the same reason `misc` gets no tab
+ * bar: a group of one is not a choice, and the space is worth more to the
+ * station name beside it. */
 function renderLangs() {
-  $("langs").innerHTML = LANGS.map((l, i) =>
-    `<button class="seg" data-i="${i}" type="button" lang="${l.html}" ` +
-    `aria-pressed="${i === state.lang}">${esc(l.label)}</button>`
+  const box = $("langs");
+  box.hidden = state.langs.length < 2;
+  box.innerHTML = state.langs.map((l) =>
+    `<button class="seg" data-id="${esc(l.id)}" type="button" lang="${esc(l.id)}" ` +
+    `aria-pressed="${l.id === state.lang}">${esc(l.label)}</button>`
   ).join("");
-  $("langs").querySelectorAll(".seg").forEach((el) => {
-    el.onclick = () => setLang(Number(el.dataset.i));
+  box.querySelectorAll(".seg").forEach((el) => {
+    el.onclick = () => setLang(el.dataset.id);
   });
 }
 
-function setLang(i) {
-  state.lang = i;
-  store.set("lang", i);
+function setLang(id) {
+  state.lang = id;
+  store.set("lang", id);
   // Keep the URL shareable: whatever you are reading, the link carries it.
-  if (state.role) location.hash = `${state.role.id}/${LANGS[i].id}`;
+  if (state.role) location.hash = `${state.role.id}/${id}`;
   else render();
 }
 
@@ -661,19 +669,23 @@ function setFoot() {
   const bits = [];
   const seen = state.snap?.seen ?? [];
   if (state.bridge && seen.length) {
-    bits.push("Tab numbers seen: " + seen.join(", "));
+    bits.push(t1("footSeen", { list: seen.join(", ") }));
   }
-  bits.push(state.local ? "Showing this church's own wording."
-                        : "Showing the example wording — blanks are not filled in yet.");
-  if (state.bridge && state.snap?.ip) bits.push("Mixer: " + state.snap.ip);
-  bits.push(state.bridge ? "Connected to the booth bridge — read-only, it cannot change the desk."
-                         : "Reference copy. github.com/rwm6857/mixerm8");
+  bits.push(t1(state.local ? "footLocal" : "footExample"));
+  if (state.bridge && state.snap?.ip) bits.push(t1("footMixer", { ip: state.snap.ip }));
+  bits.push(t1(state.bridge ? "footBridge" : "footReference"));
   $("foot").textContent = bits.join(" · ");
 }
 
 function render() {
-  document.documentElement.lang = LANGS[state.lang].html;
+  if (broken) return;
+  document.documentElement.lang = state.lang;
   renderLangs();
+  showStatus();
+  // Two labels sit in index.html rather than in a rendered block, so they
+  // are the only ones that need writing over by hand.
+  $("follow-label").textContent = t1("followLabel");
+  $("reset").textContent = t1("reset");
 
   if (state.view === "pick" || !state.role) {
     // The picker belongs to no station, so it wears the neutral palette.
@@ -716,12 +728,15 @@ async function loadData(name) {
   throw new Error(`could not load data/${name}.json`);
 }
 
+/* The one path that cannot trust data/ui.json, because a failure to load
+ * it is one of the things this says. So it reads FAILED_UI instead --
+ * English, and four sentences long. */
 function failed(what) {
   $("hero").hidden = true;
-  $("pick").innerHTML = plainCard("danger", "The guide did not load",
-    `${what} could not be fetched, so there is nothing to show.`,
-    "Reload the page. If it keeps happening, tell whoever set this up.");
-  setStatus("offline", "No content");
+  state.ui = { ...FAILED_UI, ...state.ui };
+  $("pick").innerHTML = uiCard("danger", ["failTitle", "failBody", "failDo"], { what });
+  setStatus("offline", t1("failState"));
+  broken = true;
 }
 
 async function ensureRole(role) {
@@ -745,10 +760,9 @@ async function route() {
   const parts = location.hash.replace(/^#/, "").split("/").filter(Boolean);
   const [roleId, langId] = parts;
 
-  const wanted = LANGS.findIndex((l) => l.id === langId);
-  if (wanted >= 0) {
-    state.lang = wanted;
-    store.set("lang", wanted);
+  if (state.langs.some((l) => l.id === langId)) {
+    state.lang = langId;
+    store.set("lang", langId);
   }
 
   const role = (state.roles?.roles || []).find((r) => r.id === roleId);
@@ -793,11 +807,12 @@ async function route() {
  * no bridge (this is the Pages copy), a bridge that has never found a desk,
  * and a desk that was found and has gone quiet. The pill says which. */
 function showStatus() {
+  if (broken) return;
   const s = state.snap;
-  if (!state.bridge) return setStatus("ref", "Reference");
-  if (s?.ok) return setStatus("live", "Following");
-  if (state.connecting || s?.searching) return setStatus("waiting", "Looking");
-  setStatus("waiting", "No mixer");
+  if (!state.bridge) return setStatus("ref", t1("stateReference"));
+  if (s?.ok) return setStatus("live", t1("stateFollowing"));
+  if (state.connecting || s?.searching) return setStatus("waiting", t1("stateLooking"));
+  setStatus("waiting", t1("stateNoMixer"));
 }
 
 function connect() {
@@ -811,7 +826,7 @@ function connect() {
   };
   src.onerror = () => {
     // The browser reconnects an EventSource by itself; this only says so.
-    if (state.bridge) setStatus("offline", "Reconnecting");
+    if (state.bridge) setStatus("offline", t1("stateReconnecting"));
   };
 }
 
@@ -837,18 +852,40 @@ async function reconnect() {
   }, 2500);
 }
 
+/* A remembered language, if it is still one this guide offers. Falls back
+ * to the first declared one -- which is also what an old install stored as
+ * an index rather than an id, and what the retired "EN·KO" segment becomes. */
+function rememberedLang() {
+  const saved = store.get("lang", null);
+  return state.langs.some((l) => l.id === saved) ? saved : state.langs[0].id;
+}
+
 async function boot() {
-  state.lang = store.get("lang", 0);
   state.follow = store.get("follow", true);
 
   try {
     const got = await loadData("roles");
     state.roles = got.data;
     if (got.local) state.local = true;
+    state.langs = normLangs(got.data.languages);
   } catch {
     failed("The station list");
     return;
   }
+
+  // The app's own words. A separate file rather than a block inside
+  // roles.json, so a church can translate the chrome in the editor and
+  // override it in a *.local.json exactly like the rest of the guide.
+  try {
+    const got = await loadData("ui");
+    state.ui = got.data.strings || {};
+    if (got.local) state.local = true;
+  } catch {
+    failed("The app's own wording");
+    return;
+  }
+
+  state.lang = rememberedLang();
 
   // Is a bridge serving us, or is this the Pages copy?
   try {

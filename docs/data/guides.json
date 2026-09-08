@@ -1,6 +1,10 @@
 {
   "version": 2,
-  "languages": ["en", "ko"],
+  "note": {
+    "en": "One entry per screen the console can show. `number` is what the desk reports for it, which is the join between the two -- see console.py. The numbers are unverified on the Compact; record yours with `mixerm8 --learn`.",
+    "ko": "콘솔이 표시할 수 있는 각 화면마다 항목이 하나씩 있습니다. `number`는 콘솔이 그 화면에 대해 보고하는 값이며, 둘을 연결하는 고리입니다 -- console.py를 참고하세요. 이 번호들은 Compact에서 확인되지 않았습니다. `mixerm8 --learn`으로 직접 기록하세요."
+  },
+
   "pages": {
     "Home": {
       "number": 0,
