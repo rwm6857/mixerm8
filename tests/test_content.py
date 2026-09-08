@@ -232,6 +232,114 @@ def test_a_link_a_tablet_could_not_follow_is_caught(docs):
     assert "media/equipment" not in reported, "a good internal link was rejected"
 
 
+# ---------------------------------------------------------------------------
+# Blocks. An entry's fixed fields say what it always has to say; blocks are
+# everything after that, in whatever order somebody put them. Additive on
+# purpose -- a file with no `blocks` is a file that has not changed -- so
+# these rules are about what a block must be, not about replacing anything.
+# ---------------------------------------------------------------------------
+
+def test_the_shipped_guide_uses_every_block_type(docs):
+    """Otherwise the rules below guard shapes nothing has.
+
+    The example is what a church copies, so it shows a page assembled out
+    of all of them -- including a diagram inside a collapsible step, which
+    is the case the nesting exists for.
+    """
+    kinds = {b.get("type") for _, b, _ in validate._blocks_in(docs)
+             if isinstance(b, dict)}
+    assert kinds == set(validate.BLOCKS), \
+        f"never rendered by the example: {set(validate.BLOCKS) - kinds}"
+    assert any(depth and b.get("type") == "media"
+               for _, b, depth in validate._blocks_in(docs)
+               if isinstance(b, dict)), "no media inside a step"
+
+
+def test_every_block_is_one_the_app_renders(docs):
+    """A type app.js has never heard of renders as nothing at all, which is
+    the worst way to be wrong: the file carries it, the editor shows it,
+    and the tablet is simply missing a paragraph."""
+    assert validate.unknown_block_types(docs) == []
+
+
+def test_every_block_is_complete_in_every_declared_language(docs):
+    assert validate.incomplete_blocks(docs) == []
+
+
+def test_collapsible_steps_do_not_nest(docs):
+    """One level is a step with a diagram in it. Two is a volunteer opening
+    a card to find another card, mid-service."""
+    assert validate.steps_nested_too_deep(docs) == []
+
+
+def test_every_tickable_item_has_an_id_unique_to_its_station(docs):
+    """The ticks are one flat set per station, keyed by id, so two items
+    sharing one anywhere in the file would tick together."""
+    assert validate.block_items_without_ids(docs) == []
+
+
+def test_every_media_block_says_what_it_is(docs, root):
+    assert validate.broken_media(docs, root) == []
+
+
+def test_a_media_block_can_point_at_the_booth_machine(docs):
+    """A church's own video lives outside the repo and is not here to check.
+
+    Which is the point: `media/...` is served off the booth machine by the
+    bridge, so the rules cannot resolve it and must not pretend to. What
+    they can still insist on is a name that says whether it is a picture or
+    a video, because the app decides which tag to write from the suffix.
+    """
+    assert any(b.get("src", "").startswith("media/")
+               for _, b, _ in validate._blocks_in(docs)
+               if isinstance(b, dict) and b.get("type") == "media"), \
+        "the example never shows a church supplying its own media"
+
+
+def test_the_ways_a_block_can_be_wrong_are_caught():
+    broken = {
+        "roles": {"languages": ["en"],
+                  "roles": [{"id": "misc", "layers": ["pages"]}]},
+        "misc": {
+            "intro": {"en": "x"},
+            "faq": [{"id": "q", "q": {"en": "x"}, "a": {"en": "x"}}],
+            "pages": [{"id": "p", "title": {"en": "A page"}, "blocks": [
+                {"type": "interpretive-dance"},
+                {"type": "text"},
+                {"type": "media", "src": "notes.txt"},
+                {"type": "media"},
+                {"type": "checklist", "items": [{"text": {"en": "x"}}]},
+                {"type": "steps", "items": [
+                    {"id": "s", "title": {"en": "x"}, "blocks": [
+                        {"type": "steps", "items": [
+                            {"id": "s2", "title": {"en": "x"}}]},
+                    ]},
+                ]},
+            ]}],
+        },
+    }
+    reported = " ".join(validate.check(broken))
+    for expect in ("interpretive-dance", "text block with no text",
+                   "says nothing about what it is", "media block with no src",
+                   "has no id, so a tick on it moves",
+                   "one card too many to open"):
+        assert expect in reported, f"{expect!r} was not reported"
+
+
+def test_a_page_is_its_blocks():
+    """A heading is the only field a page must have, so this is the rule
+    that keeps the freedom from being a way to publish a blank."""
+    empty = {
+        "roles": {"languages": ["en"],
+                  "roles": [{"id": "misc", "layers": ["pages"]}]},
+        "misc": {"intro": {"en": "x"},
+                 "faq": [{"id": "q", "q": {"en": "x"}, "a": {"en": "x"}}],
+                 "pages": [{"id": "p", "title": {"en": "A heading"}}]},
+    }
+    assert "has a heading and nothing on it" in " ".join(
+        validate.pages_with_nothing_on_them(empty))
+
+
 def test_every_role_has_a_content_file(docs):
     assert validate.station_ids(docs) == ["audio", "media", "livestream", "misc"]
     assert validate.roles_without_content(docs) == []

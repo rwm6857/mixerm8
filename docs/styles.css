@@ -238,6 +238,29 @@ a.out::after { content: " \2197"; font-size: .85em; opacity: .7; }
 }
 .diagram figcaption { margin-top: 8px; max-width: 520px; color: var(--muted); font-size: .85rem; }
 
+/* ---------- blocks ----------
+   An entry's fixed fields come first, then whatever blocks somebody put
+   after them. Each type keeps the look it already had elsewhere -- a
+   callout is a severity card, collapsible steps are the running order's
+   cards, a checklist ticks like the Before tab -- so a page assembled out
+   of them looks like the guide rather than like a document. */
+.page { max-width: 46rem; }
+.page > h2 { font-size: 1.8rem; margin: 0 0 18px; letter-spacing: -.022em; }
+.page .body { margin: 0 0 16px; }
+.page .card, .page .flow, .page .checklist, .page .diagram { margin-bottom: 22px; }
+.page > *:last-child { margin-bottom: 0; }
+
+/* A checklist that is part of a page rather than the whole tab. */
+.checklist.blocklist { margin: 0 0 22px; }
+
+/* Video sits in the same frame a diagram does, and is never autoplayed:
+   somebody is holding a tablet in a booth with the service about to
+   start, so it plays when they ask it to. */
+.diagram video {
+  display: block; width: 100%; max-width: 560px;
+  border: 1px solid var(--line); border-radius: 10px; background: #000;
+}
+
 /* ---------- guide index ---------- */
 .grid { display: grid; gap: 10px; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); }
 .tile {

@@ -112,6 +112,7 @@ const state = {
   view: "pick",
   problem: null,     // index of an open problem
   gear: null,        // index of an open equipment page
+  page: null,        // index of an open training page
   pinned: null,      // a console guide opened by hand
   flowOpen: false,   // has the reader asked for every step at once?
   jump: null,        // { section, id } a link is on its way to
@@ -251,12 +252,91 @@ function diagram(node) {
 }
 
 function wireDiagrams(root) {
-  (root || document).querySelectorAll("figure.diagram img").forEach((img) => {
-    if (img.dataset.wired) return;
-    img.dataset.wired = "1";
-    img.onerror = () => { img.closest("figure").hidden = true; };
-    if (img.complete && img.naturalWidth === 0) img.closest("figure").hidden = true;
+  (root || document).querySelectorAll("figure.diagram img, figure.diagram video").forEach((el) => {
+    if (el.dataset.wired) return;
+    el.dataset.wired = "1";
+    // A church's own media lives on the booth machine, so on the Pages
+    // copy it simply is not there. Hiding the figure is right either way:
+    // the wording beside it already says the same thing, and a broken
+    // player on a tablet in a dark booth says nothing at all.
+    el.onerror = () => { el.closest("figure").hidden = true; };
+    if (el.tagName === "IMG" && el.complete && el.naturalWidth === 0) {
+      el.closest("figure").hidden = true;
+    }
   });
+}
+
+/* ---------- blocks ----------
+ *
+ * An entry's fixed fields say what that entry always has to say -- a
+ * problem page has a symptom, a piece of equipment has a `where`. `blocks`
+ * is everything else, in whatever order somebody put it: a paragraph, a
+ * video, a checklist of what was in the video, a set of collapsible steps
+ * with a diagram inside one of them.
+ *
+ * One renderer per type and nothing else knows the list, so adding a type
+ * is one entry here and one form in the editor. A type this file has never
+ * heard of renders as nothing, which is why `validate.py` refuses one --
+ * a silently missing paragraph is the worst way for a guide to be wrong.
+ */
+const BLOCKS = {
+  text: (b) => lines(b.text, "body"),
+
+  media: (b) => media(b),
+
+  /* Borrows the severity colours and the card shape, so "do not change
+     this" looks the same here as it does on the console guides. */
+  callout: (b) => card({ level: b.level || "info", badge: b.badge !== false,
+                         title: b.title, body: b.body, todo: b.todo }),
+
+  /* Tickable, and the ticks live in the same per-station set as the
+     Before tab's -- which is why validate.py insists every item id is
+     unique across the whole station file. */
+  checklist: (b) =>
+    `<ol class="checklist blocklist">` + (b.items || []).map((item) => {
+      const on = state.ticks.has(item.id);
+      return `<li class="${on ? "ticked" : ""}">` +
+             `<label><input type="checkbox" data-id="${esc(item.id)}"${on ? " checked" : ""}>` +
+             `<span class="box" aria-hidden="true"></span>` +
+             `<span class="item">${todo(item)}${lines(item.text, "text")}</span>` +
+             `</label></li>`;
+    }).join("") + `</ol>`,
+
+  /* Collapsible, one level deep. A step's own content is blocks too, so a
+     diagram or a video goes inside the step it belongs to rather than
+     above the whole list. */
+  steps: (b) =>
+    `<ol class="flow">` + (b.items || []).map((item) =>
+      `<li${item.todo ? ' class="unfilled"' : ""}>` +
+      step({ summary: item.title, aside: one(item.when),
+             body: blocks(item.blocks), entry: item }) +
+      `</li>`).join("") + `</ol>`,
+};
+
+function blocks(list) {
+  if (!Array.isArray(list)) return "";
+  return list.map((b) => (BLOCKS[b?.type] ? BLOCKS[b.type](b) : "")).join("");
+}
+
+/* A picture or a video, from one of three places: something shipping in
+ * docs/, something under media/ that the bridge serves off the booth
+ * machine, or somebody else's https address. All three are just a URL by
+ * the time they get here.
+ *
+ * A video is never autoplayed and never loops. Somebody is watching this
+ * on a tablet in a booth with the service about to start; it plays when
+ * they ask it to. */
+const VIDEO = /\.(mp4|webm|m4v)(\?|#|$)/i;
+
+function media(node) {
+  if (!node?.src) return "";
+  const caption = lines(node.caption, "cap");
+  const body = VIDEO.test(node.src)
+    ? `<video src="${esc(node.src)}" controls preload="metadata" ` +
+      `playsinline></video>`
+    : `<img src="${esc(node.src)}" alt="${esc(one(node.alt))}" loading="lazy">`;
+  return `<figure class="diagram media">` + body +
+         (caption ? `<figcaption>${caption}</figcaption>` : "") + `</figure>`;
 }
 
 /* ---------- cards (console screen guides) ---------- */
@@ -330,7 +410,8 @@ function renderHome() {
     `<div><b>${esc(one(r.label) || r.id)}</b>` +
     `<span>${esc(one(r.where))}</span></div></div>` +
     lines(d.intro, "intro") +
-    diagram(d.diagram);
+    diagram(d.diagram) +
+    blocks(d.blocks);
 
   // The nav repeats the tab bar in a form that explains itself. Someone who
   // has never been in the booth does not know what "Order" means until they
@@ -349,13 +430,14 @@ function renderHome() {
     ? `<h2 class="section">${esc(t1("faqHead"))}</h2>` +
       faq.map((item) => step({
         summary: item.q,
-        body: lines(item.a, "answer"),
+        body: lines(item.a, "answer") + blocks(item.blocks),
         entry: item,
         cls: "qa",
       })).join("")
     : "";
 
   wireDiagrams($("view-home"));
+  wireTicks($("view-home"));
   revealCard($("view-home"));
 }
 
@@ -399,6 +481,23 @@ function saveTicks() {
   store.set("ticks." + state.role.id, { date: todayStamp(), done: [...state.ticks] });
 }
 
+/* Every tickable box, wherever it came from: the Before tab's own list or
+ * a checklist block sitting halfway down a page. One set per station,
+ * keyed by the item's id, which is why validate.py insists those ids are
+ * unique across the whole station file. */
+function wireTicks(root) {
+  (root || document).querySelectorAll(".checklist input[type=checkbox]").forEach((el) => {
+    if (el.dataset.wired) return;
+    el.dataset.wired = "1";
+    el.onchange = () => {
+      const id = el.dataset.id;
+      if (el.checked) state.ticks.add(id); else state.ticks.delete(id);
+      saveTicks();
+      el.closest("li").classList.toggle("ticked", el.checked);
+    };
+  });
+}
+
 function renderChecklist() {
   $("checklist-lede").textContent = t1("ledeCheck");
   $("reset").textContent = t1("reset");
@@ -412,14 +511,7 @@ function renderChecklist() {
            `<span class="item">${todo(item)}${lines(item.text, "text")}</span></label></li>`;
   }).join("");
 
-  $("checklist").querySelectorAll("input[type=checkbox]").forEach((el) => {
-    el.onchange = () => {
-      const id = el.dataset.id;
-      if (el.checked) state.ticks.add(id); else state.ticks.delete(id);
-      saveTicks();
-      el.closest("li").classList.toggle("ticked", el.checked);
-    };
-  });
+  wireTicks($("view-checklist"));
 }
 
 /* ---------- something is wrong ---------- */
@@ -441,9 +533,10 @@ function renderProblems() {
       todo(p) +
       `<ol class="steps">` +
       (p.steps || []).map((s) => `<li>${lines(s)}</li>`).join("") +
-      `</ol>` + diagram(p.diagram) + `</div>`;
+      `</ol>` + diagram(p.diagram) + blocks(p.blocks) + `</div>`;
     $("pback").onclick = () => { state.problem = null; renderProblems(); };
     wireDiagrams($("view-problems"));
+    wireTicks($("view-problems"));
     return;
   }
 
@@ -470,11 +563,13 @@ function renderFlow() {
   $("expand").textContent = t1(state.flowOpen ? "closeAll" : "openAll");
   $("flow").innerHTML = (state.data.flow || []).map((s) =>
     `<li${s.todo ? ' class="unfilled"' : ""}>` +
-    step({ summary: s.title, aside: one(s.when), body: lines(s.detail, "detail"),
+    step({ summary: s.title, aside: one(s.when),
+           body: lines(s.detail, "detail") + blocks(s.blocks),
            entry: s, open: state.flowOpen }) +
     `</li>`
   ).join("");
   wireDiagrams($("view-flow"));
+  wireTicks($("view-flow"));
   revealCard($("view-flow"));
 }
 
@@ -502,9 +597,11 @@ function renderEquipment() {
       lines(item.body, "body") +
       diagram(item.diagram) +
       (item.action ? `<div class="action">${lines(item.action)}</div>` : "") +
+      blocks(item.blocks) +
       `</div>`;
     $("gback").onclick = () => { state.gear = null; renderEquipment(); };
     wireDiagrams($("view-equipment"));
+    wireTicks($("view-equipment"));
     return;
   }
 
@@ -519,6 +616,49 @@ function renderEquipment() {
     el.onclick = () => {
       state.gear = Number(el.dataset.i);
       renderEquipment();
+      window.scrollTo(0, 0);
+    };
+  });
+}
+
+/* ---------- training and reference ----------
+ * The free-form layer. Same two-step shape as the problem pages and the
+ * equipment: a list of what is here, then the one you tapped -- except a
+ * page's body is entirely blocks, so what is on it is whoever wrote it's
+ * business rather than this file's. */
+
+function renderPages() {
+  $("pages-lede").textContent = t1("ledePages");
+  const list = state.data.pages || [];
+
+  if (state.page !== null && list[state.page]) {
+    const page = list[state.page];
+    $("pages").innerHTML = "";
+    $("pages-detail").innerHTML =
+      `<button class="chip" id="wback">${esc(t1("back"))}</button>` +
+      `<article class="page">` +
+      `<h2>${esc(one(page.title))}</h2>` +
+      todo(page) +
+      blocks(page.blocks) +
+      `</article>`;
+    $("wback").onclick = () => { state.page = null; renderPages(); };
+    wireDiagrams($("view-pages"));
+    wireTicks($("view-pages"));
+    return;
+  }
+
+  $("pages-detail").innerHTML = "";
+  $("pages").innerHTML = list.map((page, i) =>
+    `<button class="tile" data-i="${i}" data-level="${page.level || "info"}">` +
+    `<b>${esc(one(page.title))}</b>` +
+    (page.blurb ? `<span>${esc(one(page.blurb))}</span>` : "") +
+    `</button>`
+  ).join("");
+
+  $("pages").querySelectorAll(".tile").forEach((el) => {
+    el.onclick = () => {
+      state.page = Number(el.dataset.i);
+      renderPages();
       window.scrollTo(0, 0);
     };
   });
@@ -666,6 +806,7 @@ function tabsFor(role) {
   if (layers.includes("problems")) tabs.push({ view: "problems", key: "tabProblem", nav: "navProblem" });
   if (layers.includes("flow")) tabs.push({ view: "flow", key: "tabFlow", nav: "navFlow" });
   if (layers.includes("equipment")) tabs.push({ view: "equipment", key: "tabEquip", nav: "navEquip" });
+  if (layers.includes("pages")) tabs.push({ view: "pages", key: "tabPages", nav: "navPages" });
   // The mixer tab exists for the sound station whether or not a bridge is
   // answering: the screen guides are worth reading on a Tuesday too, and a
   // dead bridge must never take a tab away mid-service.
@@ -714,12 +855,14 @@ function setLang(id) {
   else render();
 }
 
-const VIEWS = ["pick", "home", "checklist", "problems", "flow", "equipment", "now"];
+const VIEWS = ["pick", "home", "checklist", "problems", "flow", "equipment",
+               "pages", "now"];
 
 function setView(view) {
   state.view = view;
   if (view !== "problems") state.problem = null;
   if (view !== "equipment") state.gear = null;
+  if (view !== "pages") state.page = null;
   if (view !== "now") state.pinned = null;
   VIEWS.forEach((v) => { $("view-" + v).hidden = v !== view; });
   $("tabs").querySelectorAll(".tab").forEach((el) => {
@@ -768,6 +911,7 @@ function render() {
     if (state.view === "problems") renderProblems();
     if (state.view === "flow") renderFlow();
     if (state.view === "equipment") renderEquipment();
+    if (state.view === "pages") renderPages();
     if (state.view === "now") renderNow();
   }
   setFoot();
@@ -809,6 +953,7 @@ function applyJump() {
   const at = jump.id ? list.findIndex((e) => e.id === jump.id) : -1;
   state.problem = view === "problems" && at >= 0 ? at : null;
   state.gear = view === "equipment" && at >= 0 ? at : null;
+  state.page = view === "pages" && at >= 0 ? at : null;
   // The running order and the questions are <details> cards, so the one
   // being linked to is opened where it sits rather than replacing the page.
   state.reveal = at >= 0 && ["flow", "faq"].includes(jump.section) ? jump.id : null;
@@ -895,6 +1040,7 @@ async function route() {
   if (switched) {
     state.problem = null;
     state.gear = null;
+    state.page = null;
     state.pinned = null;
     state.view = "home";
   }
