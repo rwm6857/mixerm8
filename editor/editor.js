@@ -7,8 +7,14 @@
  *
  * The forms are generated from SECTIONS below rather than written out, for the
  * same reason the app has no build step: the content is regular -- almost
- * everything is an {en, ko} pair -- and a form per field would be five hundred
- * lines that drift the first time the shape changes.
+ * everything is a block of one string per language -- and a form per field
+ * would be five hundred lines that drift the first time the shape changes.
+ *
+ * LANGUAGES. How many columns a text field has is not fixed here either. It
+ * comes from `languages` in the draft's own roles.json, which is edited in
+ * this editor like anything else, so adding a language grows every form on
+ * the next keystroke and the problems bar immediately lists what that
+ * language is now missing. That list is the translation job, in order.
  *
  * Nothing here knows the rules a guide has to obey. The server runs
  * mixerm8.validate, which is the same module the test suite runs, so the
@@ -21,9 +27,60 @@ const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) =>
 
 const BLANK = /_{4,}/;
 
+/* ---------- languages ----------
+ * Read off the draft, so the forms follow an edit to the language list
+ * without a reload. The label is only the column tag here: a blank one
+ * falls back to the code, and the tablet has its own table of endonyms
+ * for that case -- which is why this file carries no such table and
+ * cannot drift from it. */
+
+function langs() {
+  const out = [];
+  for (const item of state.docs.roles?.languages || []) {
+    const id = String(typeof item === "string" ? item : item?.id || "").trim();
+    if (!id || out.some((l) => l.id === id)) continue;
+    out.push({ id, label: (typeof item === "object" && item?.label) || id.toUpperCase() });
+  }
+  return out.length ? out : [{ id: "en", label: "EN" }];
+}
+
+const langIds = () => langs().map((l) => l.id);
+
+/* Is this a block of translated strings?
+ *
+ * Identified by shape, because the guide has no marker for one: every value
+ * is a string, and at least one key is a language this guide declares.
+ * That rejects { src, alt, caption } (alt and caption are objects) and
+ * { theme, icon } (neither is a language), and it still recognises an
+ * { en, ko } block after Korean has been removed from the list, which a
+ * plain "every key is declared" test would not.
+ *
+ * The one shape it could mistake is a language list entry, { id, label } --
+ * `id` being Indonesian. Hence the last clause: no block of wording has a
+ * field called `label`, because a label is itself a block. */
+function isBlock(node) {
+  if (!node || typeof node !== "object" || Array.isArray(node)) return false;
+  const keys = Object.keys(node);
+  if (!keys.length || "label" in node) return false;
+  return keys.every((k) => typeof node[k] === "string") &&
+         keys.some((k) => langIds().includes(k));
+}
+
+function blockGap(node) {
+  if (typeof node === "string") return false;
+  if (Array.isArray(node)) return node.some(blockGap);
+  if (!node || typeof node !== "object") return false;
+  if (isBlock(node)) return langIds().some((l) => !node[l]);
+  return Object.values(node).some(blockGap);
+}
+
 /* ---------- what a form is made of ---------- */
 
-const bi = () => ({ en: "", ko: "" });
+/* An empty language block. Deliberately `{}` rather than a key per
+ * language set to "": an empty string would be written to the file and
+ * read as a translation that exists, and the form shows a column per
+ * declared language whether or not the key is there yet. */
+const bi = () => ({});
 
 const BI = (key, label, extra) => ({ key, label, type: "bi", ...(extra || {}) });
 
@@ -46,6 +103,52 @@ const GUIDE_FIELDS = [NUMBER, LEVEL, BI("title", "Title"), TODO,
                       BI("action", "What to do", { optional: true }), DIAGRAM];
 
 const SECTIONS = {
+  /* Every file carries a `note` explaining what it is for. It used to be
+   * the one piece of prose in the guide the editor could not touch, which
+   * made it the one piece that went stale. */
+  about: {
+    label: "About this file", kind: "doc",
+    fields: [BI("note", "What this file is for", {
+      hint: "Read by whoever edits the guide next, not by a volunteer.",
+    })],
+  },
+  /* The list the whole app is generated from. Adding one here grows every
+   * text field in this editor and fills the problems bar with what the new
+   * language is missing -- which is the translation job, written down. */
+  languages: {
+    label: "Languages", kind: "list", title: (e) => ({ [langIds()[0]]: e.label || e.id }),
+    hint: "One button in the tablet's header per language, in this order. " +
+          "The first one is what an untranslated card falls back to, so keep " +
+          "it the one somebody in the booth is sure to read.",
+    fields: [{ key: "id", label: "Code", type: "text",
+               hint: "Goes in the QR code as #audio/ko and is the key every " +
+                     "block in every file is written under. Use a standard " +
+                     "code — en, ko, es, pt, zh-Hans." },
+             { key: "label", label: "Its own name for itself", type: "text",
+               dropEmpty: true,
+               hint: "What the button says: 한국어, Español. Leave it empty " +
+                     "and the tablet fills in the usual name for the code." }],
+    // No `label` key at all, rather than an empty one. The difference is
+    // real: absent means "use the name the tablet already knows for this
+    // code", and empty would be a button with no name on it.
+    blank: () => ({ id: "" }),
+  },
+  hero: {
+    label: "Front cover", kind: "sub", at: "hero",
+    hint: "The panel above the station picker — the first thing on the tablet.",
+    fields: [{ key: "image", label: "Picture", type: "text",
+               hint: "Relative to docs/, e.g. img/hero.jpg. Optional; the " +
+                     "gradient behind it is the design, not a placeholder." },
+             BI("title", "Title"), BI("blurb", "Opening words")],
+  },
+  /* The app's own furniture: tab names, badges, the status pill, the
+   * connection messages. Content rather than code so that a guide in a
+   * third language is not half in English -- see data/ui.json. */
+  strings: {
+    label: "App wording", kind: "strings", at: "strings",
+    hint: "Every word the app says for itself. {n}, {ip} and {list} are " +
+          "filled in by the app — keep them in the sentence.",
+  },
   home: {
     label: "Front page", kind: "doc",
     fields: [BI("intro", "Introduction", {
@@ -105,7 +208,7 @@ const SECTIONS = {
     blank: () => ({ level: "info", title: bi(), body: bi() }),
   },
   roles: {
-    label: "Stations", kind: "list", title: (e) => ({ en: e.id }),
+    label: "Stations", kind: "list", title: (e) => ({ [langIds()[0]]: e.id }),
     fields: [{ key: "id", label: "Id", type: "text",
                hint: "Ends up in a QR code as #audio/ko, so lowercase and boring." },
              BI("label", "Name"), BI("where", "Where the volunteer stands"),
@@ -122,7 +225,11 @@ const LAYERS = ["checklist", "problems", "flow", "equipment"];
 const LEVELS = [["ok", "Safe"], ["caution", "Careful"],
                 ["danger", "Do not change"], ["info", "Note"]];
 
-const LANGS = [["en", "EN"], ["ko", "한국어"], ["both", "EN+한국어"]];
+/* How many problems the bar lists before it stops. Declaring a new
+ * language opens a gap in every block of every file at once, which is
+ * hundreds of lines of true but unreadable list. The count above it is
+ * the number that matters; the rest is the same sentence again. */
+const PROBLEM_CAP = 40;
 
 const state = {
   docs: {},
@@ -133,8 +240,6 @@ const state = {
   git: {},
   willWriteTo: {},
   sel: null,          // { doc, section, id }  id is an index or a map key
-  lang: "both",
-  narrow: false,
 };
 
 /* ---------- talking to the editor server ---------- */
@@ -181,13 +286,19 @@ function touched(docName) {
 
 function docsInOrder() {
   const out = [];
-  for (const name of ["roles", "audio", "media", "livestream", "misc", "guides"]) {
+  for (const name of ["roles", "ui", "audio", "media", "livestream", "misc", "guides"]) {
     const doc = state.docs[name];
     if (!doc) continue;
-    if (name === "roles") out.push({ name, label: "Stations", sections: ["roles"] });
-    else if (name === "guides") out.push({ name, label: "Mixer screens", sections: ["pages", "screens"] });
-    else {
-      const has = ["home", "faq", ...LAYERS.filter((l) => doc[l])];
+    if (name === "roles") {
+      out.push({ name, label: "The guide itself",
+                 sections: ["about", "languages", "hero", "roles"] });
+    } else if (name === "ui") {
+      out.push({ name, label: "App wording", sections: ["about", "strings"] });
+    } else if (name === "guides") {
+      out.push({ name, label: "Mixer screens",
+                 sections: ["about", "pages", "screens"] });
+    } else {
+      const has = ["about", "home", "faq", ...LAYERS.filter((l) => doc[l])];
       out.push({ name, label: labelOf(name), sections: has });
     }
   }
@@ -199,19 +310,23 @@ function labelOf(id) {
   return role ? (role.label?.en || id) : id;
 }
 
-/* The first line of an entry, for the tree and nothing else. */
+/* The first line of an entry, for the tree and nothing else. Read in the
+ * first declared language rather than in English: a guide written only in
+ * Korean would otherwise show a tree of "(empty)". */
 function summarise(section, entry, key) {
   const spec = SECTIONS[section];
   if (spec.kind === "map") return key;
   const node = spec.title ? spec.title(entry) : null;
-  const text = (node?.en || "").trim();
+  const text = String(langIds().map((l) => node?.[l]).filter(Boolean)[0] || "").trim();
   return text ? text.slice(0, 46) : "(empty)";
 }
 
 function entriesOf(docName, section) {
   const doc = state.docs[docName];
   const spec = SECTIONS[section];
-  if (spec.kind === "doc") return [["", doc]];
+  if (spec.kind === "doc" || spec.kind === "sub" || spec.kind === "strings") {
+    return [["", doc]];
+  }
   if (spec.kind === "map") return Object.entries(doc[section] || {});
   return (doc[section] || []).map((e, i) => [i, e]);
 }
@@ -230,16 +345,21 @@ function renderTree() {
       const spec = SECTIONS[section];
       const rows = entriesOf(d.name, section);
       const open = sel && sel.doc === d.name && sel.section === section;
-      const items = spec.kind === "doc"
+      const single = ["doc", "sub", "strings"].includes(spec.kind);
+      const items = single
         ? ""
         : rows.map(([id, entry]) =>
             `<button class="item" data-doc="${esc(d.name)}" data-section="${esc(section)}" ` +
             `data-id="${esc(id)}" aria-current="${open && String(sel.id) === String(id)}">` +
+            // Two different flags, because they mean different things: a
+            // "____" is a fact nobody has established, and a gap is a
+            // sentence nobody has translated yet.
             (hasBlank(entry) ? `<span class="flag">•</span> ` : "") +
+            (blockGap(entry) ? `<span class="flag gap">◦</span> ` : "") +
             esc(summarise(section, entry, id)) + `</button>`).join("");
       return `<button class="sec" data-doc="${esc(d.name)}" data-section="${esc(section)}">` +
              `<span>${esc(spec.label)}</span>` +
-             (spec.kind === "doc" ? "" : `<span class="n">${rows.length}</span>`) +
+             (single ? "" : `<span class="n">${rows.length}</span>`) +
              `</button>` + (open ? `<div class="items">${items}</div>` : "");
     }).join("");
     return `<div class="doc">${esc(d.label)}</div>${secs}`;
@@ -250,7 +370,8 @@ function renderTree() {
       const spec = SECTIONS[el.dataset.section];
       const rows = entriesOf(el.dataset.doc, el.dataset.section);
       select(el.dataset.doc, el.dataset.section,
-             spec.kind === "doc" ? "" : (rows[0] ? rows[0][0] : null));
+             ["doc", "sub", "strings"].includes(spec.kind)
+               ? "" : (rows[0] ? rows[0][0] : null));
     };
   });
   $("tree").querySelectorAll(".item").forEach((el) => {
@@ -260,7 +381,7 @@ function renderTree() {
 
 function select(doc, section, id) {
   const spec = SECTIONS[section];
-  if (spec.kind === "list" && id !== null) id = Number(id);
+  if (spec.kind === "list" && id !== null && id !== "") id = Number(id);
   state.sel = { doc, section, id };
   renderTree();
   renderForm();
@@ -274,6 +395,12 @@ function currentEntry() {
   const spec = SECTIONS[section];
   if (!spec) return null;
   if (spec.kind === "doc") return state.docs[doc];
+  // A `sub` section edits one object inside the file -- roles.json's hero,
+  // ui.json's strings -- so it is created on first sight rather than being
+  // a section that silently does nothing.
+  if (spec.kind === "sub" || spec.kind === "strings") {
+    return (state.docs[doc][spec.at] = state.docs[doc][spec.at] || {});
+  }
   if (spec.kind === "map") return (state.docs[doc][section] || {})[id];
   return (state.docs[doc][section] || [])[id];
 }
@@ -288,17 +415,25 @@ function renderForm() {
     return;
   }
   const spec = SECTIONS[sel.section];
+  const single = ["doc", "sub", "strings"].includes(spec.kind);
 
   let html = `<div class="crumb">${esc(labelOf(sel.doc))} · ${esc(spec.label)}</div>`;
   html += `<h1>${esc(spec.kind === "map" ? sel.id
+                    : single ? spec.label
                     : summarise(sel.section, entry, sel.id))}</h1>`;
   if (spec.hint) html += `<p class="field"><span class="hint">${esc(spec.hint)}</span></p>`;
 
-  if (spec.kind !== "doc") html += rowBar(spec);
+  if (!single) html += rowBar(spec);
   if (spec.kind === "map") {
     html += field("Key", `<input type="text" data-op="rename" value="${esc(sel.id)}">`);
   }
-  html += spec.fields.map((f) => renderField(f, entry)).join("");
+  // The app's own wording has one field per string it already carries, in
+  // file order. No add and no rename on purpose: the keys belong to app.js,
+  // and inventing one here would write a line nothing ever reads.
+  const fields = spec.kind === "strings"
+    ? Object.keys(entry).map((k) => BI(k, k))
+    : spec.fields;
+  html += fields.map((f) => renderField(f, entry)).join("");
   html += gitPanel();
 
   box.innerHTML = html;
@@ -321,12 +456,18 @@ function field(label, inner, hint, extra) {
          (hint ? ` <span class="hint">${esc(hint)}</span>` : "") + `</span>${inner}</div>`;
 }
 
+/* One column per declared language, labelled with what that language calls
+ * itself. Every column is rendered whether or not the key exists yet, so
+ * adding a language turns every field in the editor into a visible gap to
+ * fill rather than something you have to know to go looking for. */
 function textareas(path, node) {
-  return `<div class="pair">` + ["en", "ko"].map((lang) =>
-    `<label class="lang-in"><span class="tag">${lang === "en" ? "ENGLISH" : "한국어"}</span>` +
-    `<textarea data-path="${esc(path)}.${lang}" ` +
-    `class="${BLANK.test(node?.[lang] || "") ? "has-blank" : ""}">` +
-    `${esc(node?.[lang] || "")}</textarea></label>`).join("") + `</div>`;
+  return `<div class="pair">` + langs().map(({ id, label }) => {
+    const text = node?.[id] || "";
+    return `<label class="lang-in${text ? "" : " gap"}">` +
+      `<span class="tag" lang="${esc(id)}">${esc(label)}</span>` +
+      `<textarea data-path="${esc(path)}.${id}" lang="${esc(id)}" ` +
+      `class="${BLANK.test(text) ? "has-blank" : ""}">${esc(text)}</textarea></label>`;
+  }).join("") + `</div>`;
 }
 
 function renderField(f, entry) {
@@ -368,7 +509,8 @@ function renderField(f, entry) {
 
   if (f.type === "text") {
     return field(f.label,
-      `<input type="text" data-path="${esc(f.key)}" value="${esc(value || "")}">`, f.hint);
+      `<input type="text" data-path="${esc(f.key)}" value="${esc(value || "")}"` +
+      (f.dropEmpty ? ` data-drop-empty="1"` : "") + `>`, f.hint);
   }
 
   if (f.type === "number") {
@@ -437,6 +579,7 @@ function wireForm(entry, spec) {
       grow(el);
       setAt(entry, el.dataset.path, el.value);
       el.classList.toggle("has-blank", BLANK.test(el.value));
+      el.closest(".lang-in").classList.toggle("gap", !el.value);
       touched(sel.doc);
     };
   });
@@ -457,7 +600,23 @@ function wireForm(entry, spec) {
       el.onchange = () => renameKey(el.value.trim());
       return;
     }
-    el.oninput = () => { setAt(entry, el.dataset.path, el.value); touched(sel.doc); };
+    el.oninput = () => {
+      // Same rule as the number field: empty means "not given", which is an
+      // absent key, not a key holding "". A "" would be written to the file
+      // and read back as an answer somebody had supplied.
+      if (el.dataset.dropEmpty && !el.value.trim()) delete entry[el.dataset.path];
+      else setAt(entry, el.dataset.path, el.value);
+      touched(sel.doc);
+      // The tree names this row after the field being typed in, and it is
+      // not the field being typed in, so it is safe to rebuild now.
+      if (sel.section === "languages") renderTree();
+    };
+    // The language list decides how many columns every other form has, so
+    // a change here is not a value but the shape of the editor. Redrawn on
+    // leaving the field rather than per keystroke: rebuilding the form
+    // under a cursor takes the cursor with it, and half a language code is
+    // not a language anyway.
+    if (sel.section === "languages") el.onchange = () => renderForm();
   });
 
   box.querySelectorAll("input[type=checkbox]").forEach((el) => {
@@ -587,16 +746,25 @@ function wireGit() {
 
 /* ---------- the preview ---------- */
 
+/* Where to point the preview for whatever is selected.
+ *
+ * The hash names a station and no language. That is deliberate: the app in
+ * the frame has a language segment in its own header, so putting one out
+ * here as well was the same control twice with nothing to keep the two
+ * agreeing. Leaving the language out of the hash means the frame keeps
+ * whichever one you last pressed inside it, across reloads. */
 function previewPlan() {
   const sel = state.sel;
   if (!sel) return { hash: "", view: null };
-  if (sel.doc === "roles") return { hash: "", view: null };
-  if (sel.doc === "guides") return { hash: `audio/${state.lang}`, view: "now", key: sel.id };
-  const view = { home: "home", faq: "home" }[sel.section] || sel.section;
+  // roles.json is the picker and the cover, and ui.json is every view at
+  // once, so both are best looked at from the front page.
+  if (sel.doc === "roles" || sel.doc === "ui") return { hash: "", view: null };
+  if (sel.doc === "guides") return { hash: "audio", view: "now", key: sel.id };
+  const view = { home: "home", about: "home", faq: "home" }[sel.section] || sel.section;
   const drill = ["problems", "equipment"].includes(sel.section);
   const unfold = ["flow", "faq"].includes(sel.section);
   return {
-    hash: `${sel.doc}/${state.lang}`,
+    hash: sel.doc,
     view,
     index: typeof sel.id === "number" ? sel.id : null,
     drill, unfold,
@@ -675,10 +843,46 @@ function renderChrome() {
   const bad = state.problems.length;
   const box = $("problems");
   box.classList.toggle("bad", bad > 0);
-  box.innerHTML = bad
+  const shown = state.problems.slice(0, PROBLEM_CAP);
+  const rest = bad - shown.length;
+  box.innerHTML = (bad
     ? `<b>${bad} thing${bad > 1 ? "s" : ""} the rules would reject:</b><ul>` +
-      state.problems.map((p) => `<li>${esc(p)}</li>`).join("") + `</ul>`
-    : `<b>Everything here passes the same checks the test suite runs.</b>`;
+      shown.map((p) => `<li>${esc(p)}</li>`).join("") +
+      (rest ? `<li class="more">…and ${rest} more of the same kind.</li>` : "") +
+      `</ul>`
+    : `<b>Everything here passes the same checks the test suite runs.</b>`)
+    + progressPanel();
+}
+
+/* How much of each language is actually written.
+ *
+ * Declaring a language takes a minute and translating one takes weeks, so
+ * the gap between the two is the thing worth showing. Counted over the
+ * blocks in the draft rather than over the problems list, because the two
+ * answer different questions: the list says what to fix next, this says
+ * how far there is to go. */
+function progressPanel() {
+  const ids = langIds();
+  if (ids.length < 2) return "";
+  const total = {}, filled = {};
+  ids.forEach((l) => { total[l] = 0; filled[l] = 0; });
+
+  const walk = (node) => {
+    if (!node || typeof node !== "object") return;
+    if (Array.isArray(node)) return node.forEach(walk);
+    if (isBlock(node)) {
+      ids.forEach((l) => { total[l] += 1; if (node[l]) filled[l] += 1; });
+      return;
+    }
+    Object.values(node).forEach(walk);
+  };
+  Object.values(state.docs).forEach(walk);
+
+  return `<div class="progress">` + langs().map(({ id, label }) => {
+    const done = total[id] ? Math.round((filled[id] / total[id]) * 100) : 100;
+    return `<span class="${done === 100 ? "full" : ""}">${esc(label)} ` +
+           `<b>${done}%</b> — ${filled[id]} of ${total[id]}</span>`;
+  }).join("") + `</div>`;
 }
 
 function renderAll() {
@@ -706,28 +910,6 @@ $("revert").onclick = async () => {
 };
 
 $("refresh").onclick = refreshPreview;
-
-$("lang").innerHTML = LANGS.map(([id, label]) =>
-  `<button data-l="${id}" aria-pressed="${id === state.lang}">${esc(label)}</button>`).join("");
-$("lang").querySelectorAll("button").forEach((el) => {
-  el.onclick = () => {
-    state.lang = el.dataset.l;
-    $("lang").querySelectorAll("button").forEach((b) =>
-      b.setAttribute("aria-pressed", String(b.dataset.l === state.lang)));
-    refreshPreview();
-  };
-});
-
-$("device").innerHTML = [["wide", "Tablet"], ["narrow", "Phone"]].map(([id, label]) =>
-  `<button data-d="${id}" aria-pressed="${(id === "narrow") === state.narrow}">${esc(label)}</button>`).join("");
-$("device").querySelectorAll("button").forEach((el) => {
-  el.onclick = () => {
-    state.narrow = el.dataset.d === "narrow";
-    $("frame").classList.toggle("narrow", state.narrow);
-    $("device").querySelectorAll("button").forEach((b) =>
-      b.setAttribute("aria-pressed", String((b.dataset.d === "narrow") === state.narrow)));
-  };
-});
 
 window.addEventListener("keydown", (e) => {
   if ((e.metaKey || e.ctrlKey) && e.key === "s") { e.preventDefault(); $("save").click(); }

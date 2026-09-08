@@ -1,0 +1,145 @@
+{
+  "version": 1,
+  "note": {
+    "en": "The app's own furniture -- tab names, ledes, badges, the status pill, the connection messages. It is content rather than code for one reason: a station added in a third language would otherwise read half in that language and half in English. Every string carries one block per language declared in roles.json, and a language with nothing here falls back to the first declared one. {n}, {ip} and {list} are filled in by the app; keep them.",
+    "ko": "앱 자체의 문구입니다 -- 탭 이름, 안내문, 배지, 상태 표시, 연결 메시지. 이것이 코드가 아니라 콘텐츠인 이유는 하나입니다: 그렇지 않으면 제3의 언어를 추가한 자리가 절반은 그 언어로, 절반은 영어로 표시됩니다. 각 문구는 roles.json에 선언된 언어마다 하나의 블록을 가지며, 여기에 아무것도 없는 언어는 처음 선언된 언어로 대체됩니다. {n}, {ip}, {list}은 앱이 채우므로 그대로 두세요."
+  },
+
+  "strings": {
+    "pick": { "en": "Which station are you on today?", "ko": "오늘 어느 자리에서 봉사하시나요?" },
+    "tabHome": { "en": "Home", "ko": "홈" },
+    "tabCheck": { "en": "Before", "ko": "예배 전" },
+    "tabProblem": { "en": "Problems", "ko": "문제 해결" },
+    "tabFlow": { "en": "Order", "ko": "진행 순서" },
+    "tabEquip": { "en": "Equipment", "ko": "장비" },
+    "tabMixer": { "en": "Mixer", "ko": "믹서" },
+    "navCheck": { "en": "What to do before the service starts.", "ko": "예배가 시작되기 전에 할 일입니다." },
+    "navProblem": { "en": "Something is wrong right now.", "ko": "지금 문제가 생겼을 때 보세요." },
+    "navFlow": {
+      "en": "The order of a normal Sunday, with times.",
+      "ko": "평소 주일의 진행 순서와 시간입니다."
+    },
+    "navEquip": {
+      "en": "What each piece of gear here is, and where it lives.",
+      "ko": "이 자리의 각 장비가 무엇이고 어디에 있는지 알려줍니다."
+    },
+    "navMixer": {
+      "en": "Every screen on the desk, and what it does.",
+      "ko": "콘솔의 모든 화면과 그 기능입니다."
+    },
+    "ledeCheck": {
+      "en": "Work down the list. Ticks clear themselves each day.",
+      "ko": "위에서부터 하나씩 하세요. 체크는 매일 자동으로 지워집니다."
+    },
+    "ledeProblem": {
+      "en": "Tap whatever matches what you are hearing.",
+      "ko": "지금 들리는 상황에 맞는 항목을 누르세요."
+    },
+    "ledeFlow": {
+      "en": "The order of a normal Sunday. Tap a step to open it.",
+      "ko": "평소 주일의 진행 순서입니다. 각 단계를 눌러 펼치세요."
+    },
+    "ledeEquip": {
+      "en": "Tap a box to read what it does and where it is.",
+      "ko": "장비를 눌러 무슨 역할을 하고 어디에 있는지 확인하세요."
+    },
+    "ledeMixer": {
+      "en": "Every screen on the desk, and what it does.",
+      "ko": "콘솔의 모든 화면과 그 기능입니다."
+    },
+    "faqHead": { "en": "Questions people ask", "ko": "자주 묻는 질문" },
+    "openAll": { "en": "Open every step", "ko": "모두 펼치기" },
+    "closeAll": { "en": "Close every step", "ko": "모두 접기" },
+    "reset": { "en": "Clear the ticks", "ko": "체크 지우기" },
+    "back": { "en": "← Back", "ko": "← 뒤로" },
+    "followLabel": { "en": "Follow the mixer", "ko": "믹서 따라가기" },
+    "badgeOk": { "en": "Safe", "ko": "안전" },
+    "badgeCaution": { "en": "Careful", "ko": "주의" },
+    "badgeDanger": { "en": "Do not change", "ko": "변경 금지" },
+    "badgeInfo": { "en": "Note", "ko": "참고" },
+    "refTitle": { "en": "Not connected to the mixer", "ko": "믹서에 연결되어 있지 않습니다" },
+    "refBody": {
+      "en": "This copy cannot follow along, so pick a screen below to read about it. In the booth, open the address the bridge prints on the media computer and this page will follow the desk by itself.",
+      "ko": "이 사본은 콘솔을 따라갈 수 없습니다. 아래에서 화면을 골라 설명을 읽으세요. 부스에서는 미디어 컴퓨터에 표시된 주소를 열면 이 페이지가 콘솔을 자동으로 따라갑니다."
+    },
+    "huntTitle": { "en": "Looking for the mixer", "ko": "믹서를 찾고 있습니다" },
+    "huntBody": {
+      "en": "Nothing has answered yet. Switch the desk on, then press the button below.",
+      "ko": "아직 응답이 없습니다. 콘솔의 전원을 켠 다음 아래 버튼을 누르세요."
+    },
+    "quietTitle": { "en": "No answer from the mixer", "ko": "믹서가 응답하지 않습니다" },
+    "quietBody": {
+      "en": "The bridge is running and knows where the desk is, but the desk is not replying.",
+      "ko": "브리지는 실행 중이고 콘솔의 주소도 알고 있지만, 콘솔이 응답하지 않습니다."
+    },
+    "quietDo": {
+      "en": "Check the desk is switched on and its network cable is plugged in, then press the button below.",
+      "ko": "콘솔의 전원이 켜져 있고 네트워크 케이블이 연결되어 있는지 확인한 뒤 아래 버튼을 누르세요."
+    },
+    "connect": { "en": "Connect to the mixer", "ko": "믹서에 연결하기" },
+    "connecting": { "en": "Looking…", "ko": "찾는 중…" },
+    "guidesTitle": { "en": "The screen guides did not load", "ko": "화면 안내를 불러오지 못했습니다" },
+    "guidesBody": {
+      "en": "This tab needs data/guides.json, and it could not be read.",
+      "ko": "이 탭은 data/guides.json이 필요하지만 읽을 수 없었습니다."
+    },
+    "guidesDo": {
+      "en": "Reload the page. If it keeps happening, tell whoever set this up.",
+      "ko": "페이지를 새로 고치세요. 계속 이런 상태라면 이 시스템을 설치한 사람에게 알려 주세요."
+    },
+    "offTitle": { "en": "Following is off", "ko": "따라가기가 꺼져 있습니다" },
+    "offBody": {
+      "en": "Turn the switch back on and this page will follow whatever screen the mixer is showing.",
+      "ko": "스위치를 다시 켜면 이 페이지가 믹서에 표시된 화면을 따라갑니다."
+    },
+    "waitTitle": { "en": "Waiting for the desk", "ko": "콘솔을 기다리고 있습니다" },
+    "waitBody": {
+      "en": "The console has not said which screen it is showing yet.",
+      "ko": "콘솔이 아직 어떤 화면을 보여 주고 있는지 알려 주지 않았습니다."
+    },
+    "tabUnmappedTitle": { "en": "Tab {n} — not mapped yet", "ko": "탭 {n} — 아직 연결되지 않았습니다" },
+    "tabUnmappedBody": {
+      "en": "The tab you just pressed reports as number {n}, and no guide is attached to that number yet.",
+      "ko": "방금 누른 탭은 번호 {n}으로 보고되지만, 그 번호에 연결된 안내가 아직 없습니다."
+    },
+    "tabUnmappedDo": {
+      "en": "Write it down, then attach a guide to that number in the guide editor.",
+      "ko": "번호를 적어 두고, 안내 편집기에서 그 번호에 안내를 연결하세요."
+    },
+    "screenUnmappedTitle": { "en": "Screen {n} — not mapped yet", "ko": "화면 {n} — 아직 연결되지 않았습니다" },
+    "screenUnmappedBody": {
+      "en": "This screen reports as number {n}, and no guide is attached to that number yet.",
+      "ko": "이 화면은 번호 {n}으로 보고되지만, 그 번호에 연결된 안내가 아직 없습니다."
+    },
+    "screenUnmappedDo": {
+      "en": "Press HOME to get back to the channel pages.",
+      "ko": "HOME을 눌러 채널 페이지로 돌아가세요."
+    },
+    "crumbTab": { "en": "Tab {n}", "ko": "탭 {n}" },
+    "crumbScreen": { "en": "Screen {n}", "ko": "화면 {n}" },
+    "crumbChannel": { "en": "CH {n}", "ko": "CH {n}" },
+    "stateReference": { "en": "Reference", "ko": "참고용" },
+    "stateFollowing": { "en": "Following", "ko": "따라가는 중" },
+    "stateLooking": { "en": "Looking", "ko": "찾는 중" },
+    "stateNoMixer": { "en": "No mixer", "ko": "믹서 없음" },
+    "stateReconnecting": { "en": "Reconnecting", "ko": "다시 연결 중" },
+    "footSeen": { "en": "Tab numbers seen: {list}", "ko": "확인된 탭 번호: {list}" },
+    "footLocal": {
+      "en": "Showing this church's own wording.",
+      "ko": "이 교회에서 직접 작성한 문구를 보고 있습니다."
+    },
+    "footExample": {
+      "en": "Showing the example wording — blanks are not filled in yet.",
+      "ko": "예시 문구를 보고 있습니다 — 빈칸은 아직 채워지지 않았습니다."
+    },
+    "footMixer": { "en": "Mixer: {ip}", "ko": "믹서: {ip}" },
+    "footBridge": {
+      "en": "Connected to the booth bridge — read-only, it cannot change the desk.",
+      "ko": "부스 브리지에 연결되어 있습니다 — 읽기 전용이므로 콘솔을 변경할 수 없습니다."
+    },
+    "footReference": {
+      "en": "Reference copy. github.com/rwm6857/mixerm8",
+      "ko": "참고용 사본입니다. github.com/rwm6857/mixerm8"
+    }
+  }
+}

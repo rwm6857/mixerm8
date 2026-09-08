@@ -77,11 +77,58 @@ someone who already knows the word, and that person is not who the layer is
 for. `test_the_problem_pages_are_problem_shaped` guards it.
 
 Routing is the hash, because a QR sticker is the whole user interface:
-`#<role>` and `#<role>/<lang>`, with `en`, `ko` and `both`. A bare URL is the
-station picker, which is also the tablet's home screen. Changing station
-resets to that station's home; changing only the language does not, so
-switching EN/KO does not lose someone's place. The hash stays two segments —
-a QR sticker addresses a station and a language, not a tab.
+`#<role>` and `#<role>/<lang>`, where `<lang>` is any code declared in
+`roles.json`. A bare URL is the station picker, which is also the tablet's
+home screen. Changing station resets to that station's home; changing only
+the language does not, so switching language does not lose someone's place.
+The hash stays two segments — a QR sticker addresses a station and a
+language, not a tab.
+
+## Languages are declared, not built in
+
+**`languages` in `roles.json` is the only place that says which languages
+exist**, and `validate.languages()` is the only thing that reads it. Every
+rule asks it rather than assuming: `incomplete_layers`, `missing_home_page`,
+`guides_missing_language`, `todos_missing_a_language` and
+`broken_diagrams` all iterate the declared list. So a church adding Spanish
+edits content, not code, and `mixerm8 --edit` is where that happens.
+
+An entry is `{ "id": "es", "label": "Español" }` or the bare string `"es"`.
+The label is the segment button's text; `LANGUAGE_NAMES` in `app.js` supplies
+the endonym when it is absent, and that table is chrome exactly like `ICONS`.
+`editor.js` deliberately carries no copy of it — it shows the code instead —
+because two tables of language names would drift.
+
+**There is no `both` any more.** Two languages stacked in every card pushed
+the thing somebody needed off the bottom of a tablet, and the segment in the
+header was always one tap away. `two()` and every `.ko` rule in `styles.css`
+went with it. What replaced it is a fallback chain: `langs()` returns the
+language on screen followed by the rest in declared order, so a sentence
+nobody has translated shows in the first declared language rather than
+leaving a blank card. That is a safety net, not a feature — a declared
+language missing anywhere fails the suite.
+
+**The app's own words are content too, in `docs/data/ui.json`.** Tab names,
+the severity badges, the status pill, the footer and the connection messages
+used to be a `UI` dict in `app.js`, which meant a station added in a third
+language read half in that language and half in English with nothing to say
+so. They are a seventh document now, so they go through the same
+`*.local.json` fallback, the same override dir and the same editor as
+everything else. `FAILED_UI` is the one exception left in `app.js`: four
+English sentences saying the guide did not load, which is the single moment
+`ui.json` cannot be relied on to be there.
+`test_the_app_and_its_wording_file_name_the_same_strings` pins the two
+lists together in both directions — a `t1("tabHme")` renders an empty tab
+label and says nothing anywhere, and a string nothing displays is one
+somebody is asked to translate for nothing. It is how `stateStarting` was
+found and removed: the pill's first word comes from `index.html`, before any
+fetch has returned, so no language can be known for it.
+
+Declaring a language and translating it are different jobs, and the second
+is weeks. So adding `es` immediately reports every gap it opens — 350-odd
+lines on the shipped example, which is why the editor's problems bar counts
+them and stops listing at `PROBLEM_CAP`, and why it shows how much of each
+language is actually written beside the count.
 
 **The station home is the landing view, and the Mixer tab never is.** A
 station has to work with the bridge dead, so the first thing a volunteer sees
@@ -161,6 +208,21 @@ form for the entry, and the real tablet app beside it showing the unsaved
 draft. The preview is `docs/` served from the same files the bridge serves,
 answering `/data/*.json` from memory — so it is the guide, not a mock-up of
 it, and `app.js` needed no editor-shaped hooks to make that work.
+
+**Everything in the guide means everything**: the stations, the front cover,
+the language list, the app's own wording, and the `note` at the top of each
+file. The notes were the one piece of prose the editor could not reach,
+which made them the one piece that went stale.
+
+**The preview has no controls of its own.** It carried a language segment
+and a Tablet/Phone pair; the language segment was the app's own control
+duplicated, with nothing keeping the two agreeing, and the guide is designed
+for a tablet at one width. Both are gone, and `previewPlan()` now leaves the
+language out of the hash so the frame keeps whichever one you last pressed
+inside it. A form's text fields carry one column per declared language, so
+the shape of the editor follows an edit to the language list — on leaving
+the field, not per keystroke, because rebuilding a form under a cursor takes
+the cursor with it.
 
 **It is a separate command from the bridge, and that is the design.** The
 bridge listens on the LAN so tablets can reach it; a write endpoint there
@@ -294,13 +356,14 @@ to stay answerable by looking.
   `docs/data/*.json`, and uses relative URLs so it works at both `/` (bridge)
   and `/mixerm8/` (Pages). No bundler, no npm, no framework.
 - **The tablet is the target.** 19px base, dark-only (a white screen blinds the
-  operator in a dim booth), 52px minimum tap targets, English and Korean.
+  operator in a dim booth), 52px minimum tap targets. One language on screen
+  at a time, whichever ones `roles.json` declares.
 
 ## Commands
 
 ```bash
 pip install -e ".[dev]"    # stdlib only at runtime; this adds pytest + ruff
-pytest                     # 94 tests, ~26s
+pytest                     # 102 tests, ~27s
 ruff check .               # line length 100
 mixerm8 --discover         # find consoles on the network
 mixerm8 --edit             # the guide editor, localhost only, no console needed
