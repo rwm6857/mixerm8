@@ -223,25 +223,20 @@ const BLOCKS = { key: "blocks", label: "And then", type: "blocks",
 const SECTIONS = {
   /* The list the whole app is generated from. Adding one here grows every
    * text field in this editor and fills the problems bar with what the new
-   * language is missing -- which is the translation job, written down. */
+   * language is missing -- which is the translation job, written down.
+   *
+   * One page for all of them, and no `Writing in` on it. This is the only
+   * section that is not wording somebody translates: it is the setup that
+   * decides what the other sections get translated *into*, so a language
+   * picker over the top of it would be asking which language to write a
+   * language code in. Three codes and three names is also just a short
+   * list -- a tree row and a page each was more navigation than content. */
   languages: {
-    label: "Languages", kind: "list", one: "language",
-    title: (e) => ({ [langIds()[0]]: e.label || e.id }),
+    label: "Languages", kind: "doc", untranslated: true,
     hint: "One button in the tablet's header per language, in this order. " +
-          "The first one is what an untranslated card falls back to, so keep " +
-          "it the one somebody in the booth is sure to read.",
-    fields: [{ key: "id", label: "Code", type: "text",
-               hint: "Goes in the QR code as #audio/ko and is the key every " +
-                     "block in every file is written under. Use a standard " +
-                     "code — en, ko, es, pt, zh-Hans." },
-             { key: "label", label: "Its own name for itself", type: "text",
-               dropEmpty: true,
-               hint: "What the button says: 한국어, Español. Leave it empty " +
-                     "and the tablet fills in the usual name for the code." }],
-    // No `label` key at all, rather than an empty one. The difference is
-    // real: absent means "use the name the tablet already knows for this
-    // code", and empty would be a button with no name on it.
-    blank: () => ({ id: "" }),
+          "The first is what an untranslated card falls back to, so keep it " +
+          "the one somebody in the booth is sure to read.",
+    fields: [{ key: "languages", label: "", type: "langrows" }],
   },
   hero: {
     label: "Front cover", kind: "sub", at: "hero",
@@ -722,7 +717,10 @@ function renderForm() {
                     : summarise(sel.section, entry, sel.id))}</h1>`;
   if (spec.hint) html += `<p class="field"><span class="hint">${esc(spec.hint)}</span></p>`;
 
-  html += langBar();
+  // Not on a section that is setup rather than wording: a language picker
+  // over the language list would be asking which language to write a
+  // language code in.
+  if (!spec.untranslated) html += langBar();
   // Adding and reordering live in the tree; only the destructive one is
   // here, where you can see the thing you are about to remove.
   if (!single) html += `<div class="rowbar">` +
@@ -947,6 +945,33 @@ function renderField(f, entry, prefix) {
       `<label style="margin-right:14px"><input type="checkbox" data-op="layer" ` +
       `data-key="${l}"${(value || []).includes(l) ? " checked" : ""}> ${l}</label>`).join(""),
       "A declared tab must have content, and content with no tab declared shows nowhere.");
+  }
+
+  if (f.type === "langrows") {
+    const list = value || [];
+    const rows = list.map((lang, i) =>
+      `<div class="langrow">` +
+      `<span class="num">${i + 1}</span>` +
+      `<label><span class="fname">Code</span>` +
+      `<input type="text" data-path="${esc(at)}.${i}.id" ` +
+      `value="${esc(lang.id || "")}" placeholder="ko"></label>` +
+      `<label><span class="fname">Its own name for itself</span>` +
+      `<input type="text" data-path="${esc(at)}.${i}.label" data-drop-empty="1" ` +
+      `value="${esc(lang.label || "")}" placeholder="한국어"></label>` +
+      blockOps(at, i) + `</div>`).join("");
+
+    return field(f.label,
+      `<div class="langrows">${rows}</div>` +
+      `<div class="rowbar" style="margin:10px 0 0">` +
+      iconBtn("plus", "Add another language",
+              `data-op="rowadd" data-arr="${esc(at)}"`) + `</div>` +
+      `<p class="field"><span class="hint">A code goes in the QR sticker as ` +
+      `<code>#audio/ko</code> and is the key every block in every file is ` +
+      `written under, so use a standard one — en, ko, es, pt, zh-Hans. ` +
+      `Leave the name empty and the tablet fills in the usual one for that ` +
+      `code. Removing a language leaves its wording in the files, out of ` +
+      `sight rather than deleted.</span></p>`,
+      f.hint);
   }
 
   if (f.type === "blocks") {
@@ -1218,19 +1243,17 @@ function wireForm(entry, spec) {
       // Same rule as the number field: empty means "not given", which is an
       // absent key, not a key holding "". A "" would be written to the file
       // and read back as an answer somebody had supplied.
-      if (el.dataset.dropEmpty && !el.value.trim()) delete entry[el.dataset.path];
-      else setAt(entry, el.dataset.path, el.value);
+      if (el.dataset.dropEmpty && !el.value.trim()) {
+        // Empty means "not given", which is an absent key rather than a
+        // key holding "" -- a "" would be written to the file and read
+        // back as an answer somebody had supplied.
+        const parts = el.dataset.path.split(".");
+        delete atPath(entry, parts.slice(0, -1).join("."))[parts.at(-1)];
+      } else {
+        setAt(entry, el.dataset.path, el.value);
+      }
       touched(sel.doc);
-      // The tree names this row after the field being typed in, and it is
-      // not the field being typed in, so it is safe to rebuild now.
-      if (sel.section === "languages") renderTree();
     };
-    // The language list decides how many columns every other form has, so
-    // a change here is not a value but the shape of the editor. Redrawn on
-    // leaving the field rather than per keystroke: rebuilding the form
-    // under a cursor takes the cursor with it, and half a language code is
-    // not a language anyway.
-    if (sel.section === "languages") el.onchange = () => renderForm();
   });
 
   box.querySelectorAll("input[type=checkbox]").forEach((el) => {
@@ -1283,6 +1306,11 @@ function wireForm(entry, spec) {
       } else if (op === "arrdown") {
         const a = atPath(entry, arr);
         if (i < a.length - 1) a.splice(i + 1, 0, a.splice(i, 1)[0]);
+      } else if (op === "rowadd") {
+        // No `label` key at all, rather than an empty one. The difference
+        // is real: absent means "use the name the tablet already knows for
+        // this code", and empty would be a button with no name on it.
+        arrayAt(entry, arr).push({ id: "" });
       } else if (op === "arrdrop") {
         atPath(entry, arr).splice(i, 1);
       } else if (op === "pickmedia") {
