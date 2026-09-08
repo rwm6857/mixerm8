@@ -34,7 +34,6 @@ from __future__ import annotations
 import http.server
 import json
 import mimetypes
-import subprocess
 import sys
 import threading
 import unicodedata
@@ -200,48 +199,19 @@ class Guide:
 
 
 # ---------------------------------------------------------------------------
-# what git has to say, and nothing it has to do
+# git, which this module does not run at all
 # ---------------------------------------------------------------------------
-
-def git_status(guide: Guide) -> dict:
-    """Read-only. The editor shows the state and the commands, never runs them.
-
-    Local wording is not pushable, and the honest way to say so is to have
-    no button that could. It lives outside the repo, so there is nothing
-    for git to report either.
-    """
-    if guide.target == LOCAL:
-        return {
-            "available": False,
-            "why": f"This church's own wording. It is written to {local_data_dir()}, "
-                   f"outside the repository — a git pull or a MixerM8 update cannot "
-                   f"overwrite it, and nothing here can publish it.",
-        }
-    data = repo_data_dir()
-    if data is None:
-        return {"available": False, "why": "Not a source checkout."}
-    repo = data.parent.parent
-    try:
-        branch = _git(repo, "rev-parse", "--abbrev-ref", "HEAD")
-        changed = [ln[3:] for ln in
-                   _git(repo, "status", "--porcelain", "--", "docs/data").splitlines()]
-    except (OSError, subprocess.SubprocessError):
-        return {"available": False, "why": "git is not available on this machine."}
-    return {
-        "available": True,
-        "branch": branch,
-        "changed": changed,
-        "commands": ["git add docs/data",
-                     'git commit -m "Reword the guide"',
-                     f"git push origin {branch}"],
-    }
-
-
-def _git(repo: Path, *args: str) -> str:
-    out = subprocess.run(("git", *args), cwd=repo, capture_output=True,
-                         text=True, timeout=10, check=True)
-    return out.stdout.strip()
-
+#
+# It used to read the branch and print the three commands for staging,
+# committing and pushing, for you to run yourself. The rule behind that was
+# right -- a church's own wording must not be pushable, so there is no
+# button that could -- but repeating three shell lines on every screen of
+# the editor was noise on the way to saying it, and where a save lands is
+# already named in the header.
+#
+# So nothing here shells out to git, and `test_the_editor_offers_no_way_to_
+# commit_or_push` now pins the stronger thing: this file imports nothing
+# that could run a command, so there is no code path to a push to audit.
 
 # ---------------------------------------------------------------------------
 # the editor's own files
@@ -371,7 +341,6 @@ class EditorHandler(http.server.BaseHTTPRequestHandler):
             "willWriteTo": {name: str(g.path_for(name)) for name in g.docs},
             "dirty": sorted(g.dirty),
             "problems": g.problems(),
-            "git": git_status(g),
         }
 
     def _api_get(self, path: str) -> None:

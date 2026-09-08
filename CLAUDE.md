@@ -126,9 +126,29 @@ fetch has returned, so no language can be known for it.
 
 Declaring a language and translating it are different jobs, and the second
 is weeks. So adding `es` immediately reports every gap it opens — 350-odd
-lines on the shipped example, which is why the editor's problems bar counts
-them and stops listing at `PROBLEM_CAP`, and why it shows how much of each
-language is actually written beside the count.
+lines on the shipped example, which is why the editor's bar along the
+bottom counts rather than lists them.
+
+**That bar is one line that names the next thing to do and goes there.** It
+used to print the rule messages as a bulleted list with a per-language
+progress block under it. Both were true and neither was addressed to the
+person reading them: `audio.json.problems[3].todo missing es` is a dotted
+path, and somebody finishing a translation wants the empty box, not its
+name. So the line reads *"8 things still need writing — click to go to the
+first"*, each click lands the cursor **in** the box — switching the
+language being written, because a form shows one at a time, and taking the
+preview with it — and the messages are verbatim behind Details along with
+the progress figures.
+
+`findGaps()` walks the draft rather than parsing the rule messages back
+into locations — the messages are prose meant to be read, and a second
+parser for a human format is a standing invitation to drift.
+`test_the_bar_names_the_next_thing_to_do` pins both halves. It is also why
+`entryAt()` exists: the tree and the form each narrowed a document to a
+section separately, which nothing noticed until the bar walked the tree's
+own list and counted `roles.json` twice, filing half of it under Front
+cover. One function narrows now, and
+`test_one_place_decides_what_a_form_edits` counts the references.
 
 **The station home is the landing view, and the Mixer tab never is.** A
 station has to work with the bridge dead, so the first thing a volunteer sees
@@ -210,19 +230,73 @@ answering `/data/*.json` from memory — so it is the guide, not a mock-up of
 it, and `app.js` needed no editor-shaped hooks to make that work.
 
 **Everything in the guide means everything**: the stations, the front cover,
-the language list, the app's own wording, and the `note` at the top of each
-file. The notes were the one piece of prose the editor could not reach,
-which made them the one piece that went stale.
+the language list and the app's own wording were all unreachable at one
+point or another, which is invisible until somebody needs to change the
+front cover. `test_every_top_level_key_is_reachable_from_the_editor` greps
+the section and field names out of `editor.js` and fails when a new
+top-level key arrives with no form behind it. `NOT_IN_THE_EDITOR` in that
+test is the list of deliberate exceptions and the reason for each — the
+`note` blocks are there, because the editor exists so nobody has to read
+the JSON the notes are addressed to.
 
-**The preview has no controls of its own.** It carried a language segment
-and a Tablet/Phone pair; the language segment was the app's own control
-duplicated, with nothing keeping the two agreeing, and the guide is designed
-for a tablet at one width. Both are gone, and `previewPlan()` now leaves the
-language out of the hash so the frame keeps whichever one you last pressed
-inside it. A form's text fields carry one column per declared language, so
-the shape of the editor follows an edit to the language list — on leaving
-the field, not per keystroke, because rebuilding a form under a cursor takes
-the cursor with it.
+**Icons where a word is not earning its place.** `ICONS` in `editor.js` is
+chrome in the code, the same way it is in `app.js`, and `iconBtn()` is the
+only thing that emits the class — because it is also the only thing that
+sets a `title` and an `aria-label`, and a trashcan is only obvious to
+somebody who can see it. `test_no_icon_button_ships_without_words_behind_it`
+pins that. A word still earns its place on a button that appears once and
+says something specific: `Save`, and the segments naming the two save
+targets and the languages. It does not earn it on the nineteen add buttons
+in the tree, or on a Remove sitting under a field whose own label already
+says what it is.
+
+**The tree owns adding and reordering; the form owns editing.** A `+` on
+each section, and rows that drag. They are navigation rather than editing:
+you decide where a step goes by looking at the steps around it, and the
+form only ever shows one of them. Delete stayed in the form, where you can
+see the thing you are about to remove.
+`test_adding_and_reordering_are_not_in_the_form` pins the split. Dragging
+is confined to one section — a checklist step dropped into the problem
+pages is a step lost — and a map is rebuilt in the new key order rather
+than sorted, because for the screen guides the key order *is* the order
+the tiles appear in on the tablet.
+
+**The mixer screens are filed under the station that has the console.**
+They live in `guides.json`, but a top-level "Mixer screens" heading put
+them as far from the sound desk as the tree could manage. So a tree row
+names the document it edits and the sound group draws from two files,
+keyed off `role.console` rather than off the string "audio".
+
+**One language at a time, and the preview is the other view of it.** A
+column per language was fine at two and unusable at four: every field
+became a wrapping grid and the form got longer in proportion to how many
+languages the guide offered. So there is one language — `state.writing`,
+kept in `localStorage` because it is a working position rather than part of
+the guide — and a field shows one box whether the guide is in two languages
+or eight. `renderForm()` repairs it in one place when a language is renamed
+or removed out from under it.
+
+**`Writing in` and the segment inside the preview are two ends of one
+value.** The mistake was never that the app in the frame has a language
+segment — it is the guide, not a mock-up of it, and that control belongs on
+a volunteer's tablet. The mistake was a *second* control out here that
+could disagree with it. So `showLangInPreview()` presses the app's own
+segment (rather than reloading, which would throw away where you had
+scrolled to) and `watchPreviewLang()` catches a press of it on the way
+down, with `setWriting(lang, fromPreview)` breaking the loop that two
+controls telling each other would otherwise make. `previewPlan()` puts the
+language back in the hash so a reload lands where you were. The
+Tablet/Phone pair is simply gone: the guide is designed for a tablet at one
+width.
+
+**The editor runs no git at all.** It used to read the branch and print the
+three commands for you to run yourself. The rule behind that was right — a
+church's own wording must not be pushable, so there is no button that
+could — but repeating three shell lines on every screen was noise on the
+way to saying it, and the header already names where a save lands.
+`test_the_editor_offers_no_way_to_commit_or_push` now pins the stronger
+thing: `editor.py` imports nothing that could run a command, so there is no
+code path to audit.
 
 **It is a separate command from the bridge, and that is the design.** The
 bridge listens on the LAN so tablets can reach it; a write endpoint there
@@ -246,10 +320,8 @@ exe are both replaced wholesale by an update and wording written into one
 would be lost. **Local wording is not pushable, and the editor has no button
 that could make it so.** It is outside the repo in fact, not only by
 `.gitignore`, so no pull and no MixerM8 update overwrites it and no push
-publishes it. For `repo` the editor prints the git commands and stops;
-running them is yours, so you see the branch first.
-`test_the_editor_offers_no_way_to_commit_or_push` pins that every `git`
-call in `editor.py` names a read.
+publishes it. Committing a `repo` save is yours to do in a terminal, where
+you see the branch first — see "The editor runs no git at all" above.
 
 **`editor.dumps()` is how a guide file is written, and the committed files
 are already in that form.** Short `{ "en": …, "ko": … }` blocks stay inline,

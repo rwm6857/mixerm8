@@ -66,8 +66,28 @@ body {
 .btn:disabled { opacity: .4; cursor: default; }
 .btn.primary { background: var(--accent); border-color: var(--accent); color: #06121c; }
 .btn.primary:disabled { background: var(--panel-2); border-color: var(--line); color: var(--fg); }
-.btn.tiny { min-height: 26px; padding: 0 8px; font-size: .76rem; }
 .btn.bad:hover { background: rgb(229 86 75 / .18); border-color: var(--bad); }
+
+/* Icon-only buttons. Square, so a row of them lines up, and 30px because
+   this is a mouse tool rather than the tablet -- the guide's own 52px rule
+   is about a finger in a dark booth. Every one carries a title and an
+   aria-label: a trashcan is only obvious to somebody who can see it. */
+.ico-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 30px; min-height: 30px; padding: 0; flex: none;
+  color: var(--muted);
+}
+.ico-btn:hover { color: var(--fg); }
+.ico-btn.bad { color: var(--muted); }
+.ico-btn.bad:hover { color: #f08e85; }
+.ico { width: 16px; height: 16px; display: block; }
+
+/* Quiet until wanted, then unmistakable. The destructive ones are never
+   hidden behind a hover, only tinted on one -- a Delete you cannot find
+   is worse than a Delete you can see. */
+.ico-btn:focus-visible, .seg button:focus-visible, .add:focus-visible {
+  outline: 2px solid var(--accent); outline-offset: 1px;
+}
 
 .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 7px; overflow: hidden; }
 .seg button {
@@ -101,19 +121,48 @@ body {
 }
 .tree .sec:hover { background: var(--panel-2); }
 .tree .sec .n { color: var(--muted); font-size: .74rem; font-weight: 500; }
+
+/* Add sits on the section it adds to, not in the form. The row is the
+   hover target so the + is findable without hunting for a 20px square. */
+.sec-row { display: flex; align-items: center; }
+.sec-row:hover { background: var(--panel-2); }
+.sec-row .sec { flex: 1; min-width: 0; }
+.sec-row .sec:hover { background: none; }
+.sec-row .add {
+  margin-right: 4px;
+  background: none; border: none;
+  opacity: 0; transition: opacity .1s;
+}
+.sec-row:hover .add, .sec-row .add:focus-visible { opacity: 1; }
+.sec-row .add:hover { background: var(--panel-3); }
+
 .tree .items { padding: 2px 0 6px; }
 .tree .item {
-  display: block; width: 100%; padding: 5px 14px 5px 26px;
+  display: flex; align-items: center; gap: 5px;
+  width: 100%; padding: 5px 14px 5px 12px;
   background: none; border: none; border-left: 2px solid transparent;
   color: var(--muted); font: inherit; font-size: .82rem;
   text-align: left; cursor: pointer;
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
+.tree .item .what { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .tree .item:hover { background: var(--panel-2); color: var(--fg); }
 .tree .item[aria-current="true"] {
   background: var(--panel-3); color: var(--fg); border-left-color: var(--accent);
 }
-.tree .item .flag { color: var(--warn); }
+.tree .item .flag { color: var(--warn); flex: none; }
+.tree .item .flag.gap { color: var(--accent); }
+
+/* Dragging to reorder. A marker line rather than live shuffling: nothing
+   moves until you let go, so the row you grabbed stays under your eye. */
+.tree .item .grip {
+  flex: none; display: flex; align-items: center;
+  color: var(--line); cursor: grab;
+}
+.tree .item .grip .ico { width: 13px; height: 13px; }
+.tree .item:hover .grip { color: var(--muted); }
+.tree .item.lifting { opacity: .4; }
+.tree .item.over-before { box-shadow: inset 0 2px 0 var(--accent); }
+.tree .item.over-after { box-shadow: inset 0 -2px 0 var(--accent); }
 
 /* ---------- the form ---------- */
 .form { padding: 20px 26px 60px; }
@@ -132,10 +181,23 @@ body {
 }
 .field .hint { text-transform: none; letter-spacing: 0; font-weight: 500; color: var(--muted); }
 
-.pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 10px; }
+/* Which language you are working in. One control for the whole form and
+   for the preview beside it, so a field is the same shape all the way down
+   however many languages the guide declares. */
+.langbar {
+  display: flex; align-items: center; flex-wrap: wrap; gap: 8px;
+  margin: 0 0 18px; padding: 9px 11px;
+  background: var(--panel); border: 1px solid var(--line); border-radius: 8px;
+}
+.langbar .fname { margin: 0 0 0 4px; }
+.langbar .fname:first-child { margin-left: 0; }
+
+.pair { display: block; }
+.lang-in { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.lang-in .tag {
+  color: var(--muted); font-size: .7rem; font-weight: 700; letter-spacing: .08em;
+}
 .lang-in.gap .tag { color: var(--warn); }
-.lang-in { display: flex; flex-direction: column; gap: 4px; }
-.lang-in .tag { color: var(--muted); font-size: .7rem; font-weight: 700; letter-spacing: .08em; }
 
 textarea, input[type="text"], select {
   width: 100%; padding: 9px 11px; resize: vertical;
@@ -182,32 +244,51 @@ textarea.has-blank { border-color: var(--warn); }
   background: #14161a; border: 1px solid var(--line); border-radius: 12px;
 }
 
-/* ---------- the rules bar ---------- */
+/* ---------- the bar along the bottom ----------
+   One line that names the next thing to do and takes you there. It used to
+   print the rule messages as a bulleted list with a progress block under
+   it -- both true, neither addressed to the person reading them. The
+   messages are still exactly what CI would say, behind Details. */
 .problems {
-  flex: none; max-height: 148px; overflow: auto;
-  padding: 9px 16px;
+  flex: none; max-height: 40vh; overflow: auto;
+  display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 14px;
+  padding: 10px 16px;
   background: var(--panel); border-top: 1px solid var(--line);
-  color: var(--good); font-size: .8rem;
+  color: var(--good); font-size: .82rem;
 }
 .problems.bad { color: var(--warn); }
-.problems b { display: block; margin-bottom: 4px; }
-.problems ul { margin: 0; padding-left: 18px; }
-.problems li { font-family: ui-monospace, Menlo, monospace; font-size: .76rem; }
-.problems .more { font-family: inherit; color: var(--muted); }
 
-/* How much of each language is written. Declaring one is a minute's work
-   and translating it is weeks, so the bar says where that stands. */
-.progress { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 6px; }
+.barline {
+  padding: 0; background: none; border: none;
+  color: inherit; font: inherit; font-weight: 600; text-align: left;
+}
+button.barline { cursor: pointer; }
+button.barline u { text-decoration-color: rgb(232 163 61 / .55); }
+button.barline:hover u { text-decoration-color: currentColor; }
+button.barline:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.barline.ok { font-weight: 500; }
+
+.details {
+  padding: 0; background: none; border: none;
+  color: var(--muted); font: inherit; font-size: .78rem; cursor: pointer;
+  text-decoration: underline; text-decoration-style: dotted;
+}
+.details:hover, .details[aria-expanded="true"] { color: var(--fg); }
+
+.detail { flex-basis: 100%; margin-top: 8px; }
+.detail h2 {
+  margin: 14px 0 0; color: var(--muted);
+  font-size: .7rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
+}
+.detail ul { margin: 6px 0 0; padding-left: 18px; }
+.detail li {
+  font-family: ui-monospace, Menlo, monospace; font-size: .74rem; color: var(--muted);
+}
+.detail .more { font-family: inherit; }
+
+/* How much of each language is written, inside Details. A figure somebody
+   goes looking for, rather than the first thing in the bar. */
+.progress { display: flex; flex-wrap: wrap; gap: 14px; }
 .progress span { color: var(--muted); font-size: .76rem; }
 .progress b { color: var(--fg); font-weight: 600; }
 .progress .full b { color: var(--good); }
-
-/* ---------- git ---------- */
-.git { margin-top: 26px; padding-top: 18px; border-top: 1px solid var(--line); }
-.git h2 { margin: 0 0 8px; font-size: .78rem; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
-.git p { margin: 0 0 10px; color: var(--muted); font-size: .84rem; }
-.git pre {
-  margin: 0; padding: 11px 13px; overflow-x: auto;
-  background: var(--bg); border: 1px solid var(--line); border-radius: 7px;
-  font-family: ui-monospace, Menlo, monospace; font-size: .78rem; color: var(--fg);
-}

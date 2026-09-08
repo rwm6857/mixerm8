@@ -27,6 +27,41 @@ const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) =>
 
 const BLANK = /_{4,}/;
 
+/* ---------- icons ----------
+ * Chrome, in the code, the same way ICONS is in app.js. A word earns its
+ * place on a button that appears once and says something specific -- Save,
+ * or which of the two places a save goes. It does not earn its place on the
+ * nineteen add buttons in the tree, or on a Remove sitting under a field
+ * whose own label already says what it is.
+ *
+ * Every icon-only button carries a title and an aria-label, because a
+ * trashcan is only obvious to somebody who can see it. */
+const ICONS = {
+  plus:  '<path d="M12 5.5v13M5.5 12h13"/>',
+  trash: '<path d="M3.5 6.5h17M9 6.5V4h6v2.5"/>' +
+         '<path d="M5.8 6.5l.9 13a1.6 1.6 0 0 0 1.6 1.5h7.4a1.6 1.6 0 0 0 1.6-1.5l.9-13"/>' +
+         '<path d="M10 10.5v7M14 10.5v7"/>',
+  up:    '<path d="M5.5 14.5l6.5-6.5 6.5 6.5"/>',
+  down:  '<path d="M5.5 9.5l6.5 6.5 6.5-6.5"/>',
+  reload: '<path d="M20.5 12a8.5 8.5 0 1 1-2.7-6.2"/><path d="M20.5 4v5.5H15"/>',
+  undo:  '<path d="M3.5 8.5h10a5.5 5.5 0 1 1 0 11H8"/><path d="M7 5 3.5 8.5 7 12"/>',
+  grip:  '<g fill="currentColor" stroke="none">' +
+         '<circle cx="9.5" cy="6" r="1.15"/><circle cx="14.5" cy="6" r="1.15"/>' +
+         '<circle cx="9.5" cy="12" r="1.15"/><circle cx="14.5" cy="12" r="1.15"/>' +
+         '<circle cx="9.5" cy="18" r="1.15"/><circle cx="14.5" cy="18" r="1.15"/></g>',
+};
+
+const icon = (name) =>
+  `<svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" ` +
+  `stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" ` +
+  `aria-hidden="true">${ICONS[name] || ""}</svg>`;
+
+/* An icon-only button. `what` is the whole label a screen reader and a
+   hover tooltip get, so it reads as an instruction, not a noun. */
+const iconBtn = (name, what, attrs = "", cls = "") =>
+  `<button class="btn ico-btn ${cls}" type="button" title="${esc(what)}" ` +
+  `aria-label="${esc(what)}" ${attrs}>${icon(name)}</button>`;
+
 /* ---------- languages ----------
  * Read off the draft, so the forms follow an edit to the language list
  * without a reload. The label is only the column tag here: a blank one
@@ -103,20 +138,12 @@ const GUIDE_FIELDS = [NUMBER, LEVEL, BI("title", "Title"), TODO,
                       BI("action", "What to do", { optional: true }), DIAGRAM];
 
 const SECTIONS = {
-  /* Every file carries a `note` explaining what it is for. It used to be
-   * the one piece of prose in the guide the editor could not touch, which
-   * made it the one piece that went stale. */
-  about: {
-    label: "About this file", kind: "doc",
-    fields: [BI("note", "What this file is for", {
-      hint: "Read by whoever edits the guide next, not by a volunteer.",
-    })],
-  },
   /* The list the whole app is generated from. Adding one here grows every
    * text field in this editor and fills the problems bar with what the new
    * language is missing -- which is the translation job, written down. */
   languages: {
-    label: "Languages", kind: "list", title: (e) => ({ [langIds()[0]]: e.label || e.id }),
+    label: "Languages", kind: "list", one: "language",
+    title: (e) => ({ [langIds()[0]]: e.label || e.id }),
     hint: "One button in the tablet's header per language, in this order. " +
           "The first one is what an untranslated card falls back to, so keep " +
           "it the one somebody in the booth is sure to read.",
@@ -156,17 +183,17 @@ const SECTIONS = {
     }), DIAGRAM],
   },
   faq: {
-    label: "Questions", kind: "list", title: (e) => e.q,
+    label: "Questions", kind: "list", title: (e) => e.q, one: "question",
     fields: [BI("q", "Question"), TODO, BI("a", "Answer"), DIAGRAM],
     blank: () => ({ q: bi(), a: bi() }),
   },
   checklist: {
-    label: "Before", kind: "list", title: (e) => e.text,
+    label: "Before", kind: "list", title: (e) => e.text, one: "step",
     fields: [TODO, BI("text", "Step")],
     blank: () => ({ text: bi() }),
   },
   problems: {
-    label: "Problems", kind: "list", title: (e) => e.title,
+    label: "Problems", kind: "list", title: (e) => e.title, one: "problem page",
     fields: [LEVEL,
              BI("title", "Title", {
                hint: "A symptom in the volunteer's words — \"Someone is too quiet\", " +
@@ -179,13 +206,13 @@ const SECTIONS = {
     blank: () => ({ level: "caution", title: bi(), symptom: bi(), steps: [bi()] }),
   },
   flow: {
-    label: "Order", kind: "list", title: (e) => e.title,
+    label: "Order", kind: "list", title: (e) => e.title, one: "step",
     fields: [BI("when", "When", { hint: "\"45 min before\", \"During\", \"After\"." }),
              BI("title", "Step"), TODO, BI("detail", "Detail"), DIAGRAM],
     blank: () => ({ when: bi(), title: bi(), detail: bi() }),
   },
   equipment: {
-    label: "Equipment", kind: "list", title: (e) => e.title,
+    label: "Equipment", kind: "list", title: (e) => e.title, one: "piece of gear",
     fields: [LEVEL, BI("title", "Name"),
              BI("where", "Where it is", {
                hint: "A blank is a fine answer — it says nobody has written it down. " +
@@ -196,19 +223,20 @@ const SECTIONS = {
     blank: () => ({ level: "info", title: bi(), where: bi(), body: bi() }),
   },
   pages: {
-    label: "Channel tabs", kind: "map", fields: GUIDE_FIELDS,
+    label: "Channel tabs", kind: "map", fields: GUIDE_FIELDS, one: "tab guide",
     hint: "The number the desk reports for this tab. Record them all with " +
           "`mixerm8 --learn`, or press the tab at the desk and read the " +
           "number off the tablet.",
     blank: () => ({ level: "info", title: bi(), body: bi() }),
   },
   screens: {
-    label: "Main screens", kind: "map", fields: GUIDE_FIELDS,
+    label: "Main screens", kind: "map", fields: GUIDE_FIELDS, one: "screen guide",
     hint: "The number the desk reports for this screen.",
     blank: () => ({ level: "info", title: bi(), body: bi() }),
   },
   roles: {
-    label: "Stations", kind: "list", title: (e) => ({ [langIds()[0]]: e.id }),
+    label: "Stations", kind: "list", one: "station",
+    title: (e) => ({ [langIds()[0]]: e.id }),
     fields: [{ key: "id", label: "Id", type: "text",
                hint: "Ends up in a QR code as #audio/ko, so lowercase and boring." },
              BI("label", "Name"), BI("where", "Where the volunteer stands"),
@@ -231,13 +259,25 @@ const LEVELS = [["ok", "Safe"], ["caution", "Careful"],
  * the number that matters; the rest is the same sentence again. */
 const PROBLEM_CAP = 40;
 
+/* Which language you are working in.
+ *
+ * One value, and the preview is the other view of it: the segment in the
+ * app's own header and the one in the form are the same control, kept in
+ * step in both directions. A column per language was fine at two and
+ * unusable at four -- every field became a wrapping grid, and the form got
+ * longer in proportion to how many languages the guide offered -- so a
+ * field shows one box whether the guide is in two languages or eight.
+ * Kept in localStorage because it is a working position, not part of the
+ * guide. */
 const state = {
+  writing: null,      // language id being edited; null until the docs load
+  gapSeen: null,      // index of the empty box the bar last jumped to
+  detail: false,      // is the bar's Details panel open?
   docs: {},
   target: "repo",
   repoAvailable: false,
   dirty: [],
   problems: [],
-  git: {},
   willWriteTo: {},
   sel: null,          // { doc, section, id }  id is an index or a map key
 };
@@ -261,7 +301,6 @@ function absorb(s) {
   state.repoAvailable = s.repoAvailable;
   state.dirty = s.dirty || [];
   state.problems = s.problems || [];
-  state.git = s.git || {};
   state.willWriteTo = s.willWriteTo || {};
 }
 
@@ -284,22 +323,44 @@ function touched(docName) {
 
 /* ---------- the tree ---------- */
 
+/* The tree, as groups of (document, section) rows.
+ *
+ * A group is not the same thing as a file. The mixer screens live in
+ * guides.json but they belong to the station with a console on it: they are
+ * that volunteer's screens, and a top-level "Mixer screens" heading put
+ * them as far from the sound desk as the guide could manage. So a section
+ * names the document it edits, and the sound station's group draws from
+ * two files. */
 function docsInOrder() {
   const out = [];
-  for (const name of ["roles", "ui", "audio", "media", "livestream", "misc", "guides"]) {
-    const doc = state.docs[name];
+  const has = (name) => Boolean(state.docs[name]);
+  const row = (doc, section) => ({ doc, section });
+
+  if (has("roles")) {
+    out.push({ label: "The guide itself", rows: [
+      row("roles", "languages"), row("roles", "hero"), row("roles", "roles"),
+    ]});
+  }
+  if (has("ui")) {
+    out.push({ label: "App wording", rows: [row("ui", "strings")] });
+  }
+  for (const role of state.docs.roles?.roles || []) {
+    const doc = state.docs[role.id];
     if (!doc) continue;
-    if (name === "roles") {
-      out.push({ name, label: "The guide itself",
-                 sections: ["about", "languages", "hero", "roles"] });
-    } else if (name === "ui") {
-      out.push({ name, label: "App wording", sections: ["about", "strings"] });
-    } else if (name === "guides") {
-      out.push({ name, label: "Mixer screens",
-                 sections: ["about", "pages", "screens"] });
-    } else {
-      const has = ["about", "home", "faq", ...LAYERS.filter((l) => doc[l])];
-      out.push({ name, label: labelOf(name), sections: has });
+    const rows = [row(role.id, "home"), row(role.id, "faq"),
+                  ...LAYERS.filter((l) => doc[l]).map((l) => row(role.id, l))];
+    // The console's screens, filed under the station that has the console.
+    if (role.console && has("guides")) {
+      rows.push(row("guides", "pages"), row("guides", "screens"));
+    }
+    out.push({ label: labelOf(role.id), rows });
+  }
+  // A file with no role claiming it would otherwise be unreachable.
+  const claimed = new Set(out.flatMap((g) => g.rows.map((r) => r.doc)));
+  for (const name of ["guides"]) {
+    if (has(name) && !claimed.has(name)) {
+      out.push({ label: "Mixer screens",
+                 rows: [row(name, "pages"), row(name, "screens")] });
     }
   }
   return out;
@@ -321,12 +382,37 @@ function summarise(section, entry, key) {
   return text ? text.slice(0, 46) : "(empty)";
 }
 
+/* The three kinds that edit one thing rather than a list of them, so they
+ * get no count in the tree, no add button and no Delete. */
+const SINGLE = ["doc", "sub", "strings"];
+const isSingle = (section) => SINGLE.includes(SECTIONS[section].kind);
+
+/* The object a form edits, for one row of the tree.
+ *
+ * One place, because there were two: the tree listed the whole document
+ * for a `sub` section while the form narrowed it to `spec.at`, and the
+ * first thing to walk the tree's own list counted roles.json twice and
+ * filed half of it under Front cover.
+ *
+ * A `sub` or `strings` target is created on sight rather than being a
+ * section that silently does nothing when the key is absent.
+ */
+function entryAt(docName, section, id) {
+  const spec = SECTIONS[section];
+  const doc = state.docs[docName];
+  if (!doc) return null;
+  if (spec.kind === "doc") return doc;
+  if (spec.kind === "sub" || spec.kind === "strings") {
+    return (doc[spec.at] = doc[spec.at] || {});
+  }
+  if (spec.kind === "map") return (doc[section] || {})[id];
+  return (doc[section] || [])[id];
+}
+
 function entriesOf(docName, section) {
   const doc = state.docs[docName];
   const spec = SECTIONS[section];
-  if (spec.kind === "doc" || spec.kind === "sub" || spec.kind === "strings") {
-    return [["", doc]];
-  }
+  if (isSingle(section)) return [["", entryAt(docName, section, "")]];
   if (spec.kind === "map") return Object.entries(doc[section] || {});
   return (doc[section] || []).map((e, i) => [i, e]);
 }
@@ -338,45 +424,152 @@ function hasBlank(node) {
   return false;
 }
 
+/* ---------- the tree ----------
+ * Adding an entry and moving one both happen here rather than in the form.
+ * They are navigation, not editing: you decide where a step goes by looking
+ * at the steps around it, and the form only ever shows one of them. */
+
 function renderTree() {
   const sel = state.sel;
-  $("tree").innerHTML = docsInOrder().map((d) => {
-    const secs = d.sections.map((section) => {
+  $("tree").innerHTML = docsInOrder().map((group) => {
+    const rows = group.rows.map(({ doc, section }) => {
       const spec = SECTIONS[section];
-      const rows = entriesOf(d.name, section);
-      const open = sel && sel.doc === d.name && sel.section === section;
-      const single = ["doc", "sub", "strings"].includes(spec.kind);
-      const items = single
-        ? ""
-        : rows.map(([id, entry]) =>
-            `<button class="item" data-doc="${esc(d.name)}" data-section="${esc(section)}" ` +
-            `data-id="${esc(id)}" aria-current="${open && String(sel.id) === String(id)}">` +
-            // Two different flags, because they mean different things: a
-            // "____" is a fact nobody has established, and a gap is a
-            // sentence nobody has translated yet.
-            (hasBlank(entry) ? `<span class="flag">•</span> ` : "") +
-            (blockGap(entry) ? `<span class="flag gap">◦</span> ` : "") +
-            esc(summarise(section, entry, id)) + `</button>`).join("");
-      return `<button class="sec" data-doc="${esc(d.name)}" data-section="${esc(section)}">` +
-             `<span>${esc(spec.label)}</span>` +
-             (single ? "" : `<span class="n">${rows.length}</span>`) +
-             `</button>` + (open ? `<div class="items">${items}</div>` : "");
+      const entries = entriesOf(doc, section);
+      const open = sel && sel.doc === doc && sel.section === section;
+      const single = isSingle(section);
+
+      const head =
+        `<div class="sec-row">` +
+        `<button class="sec" data-doc="${esc(doc)}" data-section="${esc(section)}">` +
+        `<span>${esc(spec.label)}</span>` +
+        (single ? "" : `<span class="n">${entries.length}</span>`) +
+        `</button>` +
+        (single ? "" :
+          iconBtn("plus", `Add another ${spec.one}`,
+                  `data-doc="${esc(doc)}" data-section="${esc(section)}"`, "add")) +
+        `</div>`;
+
+      if (single || !open) return head;
+
+      const items = entries.map(([id, entry]) =>
+        // Draggable rather than a pair of arrows: the order of these is the
+        // order a volunteer reads them in, and dragging is how you say
+        // "third, after that one" in one gesture instead of three presses.
+        `<button class="item" draggable="true" data-doc="${esc(doc)}" ` +
+        `data-section="${esc(section)}" data-id="${esc(id)}" ` +
+        `aria-current="${String(sel.id) === String(id)}">` +
+        `<span class="grip">${icon("grip")}</span>` +
+        // Two flags, because they mean different things: a "____" is a fact
+        // nobody has established, and a gap is a sentence nobody has
+        // translated yet.
+        (hasBlank(entry) ? `<span class="flag">•</span>` : "") +
+        (blockGap(entry) ? `<span class="flag gap">◦</span>` : "") +
+        `<span class="what">${esc(summarise(section, entry, id))}</span>` +
+        `</button>`).join("");
+      return head + `<div class="items">${items}</div>`;
     }).join("");
-    return `<div class="doc">${esc(d.label)}</div>${secs}`;
+    return `<div class="doc">${esc(group.label)}</div>${rows}`;
   }).join("");
 
   $("tree").querySelectorAll(".sec").forEach((el) => {
     el.onclick = () => {
-      const spec = SECTIONS[el.dataset.section];
-      const rows = entriesOf(el.dataset.doc, el.dataset.section);
-      select(el.dataset.doc, el.dataset.section,
-             ["doc", "sub", "strings"].includes(spec.kind)
-               ? "" : (rows[0] ? rows[0][0] : null));
+      const { doc, section } = el.dataset;
+      const entries = entriesOf(doc, section);
+      select(doc, section, isSingle(section) ? "" : (entries[0] ? entries[0][0] : null));
+    };
+  });
+  $("tree").querySelectorAll(".add").forEach((el) => {
+    el.onclick = (e) => {
+      e.stopPropagation();
+      addEntry(el.dataset.doc, el.dataset.section);
     };
   });
   $("tree").querySelectorAll(".item").forEach((el) => {
     el.onclick = () => select(el.dataset.doc, el.dataset.section, el.dataset.id);
   });
+  wireDragging();
+}
+
+/* Reordering by drag, over the rows of one section.
+ *
+ * Kept to one section deliberately: dragging a checklist step into the
+ * problem pages would be a way to lose it, and the two are not the same
+ * kind of thing. A drop marker rather than live shuffling, so nothing
+ * moves until you let go and the row you grabbed stays where your eye is.
+ */
+let dragging = null;
+
+function wireDragging() {
+  $("tree").querySelectorAll(".item").forEach((el) => {
+    el.ondragstart = (e) => {
+      dragging = { ...el.dataset };
+      el.classList.add("lifting");
+      e.dataTransfer.effectAllowed = "move";
+      // Firefox will not start a drag without something on the transfer.
+      e.dataTransfer.setData("text/plain", el.dataset.id);
+    };
+    el.ondragend = () => {
+      dragging = null;
+      $("tree").querySelectorAll(".item").forEach((o) =>
+        o.classList.remove("lifting", "over-before", "over-after"));
+    };
+    el.ondragover = (e) => {
+      if (!sameSection(el)) return;
+      e.preventDefault();
+      const box = el.getBoundingClientRect();
+      const after = e.clientY > box.top + box.height / 2;
+      el.classList.toggle("over-before", !after);
+      el.classList.toggle("over-after", after);
+    };
+    el.ondragleave = () => el.classList.remove("over-before", "over-after");
+    el.ondrop = (e) => {
+      if (!sameSection(el)) return;
+      e.preventDefault();
+      const box = el.getBoundingClientRect();
+      const after = e.clientY > box.top + box.height / 2;
+      moveEntry(dragging, el.dataset.id, after);
+    };
+  });
+}
+
+function sameSection(el) {
+  return dragging && dragging.doc === el.dataset.doc &&
+         dragging.section === el.dataset.section && dragging.id !== el.dataset.id;
+}
+
+/* Move `from` to sit before or after `ontoId`.
+ *
+ * A list is spliced. A map is rebuilt in the new key order rather than
+ * reassigned, because for the screen guides the key order *is* the order
+ * the tiles appear in on the tablet -- there is no index to sort by. */
+function moveEntry(from, ontoId, after) {
+  const spec = SECTIONS[from.section];
+  const doc = state.docs[from.doc];
+
+  if (spec.kind === "map") {
+    const keys = Object.keys(doc[from.section]);
+    const rest = keys.filter((k) => k !== from.id);
+    const at = rest.indexOf(ontoId) + (after ? 1 : 0);
+    rest.splice(at, 0, from.id);
+    const rebuilt = {};
+    for (const k of rest) rebuilt[k] = doc[from.section][k];
+    doc[from.section] = rebuilt;
+    state.sel = { doc: from.doc, section: from.section, id: from.id };
+  } else {
+    const list = doc[from.section];
+    const lifted = Number(from.id);
+    const onto = Number(ontoId);
+    // Where the row we dropped onto sits once the lifted one is out of the
+    // list: one lower if it was below the gap that just closed.
+    const settled = onto > lifted ? onto - 1 : onto;
+    const at = settled + (after ? 1 : 0);
+    const moved = list.splice(lifted, 1)[0];
+    list.splice(at, 0, moved);
+    state.sel = { doc: from.doc, section: from.section, id: at };
+  }
+  touched(from.doc);
+  renderTree();
+  renderForm();
 }
 
 function select(doc, section, id) {
@@ -392,26 +585,22 @@ function select(doc, section, id) {
 
 function currentEntry() {
   const { doc, section, id } = state.sel || {};
-  const spec = SECTIONS[section];
-  if (!spec) return null;
-  if (spec.kind === "doc") return state.docs[doc];
-  // A `sub` section edits one object inside the file -- roles.json's hero,
-  // ui.json's strings -- so it is created on first sight rather than being
-  // a section that silently does nothing.
-  if (spec.kind === "sub" || spec.kind === "strings") {
-    return (state.docs[doc][spec.at] = state.docs[doc][spec.at] || {});
-  }
-  if (spec.kind === "map") return (state.docs[doc][section] || {})[id];
-  return (state.docs[doc][section] || [])[id];
+  return SECTIONS[section] ? entryAt(doc, section, id) : null;
 }
 
 function renderForm() {
   const box = $("form");
   const sel = state.sel;
+
+  // Renaming or deleting a language can leave the working one pointing at
+  // something that is gone. Repaired here rather than guarded at every
+  // use, so there is one place the invariant holds.
+  const ids = langIds();
+  if (!ids.includes(state.writing)) state.writing = ids[0];
+
   const entry = currentEntry();
   if (!sel || !entry) {
-    box.innerHTML = `<p class="empty">Pick something on the left to edit it.</p>` + gitPanel();
-    wireGit();
+    box.innerHTML = `<p class="empty">Pick something on the left to edit it.</p>`;
     return;
   }
   const spec = SECTIONS[sel.section];
@@ -423,7 +612,12 @@ function renderForm() {
                     : summarise(sel.section, entry, sel.id))}</h1>`;
   if (spec.hint) html += `<p class="field"><span class="hint">${esc(spec.hint)}</span></p>`;
 
-  if (!single) html += rowBar(spec);
+  html += langBar();
+  // Adding and reordering live in the tree; only the destructive one is
+  // here, where you can see the thing you are about to remove.
+  if (!single) html += `<div class="rowbar">` +
+    iconBtn("trash", `Delete this ${spec.one || "entry"}`,
+            `data-op="delete"`, "bad") + `</div>`;
   if (spec.kind === "map") {
     html += field("Key", `<input type="text" data-op="rename" value="${esc(sel.id)}">`);
   }
@@ -434,21 +628,61 @@ function renderForm() {
     ? Object.keys(entry).map((k) => BI(k, k))
     : spec.fields;
   html += fields.map((f) => renderField(f, entry)).join("");
-  html += gitPanel();
 
   box.innerHTML = html;
   box.scrollTop = 0;
   wireForm(entry, spec);
-  wireGit();
+  wireLangBar();
 }
 
-function rowBar(spec) {
-  return `<div class="rowbar">` +
-    `<button class="btn tiny" data-op="add">+ Add another</button>` +
-    (spec.kind === "list"
-      ? `<button class="btn tiny" data-op="up">↑ Move up</button>` +
-        `<button class="btn tiny" data-op="down">↓ Move down</button>` : "") +
-    `<button class="btn tiny bad" data-op="delete">Delete</button></div>`;
+function wireLangBar() {
+  $("form").querySelectorAll("[data-writing]").forEach((el) => {
+    el.onclick = () => setWriting(el.dataset.writing);
+  });
+}
+
+/* Change the language being worked in, from either end.
+ *
+ * `fromPreview` says the app's own segment was the thing that was pressed,
+ * so there is nothing to push back to it -- without that the two would
+ * take turns telling each other, which is a loop rather than a sync. */
+function setWriting(lang, fromPreview) {
+  if (!lang || lang === state.writing || !langIds().includes(lang)) return;
+  state.writing = lang;
+  remember();
+  renderForm();
+  renderBar();
+  if (!fromPreview) showLangInPreview(lang);
+}
+
+function remember() {
+  try {
+    localStorage.setItem("mixerm8.editor.writing", state.writing);
+  } catch { /* private mode; the position just does not survive a reload */ }
+}
+
+/* The remembered language, if the guide still offers it. Falls back to the
+ * first declared one, which is also what a guide in one language gets. */
+function restoreLangs() {
+  const ids = langIds();
+  let saved = null;
+  try { saved = localStorage.getItem("mixerm8.editor.writing"); }
+  catch { /* nothing remembered */ }
+  state.writing = ids.includes(saved) ? saved : ids[0];
+}
+
+/* The one control that decides what every text field below shows -- and
+ * what the preview beside it shows, because they are the same value.
+ *
+ * Hidden when the guide is in one language, for the same reason the tablet
+ * hides its own segment: there is nothing to choose. */
+function langBar() {
+  const all = langs();
+  if (all.length < 2) return "";
+  return `<div class="langbar"><span class="fname">Writing in</span>` +
+    `<div class="seg">` + all.map(({ id, label }) =>
+      `<button data-writing="${esc(id)}" aria-pressed="${id === state.writing}">` +
+      `${esc(label)}</button>`).join("") + `</div></div>`;
 }
 
 function field(label, inner, hint, extra) {
@@ -456,18 +690,20 @@ function field(label, inner, hint, extra) {
          (hint ? ` <span class="hint">${esc(hint)}</span>` : "") + `</span>${inner}</div>`;
 }
 
-/* One column per declared language, labelled with what that language calls
- * itself. Every column is rendered whether or not the key exists yet, so
- * adding a language turns every field in the editor into a visible gap to
- * fill rather than something you have to know to go looking for. */
+/* One text field, in the language being worked in.
+ *
+ * The tag turns amber when that language is empty here, so a form full of
+ * gaps looks like one at a glance without having to read any of it. */
 function textareas(path, node) {
-  return `<div class="pair">` + langs().map(({ id, label }) => {
-    const text = node?.[id] || "";
-    return `<label class="lang-in${text ? "" : " gap"}">` +
-      `<span class="tag" lang="${esc(id)}">${esc(label)}</span>` +
-      `<textarea data-path="${esc(path)}.${id}" lang="${esc(id)}" ` +
-      `class="${BLANK.test(text) ? "has-blank" : ""}">${esc(text)}</textarea></label>`;
-  }).join("") + `</div>`;
+  const all = langs();
+  const write = all.find((l) => l.id === state.writing) || all[0];
+  const text = node?.[write.id] || "";
+  return `<div class="pair">` +
+    `<label class="lang-in${text ? "" : " gap"}">` +
+    `<span class="tag" lang="${esc(write.id)}">${esc(write.label)}</span>` +
+    `<textarea data-path="${esc(path)}.${write.id}" lang="${esc(write.id)}" ` +
+    `class="${BLANK.test(text) ? "has-blank" : ""}">${esc(text)}</textarea></label>` +
+    `</div>`;
 }
 
 function renderField(f, entry) {
@@ -476,13 +712,15 @@ function renderField(f, entry) {
   if (f.type === "bi") {
     if (f.optional && value === undefined) {
       return field(f.label,
-        `<button class="btn tiny" data-op="addfield" data-key="${esc(f.key)}">+ Add</button>`,
+        iconBtn("plus", `Add: ${f.label}`,
+                `data-op="addfield" data-key="${esc(f.key)}"`),
         f.hint, "optional");
     }
     return field(f.label,
       textareas(f.key, value) +
       (f.optional ? `<div class="rowbar" style="margin:8px 0 0">` +
-        `<button class="btn tiny bad" data-op="dropfield" data-key="${esc(f.key)}">Remove</button></div>` : ""),
+        iconBtn("trash", `Remove: ${f.label}`,
+                `data-op="dropfield" data-key="${esc(f.key)}"`, "bad") + `</div>` : ""),
       f.hint);
   }
 
@@ -491,13 +729,17 @@ function renderField(f, entry) {
       `<div class="step-row"><span class="num">${i + 1}</span>` +
       `<div>${textareas(`${f.key}.${i}`, step)}</div>` +
       `<span class="ops">` +
-      `<button class="btn tiny" data-op="stepup" data-key="${esc(f.key)}" data-i="${i}">↑</button>` +
-      `<button class="btn tiny" data-op="stepdown" data-key="${esc(f.key)}" data-i="${i}">↓</button>` +
-      `<button class="btn tiny bad" data-op="stepdrop" data-key="${esc(f.key)}" data-i="${i}">✕</button>` +
+      iconBtn("up", `Move step ${i + 1} earlier`,
+              `data-op="stepup" data-key="${esc(f.key)}" data-i="${i}"`) +
+      iconBtn("down", `Move step ${i + 1} later`,
+              `data-op="stepdown" data-key="${esc(f.key)}" data-i="${i}"`) +
+      iconBtn("trash", `Delete step ${i + 1}`,
+              `data-op="stepdrop" data-key="${esc(f.key)}" data-i="${i}"`, "bad") +
       `</span></div>`).join("");
     return field(f.label,
       `<div class="steps">${rows}</div><div class="rowbar" style="margin:10px 0 0">` +
-      `<button class="btn tiny" data-op="stepadd" data-key="${esc(f.key)}">+ Add a step</button></div>`,
+      iconBtn("plus", "Add a step", `data-op="stepadd" data-key="${esc(f.key)}"`) +
+      `</div>`,
       f.hint);
   }
 
@@ -535,7 +777,7 @@ function renderField(f, entry) {
   if (f.type === "diagram") {
     if (!value) {
       return field(f.label,
-        `<button class="btn tiny" data-op="addfield" data-key="diagram">+ Add</button>`,
+        iconBtn("plus", "Add a diagram", `data-op="addfield" data-key="diagram"`),
         "Optional. A church's own drawings go in docs/img/local/, which is gitignored.",
         "optional");
     }
@@ -546,8 +788,8 @@ function renderField(f, entry) {
       field("Alt text", textareas("diagram.alt", value.alt)) +
       field("Caption", textareas("diagram.caption", value.caption)) +
       `<div class="rowbar" style="margin:4px 0 0">` +
-      `<button class="btn tiny bad" data-op="dropfield" data-key="diagram">Remove</button></div>` +
-      `</div>`);
+      iconBtn("trash", "Remove this diagram", `data-op="dropfield" data-key="diagram"`, "bad") +
+      `</div></div>`);
   }
   return "";
 }
@@ -647,15 +889,7 @@ function wireForm(entry, spec) {
       else if (op === "stepdrop") entry[key].splice(i, 1);
       else if (op === "stepup" && i > 0) entry[key].splice(i - 1, 0, entry[key].splice(i, 1)[0]);
       else if (op === "stepdown") entry[key].splice(i + 1, 0, entry[key].splice(i, 1)[0]);
-      else if (op === "add") return addEntry(spec);
       else if (op === "delete") return deleteEntry(spec, list);
-      else if (op === "up" && sel.id > 0) {
-        list.splice(sel.id - 1, 0, list.splice(sel.id, 1)[0]);
-        state.sel.id -= 1;
-      } else if (op === "down" && sel.id < list.length - 1) {
-        list.splice(sel.id + 1, 0, list.splice(sel.id, 1)[0]);
-        state.sel.id += 1;
-      }
       touched(sel.doc);
       renderTree();
       renderForm();
@@ -663,21 +897,33 @@ function wireForm(entry, spec) {
   });
 }
 
-function addEntry(spec) {
-  const sel = state.sel;
+/* Add an entry to a section, and select it.
+ *
+ * Called from the tree's + rather than from the form, so it takes the
+ * section rather than reading the selection: you can add to a section you
+ * are not currently looking at. A new row goes after the selected one when
+ * that is in the same section, and at the end otherwise. */
+function addEntry(docName, section) {
+  const spec = SECTIONS[section];
+  const doc = state.docs[docName];
   const fresh = spec.blank();
+  const sel = state.sel;
+  const here = sel && sel.doc === docName && sel.section === section;
+
   if (spec.kind === "map") {
+    doc[section] = doc[section] || {};
     let key = "New screen";
     let n = 1;
-    while (state.docs[sel.doc][sel.section][key]) key = `New screen ${++n}`;
-    state.docs[sel.doc][sel.section][key] = fresh;
-    state.sel.id = key;
+    while (doc[section][key]) key = `New screen ${++n}`;
+    doc[section][key] = fresh;
+    state.sel = { doc: docName, section, id: key };
   } else {
-    const list = state.docs[sel.doc][sel.section];
-    list.splice(sel.id + 1, 0, fresh);
-    state.sel.id += 1;
+    const list = (doc[section] = doc[section] || []);
+    const at = here && typeof sel.id === "number" ? sel.id + 1 : list.length;
+    list.splice(at, 0, fresh);
+    state.sel = { doc: docName, section, id: at };
   }
-  touched(sel.doc);
+  touched(docName);
   renderTree();
   renderForm();
 }
@@ -714,57 +960,30 @@ function renameKey(next) {
   renderForm();
 }
 
-/* ---------- git, as words rather than buttons ---------- */
-
-function gitPanel() {
-  const g = state.git;
-  if (!g.available) {
-    return `<div class="git"><h2>Saving</h2><p>${esc(g.why || "")}</p></div>`;
-  }
-  const changed = g.changed?.length
-    ? `<p>Changed so far: ${g.changed.map((c) => esc(c)).join(", ")}</p>` : "<p>Nothing changed yet.</p>";
-  return `<div class="git"><h2>Committing</h2>` +
-    `<p>On branch <b>${esc(g.branch)}</b>. The editor writes files and stops there — ` +
-    `run these yourself so you can see the branch you are on first.</p>` +
-    changed +
-    `<pre id="gitcmds">${esc((g.commands || []).join("\n"))}</pre>` +
-    `<div class="rowbar" style="margin:10px 0 0">` +
-    `<button class="btn tiny" id="copygit">Copy commands</button></div></div>`;
-}
-
-function wireGit() {
-  const btn = $("copygit");
-  if (!btn) return;
-  btn.onclick = async () => {
-    try {
-      await navigator.clipboard.writeText($("gitcmds").textContent);
-      btn.textContent = "Copied";
-      setTimeout(() => { btn.textContent = "Copy commands"; }, 1500);
-    } catch { /* no clipboard permission; the text is on screen anyway */ }
-  };
-}
-
 /* ---------- the preview ---------- */
 
 /* Where to point the preview for whatever is selected.
  *
- * The hash names a station and no language. That is deliberate: the app in
- * the frame has a language segment in its own header, so putting one out
- * here as well was the same control twice with nothing to keep the two
- * agreeing. Leaving the language out of the hash means the frame keeps
- * whichever one you last pressed inside it, across reloads. */
+ * The hash carries the language, so a reload lands in the one being worked
+ * in. There is no separate control for it out here -- the app's own
+ * segment in the frame is the second view of `state.writing`, and
+ * `showLangInPreview` / `watchPreviewLang` keep the two in step rather
+ * than letting them disagree. */
 function previewPlan() {
   const sel = state.sel;
   if (!sel) return { hash: "", view: null };
   // roles.json is the picker and the cover, and ui.json is every view at
-  // once, so both are best looked at from the front page.
+  // once, so both are best looked at from the front page. A bare "#ko"
+  // would read as a station id, so the picker's hash stays empty and the
+  // app's remembered language covers it.
   if (sel.doc === "roles" || sel.doc === "ui") return { hash: "", view: null };
-  if (sel.doc === "guides") return { hash: "audio", view: "now", key: sel.id };
+  const lang = state.writing ? `/${state.writing}` : "";
+  if (sel.doc === "guides") return { hash: `audio${lang}`, view: "now", key: sel.id };
   const view = { home: "home", about: "home", faq: "home" }[sel.section] || sel.section;
   const drill = ["problems", "equipment"].includes(sel.section);
   const unfold = ["flow", "faq"].includes(sel.section);
   return {
-    hash: sel.doc,
+    hash: `${sel.doc}${lang}`,
     view,
     index: typeof sel.id === "number" ? sel.id : null,
     drill, unfold,
@@ -778,7 +997,51 @@ function refreshPreview() {
   // A query string rather than only a hash: the point of reloading is to
   // re-fetch the draft, and changing a hash alone never does.
   frame.src = `preview/index.html?t=${Date.now()}#${plan.hash}`;
-  frame.onload = () => driveWhenReady(plan, Date.now() + 3000);
+  frame.onload = () => {
+    watchPreviewLang();
+    driveWhenReady(plan, Date.now() + 3000);
+  };
+}
+
+/* ---------- the preview's language is this editor's language ----------
+ *
+ * Two views of one value rather than two controls. The app in the frame
+ * already has a segment in its header -- it is the guide, not a mock-up of
+ * it, so of course it does -- and a volunteer's tablet is where that
+ * control belongs. Adding a second one out here that could disagree with
+ * it was the mistake; making the two ends of one value is not. */
+
+/* Press the segment inside the frame. Clicking rather than reloading, so
+ * switching language is instant and does not throw away where you had
+ * scrolled to. Returns false when the frame has not finished loading, in
+ * which case the hash will carry the language anyway. */
+function showLangInPreview(lang) {
+  let doc;
+  try { doc = $("frame").contentDocument; } catch { return false; }
+  const btn = doc?.querySelector(`#langs .seg[data-id="${CSS.escape(lang)}"]`);
+  if (!btn) return false;
+  if (btn.getAttribute("aria-pressed") !== "true") btn.click();
+  return true;
+}
+
+/* And the other direction. A click on the app's own segment is caught on
+ * the way down, because pressing it in the preview is the same act as
+ * pressing it in the form. `hashchange` as well, for a language that
+ * arrives by the URL -- the app only writes the hash when it is showing a
+ * station, so neither signal covers every case on its own. */
+function watchPreviewLang() {
+  let win;
+  try { win = $("frame").contentWindow; } catch { return; }
+  if (!win) return;
+
+  win.document.addEventListener("click", (e) => {
+    const seg = e.target.closest?.("#langs .seg");
+    if (seg) setWriting(seg.dataset.id, true);
+  }, true);
+
+  win.addEventListener("hashchange", () => {
+    setWriting(win.location.hash.replace(/^#/, "").split("/")[1], true);
+  });
 }
 
 /* The app boots by fetching its own content, so nothing exists to click for
@@ -829,6 +1092,7 @@ function renderChrome() {
       absorb(await api("/api/target", "POST", { target: el.dataset.t }));
       state.docs = (await api("/api/guide")).docs;
       state.sel = null;
+      restoreLangs();
       renderAll();
     };
   });
@@ -840,27 +1104,164 @@ function renderChrome() {
     ? `${state.dirty.length} file${state.dirty.length > 1 ? "s" : ""} unsaved` : "";
   $("save").disabled = state.dirty.length === 0;
 
-  const bad = state.problems.length;
-  const box = $("problems");
-  box.classList.toggle("bad", bad > 0);
-  const shown = state.problems.slice(0, PROBLEM_CAP);
-  const rest = bad - shown.length;
-  box.innerHTML = (bad
-    ? `<b>${bad} thing${bad > 1 ? "s" : ""} the rules would reject:</b><ul>` +
-      shown.map((p) => `<li>${esc(p)}</li>`).join("") +
-      (rest ? `<li class="more">…and ${rest} more of the same kind.</li>` : "") +
-      `</ul>`
-    : `<b>Everything here passes the same checks the test suite runs.</b>`)
-    + progressPanel();
+  renderBar();
 }
 
-/* How much of each language is actually written.
+/* ---------- the bar along the bottom ----------
+ *
+ * This used to print the rule messages as a bulleted list with a per-
+ * language progress block under it. Both were true and neither was for
+ * the person reading them: `audio.json.problems[3].todo missing es` is a
+ * dotted path, and a media director wanting to finish a translation needs
+ * somewhere to click, not a diagnostic.
+ *
+ * So the bar is one line that names the next thing to do and takes you
+ * there. The rule messages are still exactly what CI would say -- they are
+ * behind Details, for whoever wants them. */
+
+function renderBar() {
+  const box = $("problems");
+  const gaps = findGaps();
+  const rules = state.problems.length;
+  box.classList.toggle("bad", rules > 0 || gaps.length > 0);
+
+  // Which gap the last click took us to. Back to "the first" whenever the
+  // list shrinks under us, which is what finishing one does.
+  if (state.gapSeen !== null && state.gapSeen >= gaps.length) state.gapSeen = null;
+
+  let line;
+  if (gaps.length) {
+    const at = state.gapSeen;
+    line = `<button class="barline" id="gogap">` + (at === null
+      ? `${gaps.length} thing${gaps.length > 1 ? "s" : ""} still need writing` +
+        ` — <u>click to go to the first</u>`
+      : `${at + 1} of ${gaps.length} · ${esc(gaps[at].where)}` +
+        ` — <u>click for the next</u>`) + `</button>`;
+  } else if (rules) {
+    // Nothing with a box to fill, but the rules still object -- a role
+    // declaring a layer it has not got, two guides on one number.
+    line = `<span class="barline">${rules} thing${rules > 1 ? "s" : ""} ` +
+           `the rules would reject</span>`;
+  } else {
+    line = `<span class="barline ok">Nothing missing — this passes the same ` +
+           `checks the test suite runs</span>`;
+  }
+
+  // Details holds the two things worth having but not worth reading first:
+  // the rule messages verbatim, and how much of each language is written.
+  // Offered whenever it would have something in it.
+  const worth = rules > 0 || langIds().length > 1;
+  box.innerHTML = line +
+    (worth ? `<button class="details" id="showdetail" aria-expanded="${state.detail}">` +
+             `Details</button>` : "") +
+    (worth && state.detail ? detailPanel() : "");
+
+  const go = $("gogap");
+  if (go) go.onclick = () => {
+    const next = state.gapSeen === null ? 0 : (state.gapSeen + 1) % gaps.length;
+    state.gapSeen = next;
+    goToGap(gaps[next]);
+  };
+  const toggle = $("showdetail");
+  if (toggle) toggle.onclick = () => { state.detail = !state.detail; renderBar(); };
+}
+
+/* Every box that is still empty, in the order the tree lists them.
+ *
+ * Computed from the draft rather than parsed back out of the rule
+ * messages. The messages are sentences meant to be read; turning one into
+ * a place to click would mean a second parser for a format that exists to
+ * be human. This walk already had to happen for the flags in the tree. */
+function findGaps() {
+  const ids = langIds();
+  const out = [];
+
+  const collect = (node, prefix, add) => {
+    if (!node || typeof node !== "object") return;
+    if (Array.isArray(node)) {
+      node.forEach((v, i) => collect(v, `${prefix}${prefix ? "." : ""}${i}`, add));
+      return;
+    }
+    if (isBlock(node)) {
+      for (const lang of ids) if (!node[lang]) add(prefix, lang);
+      return;
+    }
+    for (const [k, v] of Object.entries(node)) {
+      collect(v, `${prefix}${prefix ? "." : ""}${k}`, add);
+    }
+  };
+
+  for (const group of docsInOrder()) {
+    for (const { doc, section } of group.rows) {
+      const spec = SECTIONS[section];
+      const where = `${group.label} · ${spec.label}`;
+      for (const [id, entry] of entriesOf(doc, section)) {
+        // A `doc` section edits the whole file, so only the fields its own
+        // form shows are its business -- everything else in that file
+        // belongs to one of the other rows and would be counted twice.
+        const scope = spec.kind === "doc"
+          ? Object.fromEntries(spec.fields.map((f) => [f.key, entry[f.key]]))
+          : entry;
+        collect(scope, "", (path, lang) =>
+          out.push({ doc, section, id, path, lang, where }));
+      }
+    }
+  }
+  return out;
+}
+
+/* Select the entry, then put the cursor in the empty box itself. Landing
+ * on the right form is most of the job; landing in the box means the next
+ * thing you do is type.
+ *
+ * Switching the language first, because a form shows one language at a
+ * time: a gap in Korean has no box on screen while you are writing in
+ * English, so there would be nothing to put the cursor in. The preview
+ * moves with it, being the other view of the same value.
+ *
+ * Synchronous throughout. `select()` renders the form before it returns,
+ * so there is nothing to wait for -- and the requestAnimationFrame this
+ * used to wait in never fires at all while the window is in the
+ * background, which left the bar a click behind itself. */
+function goToGap(gap) {
+  if (state.writing !== gap.lang) {
+    state.writing = gap.lang;
+    remember();
+    showLangInPreview(gap.lang);
+  }
+  select(gap.doc, gap.section, gap.id);
+
+  const path = `${gap.path}.${gap.lang}`.replace(/["\\]/g, "\\$&");
+  const el = $("form").querySelector(`[data-path="${path}"]`);
+  if (el) {
+    el.scrollIntoView({ block: "center" });
+    el.focus();
+  }
+  renderBar();
+}
+
+function detailPanel() {
+  const shown = state.problems.slice(0, PROBLEM_CAP);
+  const rest = state.problems.length - shown.length;
+  return `<div class="detail">` + progressPanel() +
+    (shown.length
+      ? `<h2>Exactly what the rules would say</h2><ul>` +
+        shown.map((p) => `<li>${esc(p)}</li>`).join("") +
+        (rest ? `<li class="more">…and ${rest} more of the same kind.</li>` : "") +
+        `</ul>`
+      : "") +
+    `</div>`;
+}
+
+/* How much of each language is written, for the Details panel.
  *
  * Declaring a language takes a minute and translating one takes weeks, so
- * the gap between the two is the thing worth showing. Counted over the
- * blocks in the draft rather than over the problems list, because the two
- * answer different questions: the list says what to fix next, this says
- * how far there is to go. */
+ * the gap between the two is worth showing -- but as a figure somebody
+ * goes looking for, not as the first thing in the bar. The line above it
+ * says what to do next; this says how far there is left to go.
+ *
+ * Counted over the language blocks in the draft, the same walk the tree
+ * flags and the bar's own gap list use. */
 function progressPanel() {
   const ids = langIds();
   if (ids.length < 2) return "";
@@ -881,7 +1282,7 @@ function progressPanel() {
   return `<div class="progress">` + langs().map(({ id, label }) => {
     const done = total[id] ? Math.round((filled[id] / total[id]) * 100) : 100;
     return `<span class="${done === 100 ? "full" : ""}">${esc(label)} ` +
-           `<b>${done}%</b> — ${filled[id]} of ${total[id]}</span>`;
+           `<b>${done}%</b> — ${filled[id]} of ${total[id]} written</span>`;
   }).join("") + `</div>`;
 }
 
@@ -906,9 +1307,14 @@ $("revert").onclick = async () => {
   if (!confirm("Throw away every unsaved change and reload from disk?")) return;
   absorb(await api("/api/revert", "POST", {}));
   state.docs = (await api("/api/guide")).docs;
+  restoreLangs();
   renderAll();
 };
 
+// The two buttons in the shell get their glyphs from the same table as the
+// ones the forms build, rather than a second copy pasted into the HTML.
+$("revert").innerHTML = icon("undo");
+$("refresh").innerHTML = icon("reload");
 $("refresh").onclick = refreshPreview;
 
 window.addEventListener("keydown", (e) => {
@@ -921,5 +1327,6 @@ window.addEventListener("beforeunload", (e) => {
 
 (async function boot() {
   absorb(await api("/api/guide"));
+  restoreLangs();
   renderAll();
 })();
