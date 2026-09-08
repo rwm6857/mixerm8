@@ -258,10 +258,12 @@ shows it in the first declared language rather than leaving a card blank —
 a card somebody can act on beats an empty one — but nothing pretends the
 gap is not there.
 
-To do the translating, set **Writing in** to Spanish and **Alongside** to
-the language you are translating from. Each field then shows one box to
-type into and the source sentence beside it to read from. The tree marks
-every entry still missing a language, so you can work down the list.
+To do the translating, set **Writing in** to Spanish. Every field then
+shows one box, in Spanish, and the preview beside it switches to Spanish
+too — the segment in the app's own header and the one in the form are the
+same control, so pressing either moves both. The tree marks every entry
+still missing a language, and the line along the bottom will walk you
+through them one at a time.
 
 The app's own words are in `docs/data/ui.json` and work the same way, which
 is the point: without it a station added in Spanish would read half in

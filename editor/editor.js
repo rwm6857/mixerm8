@@ -259,17 +259,18 @@ const LEVELS = [["ok", "Safe"], ["caution", "Careful"],
  * the number that matters; the rest is the same sentence again. */
 const PROBLEM_CAP = 40;
 
-/* Which language you are writing in, and which one to show beside it.
+/* Which language you are working in.
  *
- * A column per language was fine at two and unusable at four: every field
- * became a wrapping grid, and the form got longer in proportion to how
- * many languages the guide offered. This is the translator's arrangement
- * instead -- one language to type into, one to read from -- so the form is
- * the same length whether the guide is in two languages or eight. Kept in
- * localStorage because it is a working position, not part of the guide. */
+ * One value, and the preview is the other view of it: the segment in the
+ * app's own header and the one in the form are the same control, kept in
+ * step in both directions. A column per language was fine at two and
+ * unusable at four -- every field became a wrapping grid, and the form got
+ * longer in proportion to how many languages the guide offered -- so a
+ * field shows one box whether the guide is in two languages or eight.
+ * Kept in localStorage because it is a working position, not part of the
+ * guide. */
 const state = {
   writing: null,      // language id being edited; null until the docs load
-  beside: null,       // language id shown read-only next to it, or null
   gapSeen: null,      // index of the empty box the bar last jumped to
   detail: false,      // is the bar's Details panel open?
   docs: {},
@@ -591,14 +592,11 @@ function renderForm() {
   const box = $("form");
   const sel = state.sel;
 
-  // Renaming or deleting a language can leave the working pair pointing at
-  // one that is gone. Repaired here rather than guarded at every use, so
-  // there is one place the invariant holds.
+  // Renaming or deleting a language can leave the working one pointing at
+  // something that is gone. Repaired here rather than guarded at every
+  // use, so there is one place the invariant holds.
   const ids = langIds();
   if (!ids.includes(state.writing)) state.writing = ids[0];
-  if (state.beside && (!ids.includes(state.beside) || state.beside === state.writing)) {
-    state.beside = null;
-  }
 
   const entry = currentEntry();
   if (!sel || !entry) {
@@ -637,65 +635,54 @@ function renderForm() {
   wireLangBar();
 }
 
-/* Writing in and Alongside. Remembered per browser rather than per entry:
- * translating is a sitting, not a field, and having to re-pick the pair on
- * every row would be worse than the columns it replaced. */
 function wireLangBar() {
   $("form").querySelectorAll("[data-writing]").forEach((el) => {
-    el.onclick = () => {
-      state.writing = el.dataset.writing;
-      if (state.beside === state.writing) state.beside = null;
-      remember();
-      renderForm();
-    };
+    el.onclick = () => setWriting(el.dataset.writing);
   });
-  $("form").querySelectorAll("[data-beside]").forEach((el) => {
-    el.onclick = () => {
-      state.beside = el.dataset.beside || null;
-      remember();
-      renderForm();
-    };
-  });
+}
+
+/* Change the language being worked in, from either end.
+ *
+ * `fromPreview` says the app's own segment was the thing that was pressed,
+ * so there is nothing to push back to it -- without that the two would
+ * take turns telling each other, which is a loop rather than a sync. */
+function setWriting(lang, fromPreview) {
+  if (!lang || lang === state.writing || !langIds().includes(lang)) return;
+  state.writing = lang;
+  remember();
+  renderForm();
+  renderBar();
+  if (!fromPreview) showLangInPreview(lang);
 }
 
 function remember() {
   try {
-    localStorage.setItem("mixerm8.editor.langs",
-                         JSON.stringify({ writing: state.writing, beside: state.beside }));
+    localStorage.setItem("mixerm8.editor.writing", state.writing);
   } catch { /* private mode; the position just does not survive a reload */ }
 }
 
-/* The remembered pair, if the guide still offers both of them. Defaults to
- * the first declared language with nothing beside it -- one column, which
- * is what a guide in one language should look like too. */
+/* The remembered language, if the guide still offers it. Falls back to the
+ * first declared one, which is also what a guide in one language gets. */
 function restoreLangs() {
   const ids = langIds();
-  let saved = {};
-  try { saved = JSON.parse(localStorage.getItem("mixerm8.editor.langs")) || {}; }
+  let saved = null;
+  try { saved = localStorage.getItem("mixerm8.editor.writing"); }
   catch { /* nothing remembered */ }
-  state.writing = ids.includes(saved.writing) ? saved.writing : ids[0];
-  state.beside = ids.includes(saved.beside) && saved.beside !== state.writing
-    ? saved.beside : null;
+  state.writing = ids.includes(saved) ? saved : ids[0];
 }
 
-/* The one control that decides what every text field below looks like.
+/* The one control that decides what every text field below shows -- and
+ * what the preview beside it shows, because they are the same value.
  *
  * Hidden when the guide is in one language, for the same reason the tablet
  * hides its own segment: there is nothing to choose. */
 function langBar() {
   const all = langs();
   if (all.length < 2) return "";
-  const seg = (name, options, current) =>
-    `<div class="seg">` + options.map(({ id, label }) =>
-      `<button data-${name}="${esc(id)}" aria-pressed="${id === current}">` +
-      `${esc(label)}</button>`).join("") + `</div>`;
-  return `<div class="langbar">` +
-    `<span class="fname">Writing in</span>` +
-    seg("writing", all, state.writing) +
-    `<span class="fname">Alongside</span>` +
-    seg("beside", [{ id: "", label: "—" },
-                   ...all.filter((l) => l.id !== state.writing)], state.beside || "") +
-    `</div>`;
+  return `<div class="langbar"><span class="fname">Writing in</span>` +
+    `<div class="seg">` + all.map(({ id, label }) =>
+      `<button data-writing="${esc(id)}" aria-pressed="${id === state.writing}">` +
+      `${esc(label)}</button>`).join("") + `</div></div>`;
 }
 
 function field(label, inner, hint, extra) {
@@ -703,36 +690,19 @@ function field(label, inner, hint, extra) {
          (hint ? ` <span class="hint">${esc(hint)}</span>` : "") + `</span>${inner}</div>`;
 }
 
-/* One text field: the language you are writing in, and optionally one to
- * read from beside it.
+/* One text field, in the language being worked in.
  *
- * The reference side is a block of text rather than a second textarea, on
- * purpose. Two editable boxes that look alike is how you retype a sentence
- * into the wrong language, and the whole point of showing it is to read it.
- *
- * The tag turns amber when the language being written is empty here, so a
- * form full of gaps looks like one at a glance without having to compare
- * it against anything. */
+ * The tag turns amber when that language is empty here, so a form full of
+ * gaps looks like one at a glance without having to read any of it. */
 function textareas(path, node) {
   const all = langs();
   const write = all.find((l) => l.id === state.writing) || all[0];
   const text = node?.[write.id] || "";
-  const beside = state.beside && all.find((l) => l.id === state.beside);
-
-  const editable =
+  return `<div class="pair">` +
     `<label class="lang-in${text ? "" : " gap"}">` +
     `<span class="tag" lang="${esc(write.id)}">${esc(write.label)}</span>` +
     `<textarea data-path="${esc(path)}.${write.id}" lang="${esc(write.id)}" ` +
-    `class="${BLANK.test(text) ? "has-blank" : ""}">${esc(text)}</textarea></label>`;
-
-  if (!beside) return `<div class="pair one">${editable}</div>`;
-
-  const ref = node?.[beside.id] || "";
-  return `<div class="pair">` + editable +
-    `<div class="lang-ref"><span class="tag" lang="${esc(beside.id)}">` +
-    `${esc(beside.label)}</span>` +
-    `<div class="ref" lang="${esc(beside.id)}">${ref ? esc(ref)
-      : `<span class="nothing">nothing written here either</span>`}</div></div>` +
+    `class="${BLANK.test(text) ? "has-blank" : ""}">${esc(text)}</textarea></label>` +
     `</div>`;
 }
 
@@ -994,23 +964,26 @@ function renameKey(next) {
 
 /* Where to point the preview for whatever is selected.
  *
- * The hash names a station and no language. That is deliberate: the app in
- * the frame has a language segment in its own header, so putting one out
- * here as well was the same control twice with nothing to keep the two
- * agreeing. Leaving the language out of the hash means the frame keeps
- * whichever one you last pressed inside it, across reloads. */
+ * The hash carries the language, so a reload lands in the one being worked
+ * in. There is no separate control for it out here -- the app's own
+ * segment in the frame is the second view of `state.writing`, and
+ * `showLangInPreview` / `watchPreviewLang` keep the two in step rather
+ * than letting them disagree. */
 function previewPlan() {
   const sel = state.sel;
   if (!sel) return { hash: "", view: null };
   // roles.json is the picker and the cover, and ui.json is every view at
-  // once, so both are best looked at from the front page.
+  // once, so both are best looked at from the front page. A bare "#ko"
+  // would read as a station id, so the picker's hash stays empty and the
+  // app's remembered language covers it.
   if (sel.doc === "roles" || sel.doc === "ui") return { hash: "", view: null };
-  if (sel.doc === "guides") return { hash: "audio", view: "now", key: sel.id };
+  const lang = state.writing ? `/${state.writing}` : "";
+  if (sel.doc === "guides") return { hash: `audio${lang}`, view: "now", key: sel.id };
   const view = { home: "home", about: "home", faq: "home" }[sel.section] || sel.section;
   const drill = ["problems", "equipment"].includes(sel.section);
   const unfold = ["flow", "faq"].includes(sel.section);
   return {
-    hash: sel.doc,
+    hash: `${sel.doc}${lang}`,
     view,
     index: typeof sel.id === "number" ? sel.id : null,
     drill, unfold,
@@ -1024,7 +997,51 @@ function refreshPreview() {
   // A query string rather than only a hash: the point of reloading is to
   // re-fetch the draft, and changing a hash alone never does.
   frame.src = `preview/index.html?t=${Date.now()}#${plan.hash}`;
-  frame.onload = () => driveWhenReady(plan, Date.now() + 3000);
+  frame.onload = () => {
+    watchPreviewLang();
+    driveWhenReady(plan, Date.now() + 3000);
+  };
+}
+
+/* ---------- the preview's language is this editor's language ----------
+ *
+ * Two views of one value rather than two controls. The app in the frame
+ * already has a segment in its header -- it is the guide, not a mock-up of
+ * it, so of course it does -- and a volunteer's tablet is where that
+ * control belongs. Adding a second one out here that could disagree with
+ * it was the mistake; making the two ends of one value is not. */
+
+/* Press the segment inside the frame. Clicking rather than reloading, so
+ * switching language is instant and does not throw away where you had
+ * scrolled to. Returns false when the frame has not finished loading, in
+ * which case the hash will carry the language anyway. */
+function showLangInPreview(lang) {
+  let doc;
+  try { doc = $("frame").contentDocument; } catch { return false; }
+  const btn = doc?.querySelector(`#langs .seg[data-id="${CSS.escape(lang)}"]`);
+  if (!btn) return false;
+  if (btn.getAttribute("aria-pressed") !== "true") btn.click();
+  return true;
+}
+
+/* And the other direction. A click on the app's own segment is caught on
+ * the way down, because pressing it in the preview is the same act as
+ * pressing it in the form. `hashchange` as well, for a language that
+ * arrives by the URL -- the app only writes the hash when it is showing a
+ * station, so neither signal covers every case on its own. */
+function watchPreviewLang() {
+  let win;
+  try { win = $("frame").contentWindow; } catch { return; }
+  if (!win) return;
+
+  win.document.addEventListener("click", (e) => {
+    const seg = e.target.closest?.("#langs .seg");
+    if (seg) setWriting(seg.dataset.id, true);
+  }, true);
+
+  win.addEventListener("hashchange", () => {
+    setWriting(win.location.hash.replace(/^#/, "").split("/")[1], true);
+  });
 }
 
 /* The app boots by fetching its own content, so nothing exists to click for
@@ -1199,9 +1216,8 @@ function findGaps() {
  *
  * Switching the language first, because a form shows one language at a
  * time: a gap in Korean has no box on screen while you are writing in
- * English, so there would be nothing to put the cursor in. Whatever you
- * were writing in moves to Alongside, so the sentence you are translating
- * from stays in view.
+ * English, so there would be nothing to put the cursor in. The preview
+ * moves with it, being the other view of the same value.
  *
  * Synchronous throughout. `select()` renders the form before it returns,
  * so there is nothing to wait for -- and the requestAnimationFrame this
@@ -1209,9 +1225,9 @@ function findGaps() {
  * background, which left the bar a click behind itself. */
 function goToGap(gap) {
   if (state.writing !== gap.lang) {
-    if (state.beside === gap.lang || !state.beside) state.beside = state.writing;
     state.writing = gap.lang;
     remember();
+    showLangInPreview(gap.lang);
   }
   select(gap.doc, gap.section, gap.id);
 

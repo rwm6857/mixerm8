@@ -135,10 +135,10 @@ progress block under it. Both were true and neither was addressed to the
 person reading them: `audio.json.problems[3].todo missing es` is a dotted
 path, and somebody finishing a translation wants the empty box, not its
 name. So the line reads *"8 things still need writing — click to go to the
-first"*, each click lands the cursor **in** the box (switching the language
-being written, because a form shows one at a time, and moving the previous
-one to Alongside so the source stays in view), and the messages are
-verbatim behind Details along with the progress figures.
+first"*, each click lands the cursor **in** the box — switching the
+language being written, because a form shows one at a time, and taking the
+preview with it — and the messages are verbatim behind Details along with
+the progress figures.
 
 `findGaps()` walks the draft rather than parsing the rule messages back
 into locations — the messages are prose meant to be read, and a second
@@ -267,25 +267,27 @@ them as far from the sound desk as the tree could manage. So a tree row
 names the document it edits and the sound group draws from two files,
 keyed off `role.console` rather than off the string "audio".
 
-**One language at a time, with one beside it to read from.** A column per
-language was fine at two and unusable at four: every field became a
-wrapping grid and the form got longer in proportion to how many languages
-the guide offered. `langBar()` is the translator's arrangement instead —
-*Writing in* picks the language you type into, *Alongside* picks one shown
-read-only next to it — so a field is the same shape whether the guide is in
-two languages or eight. The reference side is a block of text rather than a
-second textarea on purpose: two editable boxes that look alike is how a
-sentence gets retyped into the wrong language. The pair lives in
-`localStorage` because translating is a sitting, not a field, and
-`renderForm()` repairs it in one place when a language is renamed or
-removed out from under it.
+**One language at a time, and the preview is the other view of it.** A
+column per language was fine at two and unusable at four: every field
+became a wrapping grid and the form got longer in proportion to how many
+languages the guide offered. So there is one language — `state.writing`,
+kept in `localStorage` because it is a working position rather than part of
+the guide — and a field shows one box whether the guide is in two languages
+or eight. `renderForm()` repairs it in one place when a language is renamed
+or removed out from under it.
 
-**The preview has no controls of its own.** It carried a language segment
-and a Tablet/Phone pair; the segment was the app's own control duplicated,
-with nothing keeping the two agreeing, and the guide is designed for a
-tablet at one width. Both are gone, and `previewPlan()` now leaves the
-language out of the hash so the frame keeps whichever one you last pressed
-inside it.
+**`Writing in` and the segment inside the preview are two ends of one
+value.** The mistake was never that the app in the frame has a language
+segment — it is the guide, not a mock-up of it, and that control belongs on
+a volunteer's tablet. The mistake was a *second* control out here that
+could disagree with it. So `showLangInPreview()` presses the app's own
+segment (rather than reloading, which would throw away where you had
+scrolled to) and `watchPreviewLang()` catches a press of it on the way
+down, with `setWriting(lang, fromPreview)` breaking the loop that two
+controls telling each other would otherwise make. `previewPlan()` puts the
+language back in the hash so a reload lands where you were. The
+Tablet/Phone pair is simply gone: the guide is designed for a tablet at one
+width.
 
 **The editor runs no git at all.** It used to read the branch and print the
 three commands for you to run yourself. The rule behind that was right — a
