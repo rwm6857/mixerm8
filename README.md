@@ -207,8 +207,8 @@ reload the page.
     docs/data/guides.json      what each screen on the mixer does, and its number
 
 Each station file holds that station's home page (`intro` and `faq`) and
-whichever of `checklist`, `problems`, `flow` and `equipment` it declares in
-`roles.json`. `misc` declares none of them: it is questions and policies only.
+whichever of `checklist`, `problems`, `flow`, `equipment` and `pages` it
+declares in `roles.json`. `misc` declares none of them: it is questions and policies only.
 Media and Livestream declare `equipment` — one card per piece of gear, saying
 what it is, where it lives and what to do about it. The sound desk does not:
 its Mixer tab already does that job.
@@ -324,6 +324,70 @@ repository entirely, so a `git pull` cannot overwrite it, a MixerM8 update
 cannot replace it, and there is no button anywhere in the editor that could
 publish it — the editor has no way to run a command at all. If you want a
 change to ship to everyone, make it in the example.
+
+### Building a page out of blocks
+
+Every entry can carry **blocks** after its own fields, and a **Training**
+page is nothing but blocks. Five kinds, mixed in any order:
+
+| | |
+| --- | --- |
+| **Text** | A paragraph, with bold, italic and links |
+| **Picture or video** | Anything in your media folder, or an https address |
+| **Callout** | A severity card — safe, careful, do not change, note |
+| **Checklist** | Tickable, and the ticks clear themselves daily |
+| **Collapsible steps** | Cards that open, and a step can hold blocks of its own |
+
+That last one is the point of the nesting: a diagram or a video goes inside
+the step it explains, rather than above the whole list. It stops there —
+steps inside steps would mean opening a card to find another card, which is
+not something to do to somebody mid-service.
+
+So a set-up page can be a walkthrough video, then a checklist of the steps
+in that video, then a callout naming the one thing not to touch. The shipped
+example has one on the Sound station's **Training** tab.
+
+### Your own pictures and video
+
+Drop them in the media folder and they appear:
+
+    %APPDATA%\MixerM8\media\        Windows
+    ~/.config/MixerM8/media/        elsewhere
+
+Then refer to them as `media/booth-walkthrough.mp4`. The editor lists what
+is there and can take a file for you, so you do not have to find the folder.
+Pictures can be `.png .jpg .svg .webp .gif`, video `.mp4 .webm`, and nothing
+else is served — the bridge hands out that one folder, read-only, and will
+not serve anything it does not recognise.
+
+This folder is outside the repository, like your wording, so no update
+replaces it and nothing publishes it. On the GitHub Pages copy your media
+simply is not there, and a picture that will not load hides itself rather
+than leaving a broken icon on a tablet in a dark booth.
+
+### Formatting, and links between pages
+
+Inside any piece of wording you can use three things and no more:
+
+    **bold**   *italic*   [label](target)
+
+A link either leaves the guide or lands somewhere inside it:
+
+    [the running order](audio/flow/load-the-scene)   a particular entry
+    [the media gear](media/equipment)                a tab
+    [the sound desk](audio)                          a station
+    [the docs](https://example.org)                  the web, opens in a new tab
+
+Internal links are checked. If you rename or delete the thing a link points
+at, the editor tells you before you save — a "see also" that goes nowhere
+reads as an answer and isn't one.
+
+There is deliberately no way to change size, colour or font. A card's
+meaning comes from its severity, and wording that could restyle itself is
+wording that could quietly stop looking like a warning.
+
+In the editor, each text box has **B**, *I* and link buttons on hover, and
+⌘B / ⌘I / ⌘K do the same thing to whatever you have selected. ⌘S saves.
 
 ### Diagrams
 

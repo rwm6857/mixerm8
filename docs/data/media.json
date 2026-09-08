@@ -13,6 +13,7 @@
 
   "faq": [
     {
+      "id": "do-i-advance-the-slides-or-does-the",
       "q": {
         "en": "Do I advance the slides, or does the worship leader?",
         "ko": "슬라이드는 제가 넘기나요, 아니면 인도자가 넘기나요?"
@@ -27,6 +28,7 @@
       }
     },
     {
+      "id": "the-song-order-changed-at-the-last",
       "q": {
         "en": "The song order changed at the last minute.",
         "ko": "찬양 순서가 마지막에 바뀌었습니다."
@@ -37,6 +39,7 @@
       }
     },
     {
+      "id": "can-everyone-see-my-email-while-i-set",
       "q": {
         "en": "Can everyone see my email while I set up?",
         "ko": "준비하는 동안 제 이메일이 화면에 보이나요?"
@@ -47,6 +50,7 @@
       }
     },
     {
+      "id": "i-lost-my-place-and-i-cannot-find-it",
       "q": {
         "en": "I lost my place and I cannot find it again.",
         "ko": "지금 어디인지 놓쳤고 다시 찾지 못하겠습니다."
@@ -60,15 +64,18 @@
 
   "checklist": [
     {
+      "id": "turn-on-the-projector-it-takes-a",
       "text": {
         "en": "Turn on the projector. It takes a minute or two to warm up, so do this first.",
         "ko": "프로젝터를 켜세요. 예열에 1~2분 걸리므로 가장 먼저 하세요."
       }
     },
     {
+      "id": "turn-on-the-computer-and-log-in",
       "text": { "en": "Turn on the computer and log in.", "ko": "컴퓨터를 켜고 로그인하세요." }
     },
     {
+      "id": "open-this-week-s-slides-from",
       "todo": {
         "en": "Fill in where this week's slides are kept, and who sends them.",
         "ko": "이번 주 슬라이드가 어디에 있고 누가 보내주는지 채워주세요."
@@ -76,24 +83,28 @@
       "text": { "en": "Open this week's slides from ____.", "ko": "____에서 이번 주 슬라이드를 여세요." }
     },
     {
+      "id": "press-windows-key-p-and-choose-extend",
       "text": {
         "en": "Press Windows key + P and choose Extend, so the projector is a second screen and not a copy of yours.",
         "ko": "Windows 키 + P를 누르고 '확장'을 선택하세요. 그러면 프로젝터가 내 화면의 복사본이 아닌 두 번째 화면이 됩니다."
       }
     },
     {
+      "id": "in-powerpoint-start-the-slide-show",
       "text": {
         "en": "In PowerPoint, start the slide show. Your screen should show the notes and the next slide; the projector should show only the slide.",
         "ko": "PowerPoint에서 슬라이드 쇼를 시작하세요. 내 화면에는 메모와 다음 슬라이드가, 프로젝터에는 슬라이드만 보여야 합니다."
       }
     },
     {
+      "id": "look-up-at-the-congregation-screen-and",
       "text": {
         "en": "Look up at the congregation screen and check it is not showing your desktop.",
         "ko": "회중 화면을 올려다보고 내 바탕화면이 나오고 있지 않은지 확인하세요."
       }
     },
     {
+      "id": "put-the-first-slide-up-before-people",
       "text": {
         "en": "Put the first slide up before people start arriving.",
         "ko": "사람들이 도착하기 전에 첫 슬라이드를 띄워두세요."
@@ -103,6 +114,7 @@
 
   "problems": [
     {
+      "id": "the-projector-is-showing-nothing",
       "level": "caution",
       "title": { "en": "The projector is showing nothing", "ko": "프로젝터에 아무것도 안 나옵니다" },
       "symptom": {
@@ -129,6 +141,7 @@
       ]
     },
     {
+      "id": "everyone-can-see-my-desktop",
       "level": "caution",
       "title": { "en": "Everyone can see my desktop", "ko": "회중이 제 바탕화면을 보고 있습니다" },
       "symptom": {
@@ -151,6 +164,7 @@
       ]
     },
     {
+      "id": "the-slides-will-not-advance",
       "level": "caution",
       "title": { "en": "The slides will not advance", "ko": "슬라이드가 넘어가지 않습니다" },
       "symptom": { "en": "You click and nothing happens.", "ko": "클릭해도 아무 일도 일어나지 않습니다." },
@@ -170,6 +184,7 @@
       ]
     },
     {
+      "id": "i-have-lost-my-place",
       "level": "info",
       "title": { "en": "I have lost my place", "ko": "지금 어디인지 모르겠습니다" },
       "symptom": {
@@ -192,6 +207,7 @@
       ]
     },
     {
+      "id": "a-video-in-the-slides-has-no-sound",
       "level": "caution",
       "title": { "en": "A video in the slides has no sound", "ko": "슬라이드의 영상에서 소리가 안 납니다" },
       "symptom": {
@@ -221,6 +237,7 @@
 
   "flow": [
     {
+      "id": "projector-on",
       "when": { "en": "30 min before", "ko": "30분 전" },
       "title": { "en": "Projector on", "ko": "프로젝터 켜기" },
       "detail": {
@@ -229,6 +246,7 @@
       }
     },
     {
+      "id": "open-the-slides",
       "when": { "en": "25 min before", "ko": "25분 전" },
       "title": { "en": "Open the slides", "ko": "슬라이드 열기" },
       "todo": {
@@ -241,6 +259,7 @@
       }
     },
     {
+      "id": "set-up-the-two-screens",
       "when": { "en": "20 min before", "ko": "20분 전" },
       "title": { "en": "Set up the two screens", "ko": "두 화면 설정" },
       "detail": {
@@ -249,6 +268,7 @@
       }
     },
     {
+      "id": "first-slide-up",
       "when": { "en": "10 min before", "ko": "10분 전" },
       "title": { "en": "First slide up", "ko": "첫 슬라이드 띄우기" },
       "detail": {
@@ -257,6 +277,7 @@
       }
     },
     {
+      "id": "follow-along",
       "when": { "en": "During", "ko": "예배 중" },
       "title": { "en": "Follow along", "ko": "따라가기" },
       "detail": {
@@ -265,6 +286,7 @@
       }
     },
     {
+      "id": "shut-down",
       "when": { "en": "After", "ko": "예배 후" },
       "title": { "en": "Shut down", "ko": "종료" },
       "detail": {
@@ -276,6 +298,7 @@
 
   "equipment": [
     {
+      "id": "the-projector",
       "level": "ok",
       "title": { "en": "The projector", "ko": "프로젝터" },
       "todo": {
@@ -293,6 +316,7 @@
       }
     },
     {
+      "id": "the-slides-computer",
       "level": "ok",
       "title": { "en": "The slides computer", "ko": "슬라이드 컴퓨터" },
       "todo": {
@@ -310,6 +334,7 @@
       }
     },
     {
+      "id": "the-cable-to-the-projector",
       "level": "caution",
       "title": { "en": "The cable to the projector", "ko": "프로젝터로 가는 케이블" },
       "todo": {
@@ -327,6 +352,7 @@
       }
     },
     {
+      "id": "the-clicker",
       "level": "ok",
       "title": { "en": "The clicker", "ko": "슬라이드 리모컨" },
       "todo": {

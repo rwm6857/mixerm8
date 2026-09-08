@@ -13,6 +13,7 @@
 
   "faq": [
     {
+      "id": "what-software-actually-runs-the-stream",
       "q": {
         "en": "What software actually runs the stream?",
         "ko": "방송은 어떤 프로그램으로 진행되나요?"
@@ -27,6 +28,7 @@
       }
     },
     {
+      "id": "does-the-stream-start-by-itself",
       "q": { "en": "Does the stream start by itself?", "ko": "방송은 저절로 시작되나요?" },
       "a": {
         "en": "No. Someone presses go live every week, and the only proof it worked is watching the stream come up on a phone. Do that before the service starts, not after somebody messages to ask where it is.",
@@ -34,6 +36,7 @@
       }
     },
     {
+      "id": "how-rough-is-too-rough",
       "q": { "en": "How rough is too rough?", "ko": "화면이 어느 정도까지 허용되나요?" },
       "a": {
         "en": "A slightly wide shot that stays still all service is fine. What is not fine is silence, a frozen picture, or a camera pointed at the floor — those are worth interrupting yourself to fix. Leave everything else until afterwards.",
@@ -41,6 +44,7 @@
       }
     },
     {
+      "id": "should-i-stop-the-stream-during-the",
       "q": {
         "en": "Should I stop the stream during the announcements or the offering?",
         "ko": "광고나 헌금 순서에 방송을 멈춰야 하나요?"
@@ -58,6 +62,7 @@
 
   "checklist": [
     {
+      "id": "power-everything-on-in-this-order",
       "todo": {
         "en": "Fill in the power-on order for the cameras, the ATEM and the streaming computer. Nobody has written this down yet, and the order matters — a device powered up in the wrong order often will not be seen by the one before it.",
         "ko": "카메라, ATEM, 방송용 컴퓨터의 전원 켜는 순서를 채워주세요. 아직 기록된 것이 없으며 순서가 중요합니다 — 잘못된 순서로 켜면 앞 장비가 뒤 장비를 인식하지 못하는 경우가 많습니다."
@@ -65,6 +70,7 @@
       "text": { "en": "Power everything on in this order: ____.", "ko": "다음 순서로 전원을 켜세요: ____." }
     },
     {
+      "id": "open-on-the-streaming-computer",
       "todo": {
         "en": "Fill in which program runs the stream on this computer, and where its icon is.",
         "ko": "이 컴퓨터에서 방송을 실행하는 프로그램과 아이콘 위치를 채워주세요."
@@ -72,30 +78,35 @@
       "text": { "en": "Open ____ on the streaming computer.", "ko": "방송용 컴퓨터에서 ____을 여세요." }
     },
     {
+      "id": "press-each-camera-button-on-the-atem",
       "text": {
         "en": "Press each camera button on the ATEM in turn and check you get a picture from every one.",
         "ko": "ATEM에서 각 카메라 버튼을 차례로 눌러 모든 카메라에서 화면이 나오는지 확인하세요."
       }
     },
     {
+      "id": "watch-the-audio-meter-on-the-streaming",
       "text": {
         "en": "Watch the audio meter on the streaming computer while someone talks into a microphone. If it does not move, stop and fix that now — this is the most common thing to go wrong.",
         "ko": "누군가 마이크에 말하는 동안 방송용 컴퓨터의 오디오 미터를 확인하세요. 움직이지 않으면 지금 해결하세요 — 가장 흔한 문제입니다."
       }
     },
     {
+      "id": "start-the-stream-wait-until-youtube",
       "text": {
         "en": "Start the stream. Wait until YouTube says it is live before you trust it.",
         "ko": "방송을 시작하세요. YouTube에 '라이브'라고 표시될 때까지 기다린 뒤 확인하세요."
       }
     },
     {
+      "id": "watch-the-first-minute-on-your-own",
       "text": {
         "en": "Watch the first minute on your own phone, with the volume up. That is the only way to know the people at home are getting picture and sound.",
         "ko": "본인 휴대폰으로 첫 1분을 소리를 켜고 확인하세요. 집에서 보는 사람들에게 화면과 소리가 나가는지 확인할 수 있는 유일한 방법입니다."
       }
     },
     {
+      "id": "stop-the-stream-after-the-service",
       "text": {
         "en": "Stop the stream after the service, before turning anything off.",
         "ko": "예배 후 장비를 끄기 전에 방송을 먼저 정지하세요."
@@ -105,6 +116,7 @@
 
   "problems": [
     {
+      "id": "no-sound-on-the-stream",
       "level": "danger",
       "title": { "en": "No sound on the stream", "ko": "방송에 소리가 안 나갑니다" },
       "symptom": {
@@ -139,6 +151,7 @@
       ]
     },
     {
+      "id": "the-stream-will-not-start",
       "level": "caution",
       "title": { "en": "The stream will not start", "ko": "방송이 시작되지 않습니다" },
       "symptom": {
@@ -165,6 +178,7 @@
       ]
     },
     {
+      "id": "one-camera-is-black",
       "level": "caution",
       "title": { "en": "One camera is black", "ko": "카메라 하나가 검은 화면입니다" },
       "symptom": {
@@ -195,6 +209,7 @@
       ]
     },
     {
+      "id": "the-stream-is-choppy-or-keeps-stopping",
       "level": "caution",
       "title": { "en": "The stream is choppy or keeps stopping", "ko": "방송이 끊기거나 자꾸 멈춥니다" },
       "symptom": {
@@ -224,6 +239,7 @@
 
   "flow": [
     {
+      "id": "power-up",
       "when": { "en": "45 min before", "ko": "45분 전" },
       "title": { "en": "Power up", "ko": "전원 켜기" },
       "todo": {
@@ -236,6 +252,7 @@
       }
     },
     {
+      "id": "open-the-streaming-program",
       "when": { "en": "35 min before", "ko": "35분 전" },
       "title": { "en": "Open the streaming program", "ko": "방송 프로그램 열기" },
       "todo": { "en": "Fill in the program name.", "ko": "프로그램 이름을 채워주세요." },
@@ -245,6 +262,7 @@
       }
     },
     {
+      "id": "check-every-camera",
       "when": { "en": "30 min before", "ko": "30분 전" },
       "title": { "en": "Check every camera", "ko": "모든 카메라 확인" },
       "detail": {
@@ -253,6 +271,7 @@
       }
     },
     {
+      "id": "check-the-sound",
       "when": { "en": "20 min before", "ko": "20분 전" },
       "title": { "en": "Check the sound", "ko": "소리 확인" },
       "detail": {
@@ -261,6 +280,7 @@
       }
     },
     {
+      "id": "go-live",
       "when": { "en": "5 min before", "ko": "5분 전" },
       "title": { "en": "Go live", "ko": "방송 시작" },
       "detail": {
@@ -269,6 +289,7 @@
       }
     },
     {
+      "id": "switch-slowly",
       "when": { "en": "During", "ko": "예배 중" },
       "title": { "en": "Switch slowly", "ko": "천천히 전환하기" },
       "detail": {
@@ -277,6 +298,7 @@
       }
     },
     {
+      "id": "stop-the-stream-first",
       "when": { "en": "After", "ko": "예배 후" },
       "title": { "en": "Stop the stream first", "ko": "방송 먼저 정지" },
       "detail": {
@@ -288,6 +310,7 @@
 
   "equipment": [
     {
+      "id": "the-cameras",
       "level": "caution",
       "title": { "en": "The cameras", "ko": "카메라" },
       "todo": {
@@ -305,6 +328,7 @@
       }
     },
     {
+      "id": "the-streaming-computer",
       "level": "ok",
       "title": { "en": "The streaming computer", "ko": "방송 컴퓨터" },
       "todo": {
@@ -322,6 +346,7 @@
       }
     },
     {
+      "id": "the-sound-feed-from-the-desk",
       "level": "danger",
       "title": { "en": "The sound feed from the desk", "ko": "콘솔에서 오는 소리" },
       "todo": {
@@ -339,6 +364,7 @@
       }
     },
     {
+      "id": "the-internet-connection",
       "level": "caution",
       "title": { "en": "The internet connection", "ko": "인터넷 연결" },
       "todo": {
@@ -356,6 +382,7 @@
       }
     },
     {
+      "id": "the-video-switcher",
       "level": "caution",
       "title": { "en": "The video switcher", "ko": "영상 스위처" },
       "todo": {

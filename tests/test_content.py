@@ -6,6 +6,7 @@ split up and named for their reasons: the name is the argument for why the
 rule exists, and one test_everything_is_valid would throw that away.
 """
 
+import json
 import re
 
 import pytest
@@ -75,7 +76,8 @@ def test_a_guide_in_one_language_needs_only_that_one():
         "roles": {"languages": ["ko"],
                   "roles": [{"id": "misc", "layers": []}]},
         "misc": {"intro": {"ko": "안녕하세요"},
-                 "faq": [{"q": {"ko": "질문"}, "a": {"ko": "대답"}}]},
+                 "faq": [{"id": "jilmun", "q": {"ko": "질문"},
+                          "a": {"ko": "대답"}}]},
     }
     assert validate.languages(korean_only) == ("ko",)
     assert validate.check(korean_only) == []
@@ -152,6 +154,190 @@ def test_a_language_list_the_app_could_not_use_is_caught():
     ]:
         reported = " ".join(validate.bad_language_ids({"roles": {"languages": bad}}))
         assert expect in reported, f"{bad!r} was reported as {reported!r}"
+
+
+# ---------------------------------------------------------------------------
+# Addresses. Everything used to be found by its position in a list, which
+# is not an address: it changes when the thing above it moves. Ids exist so
+# that a link has somewhere to point and a volunteer's tick stays on the
+# step they ticked.
+# ---------------------------------------------------------------------------
+
+def test_every_entry_has_an_id(docs):
+    """Position is not an address.
+
+    The concrete cost was in the app: ticks were stored as `done: [0, 2, 5]`,
+    so reordering a checklist -- one drag in the editor -- moved a
+    volunteer's ticks onto different steps without anything saying so.
+    """
+    assert validate.entries_without_ids(docs) == []
+
+
+def test_ids_survive_being_put_in_a_link(docs):
+    assert validate.bad_entry_ids(docs) == []
+
+
+def test_no_two_entries_in_a_section_claim_one_id(docs):
+    """One would take every link meant for the other, silently."""
+    assert validate.entry_ids_claimed_twice(docs) == []
+
+
+def test_an_id_is_not_regenerated_from_the_wording():
+    """Renaming a heading must not break a link to it.
+
+    So the id is slugged from the wording once, when the entry is made, and
+    never again -- which is why it is a field in the file rather than
+    something the app works out on the way past.
+    """
+    seen = {e["id"] for e in validate.load_documents(server.webroot() / "data")
+            ["audio"]["problems"]}
+    assert "a-squeal-or-a-howl" in seen
+
+
+def test_every_link_in_the_guide_goes_somewhere(docs):
+    """A "see also" pointing at a renamed entry reads as an answer and goes
+    nowhere, which is worse than not offering one."""
+    assert validate.dead_links(docs) == []
+
+
+def test_the_shipped_guide_actually_uses_links_and_emphasis(docs):
+    """Otherwise the two checks above are guarding a feature nothing has.
+
+    The example is what a church copies, so it shows the conventions in
+    use rather than describing them in a comment somewhere.
+    """
+    links = list(validate._link_targets(docs))
+    assert links, "no wording links anywhere, so dead_links proves nothing"
+    assert any(target.count("/") == 2 for _, _, target in links), \
+        "no link reaches a particular entry"
+    assert any("**" in (e.get("detail") or {}).get("en", "")
+               for e in docs["audio"]["flow"]), "no emphasis in the example"
+
+
+def test_a_link_a_tablet_could_not_follow_is_caught(docs):
+    """Every way one can be wrong, in one place, because a dead link is
+    invisible until somebody taps it mid-service."""
+    broken = json.loads(json.dumps(docs))
+    broken["audio"]["faq"][0]["a"]["en"] = (
+        "[gone](audio/problems/no-such-entry) [no tab](audio/nonsense) "
+        "[no station](nowhere/faq) [too deep](audio/faq/a/b) "
+        "[a script](javascript:alert(1)) "
+        "[fine](https://example.org) [also fine](media/equipment)")
+    reported = " ".join(validate.dead_links(broken))
+    for expect in ("nothing there has that id", "not a tab that station has",
+                   "does not exist", "deeper than station/tab/entry",
+                   "not a link a tablet would open"):
+        assert expect in reported, f"{expect!r} was not reported"
+    assert "example.org" not in reported, "an ordinary web link was rejected"
+    assert "media/equipment" not in reported, "a good internal link was rejected"
+
+
+# ---------------------------------------------------------------------------
+# Blocks. An entry's fixed fields say what it always has to say; blocks are
+# everything after that, in whatever order somebody put them. Additive on
+# purpose -- a file with no `blocks` is a file that has not changed -- so
+# these rules are about what a block must be, not about replacing anything.
+# ---------------------------------------------------------------------------
+
+def test_the_shipped_guide_uses_every_block_type(docs):
+    """Otherwise the rules below guard shapes nothing has.
+
+    The example is what a church copies, so it shows a page assembled out
+    of all of them -- including a diagram inside a collapsible step, which
+    is the case the nesting exists for.
+    """
+    kinds = {b.get("type") for _, b, _ in validate._blocks_in(docs)
+             if isinstance(b, dict)}
+    assert kinds == set(validate.BLOCKS), \
+        f"never rendered by the example: {set(validate.BLOCKS) - kinds}"
+    assert any(depth and b.get("type") == "media"
+               for _, b, depth in validate._blocks_in(docs)
+               if isinstance(b, dict)), "no media inside a step"
+
+
+def test_every_block_is_one_the_app_renders(docs):
+    """A type app.js has never heard of renders as nothing at all, which is
+    the worst way to be wrong: the file carries it, the editor shows it,
+    and the tablet is simply missing a paragraph."""
+    assert validate.unknown_block_types(docs) == []
+
+
+def test_every_block_is_complete_in_every_declared_language(docs):
+    assert validate.incomplete_blocks(docs) == []
+
+
+def test_collapsible_steps_do_not_nest(docs):
+    """One level is a step with a diagram in it. Two is a volunteer opening
+    a card to find another card, mid-service."""
+    assert validate.steps_nested_too_deep(docs) == []
+
+
+def test_every_tickable_item_has_an_id_unique_to_its_station(docs):
+    """The ticks are one flat set per station, keyed by id, so two items
+    sharing one anywhere in the file would tick together."""
+    assert validate.block_items_without_ids(docs) == []
+
+
+def test_every_media_block_says_what_it_is(docs, root):
+    assert validate.broken_media(docs, root) == []
+
+
+def test_a_media_block_can_point_at_the_booth_machine(docs):
+    """A church's own video lives outside the repo and is not here to check.
+
+    Which is the point: `media/...` is served off the booth machine by the
+    bridge, so the rules cannot resolve it and must not pretend to. What
+    they can still insist on is a name that says whether it is a picture or
+    a video, because the app decides which tag to write from the suffix.
+    """
+    assert any(b.get("src", "").startswith("media/")
+               for _, b, _ in validate._blocks_in(docs)
+               if isinstance(b, dict) and b.get("type") == "media"), \
+        "the example never shows a church supplying its own media"
+
+
+def test_the_ways_a_block_can_be_wrong_are_caught():
+    broken = {
+        "roles": {"languages": ["en"],
+                  "roles": [{"id": "misc", "layers": ["pages"]}]},
+        "misc": {
+            "intro": {"en": "x"},
+            "faq": [{"id": "q", "q": {"en": "x"}, "a": {"en": "x"}}],
+            "pages": [{"id": "p", "title": {"en": "A page"}, "blocks": [
+                {"type": "interpretive-dance"},
+                {"type": "text"},
+                {"type": "media", "src": "notes.txt"},
+                {"type": "media"},
+                {"type": "checklist", "items": [{"text": {"en": "x"}}]},
+                {"type": "steps", "items": [
+                    {"id": "s", "title": {"en": "x"}, "blocks": [
+                        {"type": "steps", "items": [
+                            {"id": "s2", "title": {"en": "x"}}]},
+                    ]},
+                ]},
+            ]}],
+        },
+    }
+    reported = " ".join(validate.check(broken))
+    for expect in ("interpretive-dance", "text block with no text",
+                   "says nothing about what it is", "media block with no src",
+                   "has no id, so a tick on it moves",
+                   "one card too many to open"):
+        assert expect in reported, f"{expect!r} was not reported"
+
+
+def test_a_page_is_its_blocks():
+    """A heading is the only field a page must have, so this is the rule
+    that keeps the freedom from being a way to publish a blank."""
+    empty = {
+        "roles": {"languages": ["en"],
+                  "roles": [{"id": "misc", "layers": ["pages"]}]},
+        "misc": {"intro": {"en": "x"},
+                 "faq": [{"id": "q", "q": {"en": "x"}, "a": {"en": "x"}}],
+                 "pages": [{"id": "p", "title": {"en": "A heading"}}]},
+    }
+    assert "has a heading and nothing on it" in " ".join(
+        validate.pages_with_nothing_on_them(empty))
 
 
 def test_every_role_has_a_content_file(docs):

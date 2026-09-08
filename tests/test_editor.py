@@ -9,6 +9,7 @@ will use twice.
 
 import contextlib
 import http.client
+import io
 import json
 import re
 from pathlib import Path
@@ -405,3 +406,65 @@ def test_saving_writes_and_clears(tmp_path, monkeypatch):
             written.read_text("utf-8")
     finally:
         srv.shutdown()
+
+
+# ---------------------------------------------------------------------------
+# Media the editor takes in. The same allowlist the bridge serves by, checked
+# here rather than trusted from the browser -- this endpoint writes files.
+# ---------------------------------------------------------------------------
+
+def test_the_editor_takes_a_picture_and_lists_it(tmp_path, monkeypatch):
+    monkeypatch.setattr(editor.config, "config_dir", lambda: tmp_path)
+    png = b"\x89PNG" + b"0" * 40
+    editor.save_media("booth.png", io.BytesIO(png).read, len(png))
+    listing = editor.media_listing()
+    assert [f["name"] for f in listing["files"]] == ["booth.png"]
+    assert listing["files"][0]["video"] is False
+
+
+def test_the_editor_refuses_media_it_could_not_serve(tmp_path, monkeypatch):
+    """A file the bridge would 404 is a file found out on a Sunday rather
+    than here, so the editor will not take one."""
+    monkeypatch.setattr(editor.config, "config_dir", lambda: tmp_path)
+    for name in ("page.html", "notes.txt", "../escape.png", "sub/deep.png", ""):
+        with pytest.raises(ValueError):
+            editor.save_media(name, io.BytesIO(b"x").read, 1)
+    assert not (tmp_path / "media").exists() or \
+        list((tmp_path / "media").iterdir()) == []
+
+
+def test_media_bigger_than_the_cap_is_refused(tmp_path, monkeypatch):
+    monkeypatch.setattr(editor.config, "config_dir", lambda: tmp_path)
+    for length in (0, -1, editor.MEDIA_CAP + 1):
+        with pytest.raises(ValueError):
+            editor.save_media("big.mp4", io.BytesIO(b"x").read, length)
+
+
+def test_the_listing_hides_a_file_the_bridge_would_refuse(tmp_path, monkeypatch):
+    """Somebody will drop a stray file in that folder by hand; the editor
+    offers what a tablet can actually show and nothing else."""
+    monkeypatch.setattr(editor.config, "config_dir", lambda: tmp_path)
+    folder = tmp_path / "media"
+    folder.mkdir()
+    (folder / "fine.jpg").write_bytes(b"x")
+    (folder / "Thumbs.db").write_bytes(b"x")
+    (folder / "notes.txt").write_text("x")
+    assert [f["name"] for f in editor.media_listing()["files"]] == ["fine.jpg"]
+
+
+def test_the_editor_and_the_app_agree_on_the_block_types():
+    """Three files list them -- validate.py, app.js and editor.js -- because
+    each does a different job with the list. Two agreeing and one not is a
+    block that saves, validates, and renders as a gap on the tablet.
+    """
+    root = Path(editor.__file__).parents[2]
+    app = (root / "docs" / "app.js").read_text("utf-8")
+    js = (root / "editor" / "editor.js").read_text("utf-8")
+
+    def keys(source, marker):
+        block = source[source.index(marker):]
+        block = block[:block.index("\n};")]
+        return set(re.findall(r"^  (\w+):", block, re.M))
+
+    assert keys(app, "const BLOCKS = {") == set(validate.BLOCKS)
+    assert keys(js, "const BLOCK_TYPES = {") == set(validate.BLOCKS)

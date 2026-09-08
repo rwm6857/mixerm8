@@ -27,7 +27,7 @@
       "theme": "green",
       "icon": "fader",
       "console": true,
-      "layers": ["checklist", "problems", "flow"]
+      "layers": ["checklist", "problems", "flow", "pages"]
     },
     {
       "id": "media",
