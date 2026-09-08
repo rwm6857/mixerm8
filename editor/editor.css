@@ -199,6 +199,19 @@ body {
 }
 .lang-in.gap .tag { color: var(--warn); }
 
+/* Bold, italic, link. Sitting on the box's own label row rather than
+   above the form, because a shortcut formats the box the cursor is in and
+   the buttons should say the same thing. */
+.lang-in { position: relative; }
+.marks {
+  position: absolute; top: -5px; right: 0; display: flex; gap: 2px;
+  opacity: 0; transition: opacity .1s;
+}
+.lang-in:focus-within .marks, .lang-in:hover .marks { opacity: 1; }
+.ico-btn.mark { width: 26px; min-height: 24px; border-color: transparent; background: none; }
+.ico-btn.mark:hover { background: var(--panel-3); border-color: var(--line); }
+.ico-btn.mark .ico { width: 14px; height: 14px; }
+
 textarea, input[type="text"], select {
   width: 100%; padding: 9px 11px; resize: vertical;
   background: var(--panel); color: var(--fg);

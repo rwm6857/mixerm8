@@ -34,6 +34,23 @@ LAYERS = {
 
 LEVELS = ("ok", "caution", "danger", "info")
 
+# Sections whose entries carry a stable `id`. Everything used to be
+# addressed by array position, which meant a reorder moved a volunteer's
+# checklist ticks onto different steps and a link between two pages had
+# nothing to point at. `guides` needs no entry here: its pages and screens
+# are a map, so the key already is the id.
+IDENTIFIED = ("faq", *LAYERS)
+
+# An id goes in a link, so it is kept to the shape a URL would carry.
+ENTRY_ID = re.compile(r"[a-z0-9][a-z0-9-]*")
+
+# `[label](target)` inside any piece of wording. An internal target names a
+# station, a station and a tab, or an entry: "audio", "audio/problems",
+# "audio/problems/a-squeal-or-a-howl". Anything with a scheme is external.
+LINK = re.compile(r"\[([^\]\n]+)\]\(([^)\s]+)\)")
+SCHEME = re.compile(r"([a-z][a-z0-9+.-]*):", re.I)
+LINKABLE_SCHEMES = ("http", "https", "mailto")
+
 # Which languages a guide is written in is declared in roles.json, not
 # fixed here: a church adding a third one should not need a release. This
 # is only what to assume when nothing says otherwise, and it is one
@@ -208,6 +225,122 @@ def app_wording_missing_a_language(docs: dict[str, dict]) -> list[str]:
             if not block.get(lang):
                 missing.append(f"ui.strings.{key} missing {lang}")
     return missing
+
+
+def _identified(docs: dict[str, dict]):
+    """Each (doc name, section, index, entry) that ought to carry an id."""
+    for name, doc in docs.items():
+        if name in ("roles", "ui", "guides"):
+            continue
+        for section in IDENTIFIED:
+            entries = doc.get(section)
+            if not isinstance(entries, list):
+                continue
+            for i, entry in enumerate(entries):
+                if isinstance(entry, dict):
+                    yield name, section, i, entry
+
+
+def entries_without_ids(docs: dict[str, dict]) -> list[str]:
+    """Position is not an address. An entry with no id cannot be linked to,
+    and the tick a volunteer put on it lands on whatever moved into its
+    place."""
+    return [f"{name}.{section}[{i}] has no id, so nothing can point at it "
+            f"and a tick on it moves when it does"
+            for name, section, i, entry in _identified(docs)
+            if not isinstance(entry.get("id"), str) or not entry["id"]]
+
+
+def bad_entry_ids(docs: dict[str, dict]) -> list[str]:
+    """Ids end up in links, so they are kept boring like the role ids."""
+    return [f"{name}.{section}[{i}] has id {entry['id']!r}, which is not the "
+            f"shape a link could carry"
+            for name, section, i, entry in _identified(docs)
+            if isinstance(entry.get("id"), str) and entry["id"]
+            and not ENTRY_ID.fullmatch(entry["id"])]
+
+
+def entry_ids_claimed_twice(docs: dict[str, dict]) -> list[str]:
+    """Two entries on one id means a link reaches whichever comes first
+    and the other is unreachable. Scoped per section, because that is how
+    a link addresses one: station, tab, id."""
+    clashes: list[str] = []
+    claimed: dict[tuple[str, str], dict[str, int]] = {}
+    for name, section, i, entry in _identified(docs):
+        eid = entry.get("id")
+        if not isinstance(eid, str) or not eid:
+            continue        # entries_without_ids has this one
+        seen = claimed.setdefault((name, section), {})
+        if eid in seen:
+            clashes.append(f"{name}.{section}: entries {seen[eid]} and {i} "
+                           f"both claim the id {eid!r}")
+        else:
+            seen[eid] = i
+    return clashes
+
+
+def _link_targets(docs: dict[str, dict]):
+    """Every ("where", label, target) a piece of wording links to."""
+    def go(where, node):
+        if isinstance(node, dict):
+            for key, value in node.items():
+                yield from go(f"{where}.{key}", value)
+        elif isinstance(node, list):
+            for i, item in enumerate(node):
+                yield from go(f"{where}[{i}]", item)
+        elif isinstance(node, str):
+            for label, target in LINK.findall(node):
+                yield where, label, target
+
+    for name, doc in docs.items():
+        yield from go(f"{name}.json", doc)
+
+
+def dead_links(docs: dict[str, dict]) -> list[str]:
+    """A link either leaves the guide or lands somewhere inside it.
+
+    A "see also" pointing at an entry that has been renamed or deleted is
+    worse than no link at all: it reads as an answer and goes nowhere. So
+    every internal target is resolved against the guide it sits in, and an
+    external one has to use a scheme a tablet will actually open --
+    `javascript:` in a church's own file is not a threat model worth
+    pretending about, but it is certainly not a link.
+    """
+    problems: list[str] = []
+    sections = {rid: set(IDENTIFIED) for rid in station_ids(docs)}
+
+    for where, label, target in _link_targets(docs):
+        scheme = SCHEME.match(target)
+        if scheme:
+            if scheme.group(1).lower() not in LINKABLE_SCHEMES:
+                problems.append(f"{where}: {label!r} links to {target!r}, "
+                                f"which is not a link a tablet would open")
+            continue
+
+        parts = target.split("/")
+        if len(parts) > 3:
+            problems.append(f"{where}: {label!r} links to {target!r}, which "
+                            f"is deeper than station/tab/entry")
+            continue
+        rid = parts[0]
+        if rid not in sections:
+            problems.append(f"{where}: {label!r} links to the station "
+                            f"{rid!r}, which does not exist")
+            continue
+        if len(parts) == 1:
+            continue
+        if parts[1] not in sections[rid]:
+            problems.append(f"{where}: {label!r} links to {rid}/{parts[1]}, "
+                            f"which is not a tab that station has")
+            continue
+        if len(parts) == 2:
+            continue
+        known = {e.get("id") for e in (docs.get(rid) or {}).get(parts[1]) or []
+                 if isinstance(e, dict)}
+        if parts[2] not in known:
+            problems.append(f"{where}: {label!r} links to {target!r}, and "
+                            f"nothing there has that id any more")
+    return problems
 
 
 def bad_role_ids(docs: dict[str, dict]) -> list[str]:
@@ -440,6 +573,10 @@ ALL_CHECKS = (
     todos_missing_a_language,
     bad_language_ids,
     app_wording_missing_a_language,
+    entries_without_ids,
+    bad_entry_ids,
+    entry_ids_claimed_twice,
+    dead_links,
     bad_role_ids,
     roles_without_content,
     layers_out_of_step,

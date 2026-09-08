@@ -45,6 +45,12 @@ const ICONS = {
   down:  '<path d="M5.5 9.5l6.5 6.5 6.5-6.5"/>',
   reload: '<path d="M20.5 12a8.5 8.5 0 1 1-2.7-6.2"/><path d="M20.5 4v5.5H15"/>',
   undo:  '<path d="M3.5 8.5h10a5.5 5.5 0 1 1 0 11H8"/><path d="M7 5 3.5 8.5 7 12"/>',
+  bold:  '<path d="M7 5h5.5a3.5 3.5 0 0 1 0 7H7zM7 12h6.5a3.5 3.5 0 0 1 0 7H7z" ' +
+         'stroke-width="2"/>',
+  italic: '<path d="M15.5 5h-4M12.5 19h-4M14.5 5l-3 14"/>',
+  linkin: '<path d="M9.5 14.5l5-5"/>' +
+          '<path d="M12 7l1.8-1.8a3.9 3.9 0 0 1 5.5 5.5L17.5 12.5"/>' +
+          '<path d="M12 17l-1.8 1.8a3.9 3.9 0 0 1-5.5-5.5L6.5 11.5"/>',
   grip:  '<g fill="currentColor" stroke="none">' +
          '<circle cx="9.5" cy="6" r="1.15"/><circle cx="14.5" cy="6" r="1.15"/>' +
          '<circle cx="9.5" cy="12" r="1.15"/><circle cx="14.5" cy="12" r="1.15"/>' +
@@ -133,6 +139,15 @@ const LEVEL = { key: "level", label: "Severity", type: "level" };
  * entry rather than in a table somewhere -- see console.py. */
 const NUMBER = { key: "number", label: "Number the desk reports", type: "number" };
 
+/* An entry's address. Links point at it and a volunteer's ticks are stored
+ * against it, so it is stable on purpose: renaming a heading must not
+ * break a link to it, which means the id does not follow the heading.
+ * Last in the form, because it is the one field that is not wording. */
+const ENTRY_ID = { key: "id", label: "Id", type: "text",
+                   hint: "How links reach this and how a tick remembers it. " +
+                         "Change it now rather than later — anything pointing " +
+                         "at the old one stops working." };
+
 const GUIDE_FIELDS = [NUMBER, LEVEL, BI("title", "Title"), TODO,
                       BI("body", "What this screen is"),
                       BI("action", "What to do", { optional: true }), DIAGRAM];
@@ -183,17 +198,17 @@ const SECTIONS = {
     }), DIAGRAM],
   },
   faq: {
-    label: "Questions", kind: "list", title: (e) => e.q, one: "question",
-    fields: [BI("q", "Question"), TODO, BI("a", "Answer"), DIAGRAM],
+    label: "Questions", kind: "list", title: (e) => e.q, one: "question", identified: true,
+    fields: [BI("q", "Question"), TODO, BI("a", "Answer"), DIAGRAM, ENTRY_ID],
     blank: () => ({ q: bi(), a: bi() }),
   },
   checklist: {
-    label: "Before", kind: "list", title: (e) => e.text, one: "step",
-    fields: [TODO, BI("text", "Step")],
+    label: "Before", kind: "list", title: (e) => e.text, one: "step", identified: true,
+    fields: [TODO, BI("text", "Step"), ENTRY_ID],
     blank: () => ({ text: bi() }),
   },
   problems: {
-    label: "Problems", kind: "list", title: (e) => e.title, one: "problem page",
+    label: "Problems", kind: "list", title: (e) => e.title, one: "problem page", identified: true,
     fields: [LEVEL,
              BI("title", "Title", {
                hint: "A symptom in the volunteer's words — \"Someone is too quiet\", " +
@@ -202,24 +217,25 @@ const SECTIONS = {
              BI("symptom", "What they are seeing or hearing"),
              TODO,
              { key: "steps", label: "Steps", type: "bi-list" },
-             DIAGRAM],
+             DIAGRAM, ENTRY_ID],
     blank: () => ({ level: "caution", title: bi(), symptom: bi(), steps: [bi()] }),
   },
   flow: {
-    label: "Order", kind: "list", title: (e) => e.title, one: "step",
+    label: "Order", kind: "list", title: (e) => e.title, one: "step", identified: true,
     fields: [BI("when", "When", { hint: "\"45 min before\", \"During\", \"After\"." }),
-             BI("title", "Step"), TODO, BI("detail", "Detail"), DIAGRAM],
+             BI("title", "Step"), TODO, BI("detail", "Detail"), DIAGRAM, ENTRY_ID],
     blank: () => ({ when: bi(), title: bi(), detail: bi() }),
   },
   equipment: {
-    label: "Equipment", kind: "list", title: (e) => e.title, one: "piece of gear",
+    label: "Equipment", kind: "list", title: (e) => e.title, one: "piece of gear", identified: true,
     fields: [LEVEL, BI("title", "Name"),
              BI("where", "Where it is", {
                hint: "A blank is a fine answer — it says nobody has written it down. " +
                      "Silence is not, so this one is never empty.",
              }),
              TODO, BI("body", "What it does"),
-             BI("action", "What to do about it", { optional: true }), DIAGRAM],
+             BI("action", "What to do about it", { optional: true }),
+             DIAGRAM, ENTRY_ID],
     blank: () => ({ level: "info", title: bi(), where: bi(), body: bi() }),
   },
   pages: {
@@ -694,16 +710,77 @@ function field(label, inner, hint, extra) {
  *
  * The tag turns amber when that language is empty here, so a form full of
  * gaps looks like one at a glance without having to read any of it. */
+/* The three things a guide file may ask for inside a sentence. No sizes,
+ * no colours and no fonts on purpose: a card's meaning comes from its
+ * severity, and wording that could restyle itself is wording that could
+ * quietly stop looking like a warning. */
+const MARKS = [
+  { op: "bold", icon: "bold", wrap: "**", key: "b", what: "Bold (⌘B)" },
+  { op: "italic", icon: "italic", wrap: "*", key: "i", what: "Italic (⌘I)" },
+  { op: "link", icon: "linkin", key: "k", what: "Link (⌘K)" },
+];
+
 function textareas(path, node) {
   const all = langs();
   const write = all.find((l) => l.id === state.writing) || all[0];
   const text = node?.[write.id] || "";
+  const box = `${esc(path)}.${write.id}`;
   return `<div class="pair">` +
     `<label class="lang-in${text ? "" : " gap"}">` +
     `<span class="tag" lang="${esc(write.id)}">${esc(write.label)}</span>` +
-    `<textarea data-path="${esc(path)}.${write.id}" lang="${esc(write.id)}" ` +
+    `<span class="marks">` + MARKS.map((m) =>
+      iconBtn(m.icon, m.what, `data-mark="${m.op}" data-box="${box}"`, "mark")).join("") +
+    `</span>` +
+    `<textarea data-path="${box}" lang="${esc(write.id)}" ` +
     `class="${BLANK.test(text) ? "has-blank" : ""}">${esc(text)}</textarea></label>` +
     `</div>`;
+}
+
+/* ---------- inline formatting ----------
+ *
+ * Applied to the text in the box rather than through contenteditable, so
+ * what is stored is the same handful of marks the tablet renders and
+ * nothing else -- no stray spans, no pasted styling, and a diff that shows
+ * the sentence somebody changed.
+ */
+
+/* Wrap or unwrap the selection. Pressing bold on something already bold
+ * takes it off, which is what every editor does and what the muscle
+ * memory expects. With nothing selected it inserts the pair and puts the
+ * cursor between them, so you can type straight into it. */
+function applyMark(el, mark) {
+  const { selectionStart: from, selectionEnd: to, value } = el;
+  const chosen = value.slice(from, to);
+
+  if (mark.op === "link") {
+    const target = prompt(
+      "Link to a station, a tab, an entry, or a web address.\n\n" +
+      "audio\naudio/problems\naudio/problems/a-squeal-or-a-howl\n" +
+      "https://example.org", "");
+    if (target === null) return;
+    const label = chosen || "link";
+    return replaceIn(el, from, to, `[${label}](${target.trim()})`,
+                     chosen ? null : [from + 1, from + 1 + label.length]);
+  }
+
+  const pad = mark.wrap;
+  if (chosen.startsWith(pad) && chosen.endsWith(pad) && chosen.length > pad.length * 2) {
+    return replaceIn(el, from, to, chosen.slice(pad.length, -pad.length));
+  }
+  const wrapped = pad + chosen + pad;
+  replaceIn(el, from, to, wrapped,
+            chosen ? [from, from + wrapped.length]
+                   : [from + pad.length, from + pad.length]);
+}
+
+/* One edit, then let the box's own oninput carry it into the draft --
+ * there is only one path from a keystroke to the file and this uses it. */
+function replaceIn(el, from, to, text, select) {
+  el.value = el.value.slice(0, from) + text + el.value.slice(to);
+  const [a, b] = select || [from + text.length, from + text.length];
+  el.setSelectionRange(a, b);
+  el.dispatchEvent(new Event("input", { bubbles: true }));
+  el.focus();
 }
 
 function renderField(f, entry) {
@@ -815,8 +892,25 @@ function wireForm(entry, spec) {
   const box = $("form");
   const sel = state.sel;
 
+  // The toolbar over each box, and the same three on the keyboard. Bound
+  // to the box rather than the window so a shortcut only ever formats the
+  // thing the cursor is in.
+  box.querySelectorAll("[data-mark]").forEach((el) => {
+    el.onclick = () => {
+      const target = box.querySelector(`textarea[data-path="${CSS.escape(el.dataset.box)}"]`);
+      if (target) applyMark(target, MARKS.find((m) => m.op === el.dataset.mark));
+    };
+  });
+
   box.querySelectorAll("textarea").forEach((el) => {
     grow(el);
+    el.onkeydown = (e) => {
+      if (!(e.metaKey || e.ctrlKey) || e.altKey) return;
+      const mark = MARKS.find((m) => m.key === e.key.toLowerCase());
+      if (!mark) return;
+      e.preventDefault();
+      applyMark(el, mark);
+    };
     el.oninput = () => {
       grow(el);
       setAt(entry, el.dataset.path, el.value);
@@ -919,6 +1013,14 @@ function addEntry(docName, section) {
     state.sel = { doc: docName, section, id: key };
   } else {
     const list = (doc[section] = doc[section] || []);
+    // Given its address at birth rather than on the first save, so it is
+    // never briefly a thing nothing can point at.
+    if (spec.identified) {
+      const taken = new Set(list.map((e) => e.id));
+      let n = list.length + 1;
+      while (taken.has(`item-${n}`)) n += 1;
+      fresh.id = `item-${n}`;
+    }
     const at = here && typeof sel.id === "number" ? sel.id + 1 : list.length;
     list.splice(at, 0, fresh);
     state.sel = { doc: docName, section, id: at };

@@ -114,6 +114,8 @@ const state = {
   gear: null,        // index of an open equipment page
   pinned: null,      // a console guide opened by hand
   flowOpen: false,   // has the reader asked for every step at once?
+  jump: null,        // { section, id } a link is on its way to
+  reveal: null,      // id of a collapsed card to open and scroll to
   ticks: new Set(),
   lang: "en",        // the id of the language on screen, not an index
 };
@@ -133,11 +135,64 @@ const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) =>
   ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 
-/* A run of four or more underscores is a blank nobody has filled in yet.
+/* ---------- wording, as the tablet shows it ----------
+ *
+ * Escaped first, always. Everything below runs on the escaped string, so
+ * no amount of markup in a guide file can put a tag on the page that is
+ * not one of the handful written here.
+ *
+ * A run of four or more underscores is a blank nobody has filled in yet.
  * It is shown as a gap rather than guessed at: a volunteer who reads
  * "select ____" asks someone, where one who reads an invented scene name
  * loads the wrong scene in the middle of a service. */
-const fill = (s) => esc(s).replace(/_{4,}/g, '<span class="blank">____</span>');
+const BLANK = /_{4,}/g;
+
+/* `**bold**`, `*italic*` and `[label](target)`. Asterisks rather than
+ * underscores for the emphasis, because four underscores already mean
+ * something here and the two conventions would collide in the one place
+ * it matters least to be ambiguous. */
+const EMPHASIS = [[/\*\*([^*]+)\*\*/g, "<b>$1</b>"], [/\*([^*]+)\*/g, "<i>$1</i>"]];
+const LINK = /\[([^\]\n]+)\]\(([^)\s]+)\)/g;
+const SCHEME = /^([a-z][a-z0-9+.-]*):/i;
+const OPENABLE = ["http", "https", "mailto"];
+
+const emphasise = (html) =>
+  EMPHASIS.reduce((acc, [re, tag]) => acc.replace(re, tag), html);
+
+/* One link, or null for a target a tablet would not open -- in which case
+ * the caller leaves the original text alone, so a mistake reads as the
+ * words somebody typed rather than vanishing.
+ *
+ * An internal link carries its target in a data attribute and no href.
+ * That is deliberate: the hash addresses a station and a language and
+ * nothing deeper, because it is what a QR sticker says. A "see also"
+ * inside the guide is navigation, not an address, so it does not need to
+ * be one. */
+function link(label, target) {
+  const scheme = SCHEME.exec(target);
+  if (scheme) {
+    if (!OPENABLE.includes(scheme[1].toLowerCase())) return null;
+    return `<a class="out" href="${target}" target="_blank" rel="noopener">` +
+           `${emphasise(label)}</a>`;
+  }
+  return `<a class="jump" role="button" tabindex="0" data-to="${target}">` +
+         `${emphasise(label)}</a>`;
+}
+
+function fill(s) {
+  let html = esc(s).replace(BLANK, '<span class="blank">____</span>');
+
+  // Links are lifted out before the emphasis pass and put back after, so
+  // an asterisk inside a URL cannot turn half of it italic.
+  const held = [];
+  html = html.replace(LINK, (whole, label, target) => {
+    const anchor = link(label, target);
+    if (!anchor) return whole;
+    held.push(anchor);
+    return `\u0000${held.length - 1}\u0000`;
+  });
+  return emphasise(html).replace(/\u0000(\d+)\u0000/g, (m, i) => held[Number(i)]);
+}
 
 /* Which language to read a block in, and what to read instead when it is
  * not written yet: the one on screen first, then the rest in declared
@@ -301,6 +356,7 @@ function renderHome() {
     : "";
 
   wireDiagrams($("view-home"));
+  revealCard($("view-home"));
 }
 
 /* One collapsible card, used by the questions and by the running order.
@@ -309,7 +365,8 @@ function renderHome() {
  * thing the blanks convention exists to prevent. */
 function step({ summary, aside, body, entry, cls = "", open = false }) {
   const start = open || Boolean(entry?.todo);
-  return `<details class="step ${cls}"${start ? " open" : ""}>` +
+  return `<details class="step ${cls}"${start ? " open" : ""}` +
+         (entry?.id ? ` data-id="${esc(entry.id)}"` : "") + `>` +
          `<summary>` +
          (aside ? `<span class="when">${esc(aside)}</span>` : "") +
          `<span class="step-title">${esc(one(summary))}</span>` +
@@ -327,6 +384,12 @@ function todayStamp() {
 
 function loadTicks(roleId) {
   // Ticks from last Sunday are worse than no ticks at all, so they expire.
+  //
+  // Keyed by each step's own id rather than by its position in the list.
+  // Position used to be the key, which meant reordering the checklist --
+  // one drag in the editor -- silently moved a volunteer's ticks onto
+  // different steps. An id from an older install is a number, matches
+  // nothing, and reads as unticked, which is the right answer anyway.
   const saved = store.get("ticks." + roleId, null);
   if (!saved || saved.date !== todayStamp()) return new Set();
   return new Set(saved.done);
@@ -341,18 +404,18 @@ function renderChecklist() {
   $("reset").textContent = t1("reset");
   const items = state.data.checklist || [];
 
-  $("checklist").innerHTML = items.map((item, i) => {
-    const on = state.ticks.has(i);
+  $("checklist").innerHTML = items.map((item) => {
+    const on = state.ticks.has(item.id);
     return `<li class="${on ? "ticked" : ""}">` +
-           `<label><input type="checkbox" data-i="${i}"${on ? " checked" : ""}>` +
+           `<label><input type="checkbox" data-id="${esc(item.id)}"${on ? " checked" : ""}>` +
            `<span class="box" aria-hidden="true"></span>` +
            `<span class="item">${todo(item)}${lines(item.text, "text")}</span></label></li>`;
   }).join("");
 
   $("checklist").querySelectorAll("input[type=checkbox]").forEach((el) => {
     el.onchange = () => {
-      const i = Number(el.dataset.i);
-      if (el.checked) state.ticks.add(i); else state.ticks.delete(i);
+      const id = el.dataset.id;
+      if (el.checked) state.ticks.add(id); else state.ticks.delete(id);
       saveTicks();
       el.closest("li").classList.toggle("ticked", el.checked);
     };
@@ -412,6 +475,7 @@ function renderFlow() {
     `</li>`
   ).join("");
   wireDiagrams($("view-flow"));
+  revealCard($("view-flow"));
 }
 
 /* ---------- the gear at this station ----------
@@ -709,6 +773,59 @@ function render() {
   setFoot();
 }
 
+/* ---------- following a link inside the guide ----------
+ *
+ * A link says "audio/problems/a-squeal-or-a-howl": a station, optionally a
+ * tab, optionally one entry. Crossing to another station goes through the
+ * hash, because that is what makes route() load the other station's file --
+ * but only ever as `#station/language`, so the two-segment rule the QR
+ * stickers rest on still holds. Which entry to open travels in
+ * `state.jump` instead, and is applied once the content is there.
+ */
+function goTo(target) {
+  const [rid, section, id] = String(target || "").split("/");
+  const role = (state.roles?.roles || []).find((r) => r.id === rid);
+  if (!role) return;
+
+  state.jump = section ? { section, id } : null;
+  if (state.role?.id !== rid) {
+    location.hash = `${rid}/${state.lang}`;
+    return;                     // route() runs on the hashchange, then jumps
+  }
+  applyJump();
+}
+
+function applyJump() {
+  const jump = state.jump;
+  state.jump = null;
+  if (!jump || !state.role) return;
+
+  // The questions live on the station's front page rather than in a tab of
+  // their own, so a link to one lands on Home with that card open.
+  const view = jump.section === "faq" ? "home" : jump.section;
+  if (!tabsFor(state.role).some((tb) => tb.view === view)) return;
+
+  const list = (state.data || {})[jump.section] || [];
+  const at = jump.id ? list.findIndex((e) => e.id === jump.id) : -1;
+  state.problem = view === "problems" && at >= 0 ? at : null;
+  state.gear = view === "equipment" && at >= 0 ? at : null;
+  // The running order and the questions are <details> cards, so the one
+  // being linked to is opened where it sits rather than replacing the page.
+  state.reveal = at >= 0 && ["flow", "faq"].includes(jump.section) ? jump.id : null;
+  setView(view);
+}
+
+/* Open the card a link arrived at and put it on screen. Cleared as it
+ * fires, so scrolling away and coming back does not drag you here again. */
+function revealCard(root) {
+  if (!state.reveal) return;
+  const card = (root || document).querySelector(`details[data-id="${CSS.escape(state.reveal)}"]`);
+  state.reveal = null;
+  if (!card) return;
+  card.open = true;
+  card.scrollIntoView({ block: "center" });
+}
+
 /* ---------- content loading ---------- */
 
 async function loadData(name) {
@@ -796,6 +913,11 @@ async function route() {
   // The station's own front page is the landing view, and the Mixer tab
   // never is: a station has to work when the bridge is down, so the first
   // thing a volunteer sees must not depend on a UDP reply.
+  if (state.jump) {
+    applyJump();
+    return;
+  }
+
   const keep = VIEWS.includes(state.view) && state.view !== "pick";
   const offered = tabsFor(role).some((tb) => tb.view === state.view);
   setView(keep && offered ? state.view : "home");
@@ -905,6 +1027,24 @@ async function boot() {
 /* ---------- wiring ---------- */
 
 window.addEventListener("hashchange", route);
+
+// Every internal link in the guide, in one place: the cards are rebuilt
+// constantly, so binding each anchor as it appears would be a lot of
+// wiring for one behaviour. Enter works too, since these carry no href
+// and a keyboard user gets nothing from the browser for free.
+document.addEventListener("click", (e) => {
+  const a = e.target.closest?.("a.jump");
+  if (!a) return;
+  e.preventDefault();
+  goTo(a.dataset.to);
+});
+document.addEventListener("keydown", (e) => {
+  if (e.key !== "Enter" && e.key !== " ") return;
+  const a = e.target.closest?.("a.jump");
+  if (!a) return;
+  e.preventDefault();
+  goTo(a.dataset.to);
+});
 
 // One step up the hierarchy, not straight out of it: from a tab back to the
 // station's front page, and only from there back to the station list.

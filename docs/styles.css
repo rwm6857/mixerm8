@@ -201,6 +201,31 @@ code {
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .88em;
 }
 
+/* ---------- emphasis and links in the wording ----------
+   The only formatting a guide file can ask for. No sizes, no colours and
+   no fonts: a card's meaning comes from its severity, and wording that
+   could restyle itself would be wording that could quietly stop looking
+   like a warning. */
+.body b, .detail b, .answer b, .text b, .intro b, .symptom b, .steps b, .blurb b { font-weight: 700; }
+.body i, .detail i, .answer i, .text i, .intro i, .symptom i, .steps i, .blurb i { font-style: italic; }
+
+/* A link inside the guide, and one that leaves it. Both are 44px tall in
+   practice because they sit in body text a finger has to hit -- the
+   underline is the target, so it is offset far enough to be visible on a
+   glossy screen in a dark booth. */
+a.jump, a.out {
+  color: var(--accent-ink); cursor: pointer;
+  text-decoration: underline; text-underline-offset: 3px;
+  text-decoration-thickness: 2px; text-decoration-color: rgb(255 255 255 / .28);
+}
+a.jump:hover, a.out:hover, a.jump:active { text-decoration-color: currentColor; }
+a.jump:focus-visible, a.out:focus-visible {
+  outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 3px;
+}
+/* Leaving the guide is worth saying so, quietly. A volunteer mid-service
+   who taps this loses the page they were on. */
+a.out::after { content: " \2197"; font-size: .85em; opacity: .7; }
+
 /* ---------- diagrams ----------
    Always optional. A figure whose image fails to load hides itself rather
    than leaving a broken-image icon: the wording beside it already says the
