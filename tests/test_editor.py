@@ -111,31 +111,80 @@ def test_without_a_checkout_only_the_local_copy_is_offered(monkeypatch, tmp_path
     assert editor.Guide(editor.REPO).target == editor.LOCAL
 
 
-def test_git_has_nothing_to_say_about_local_wording(monkeypatch, tmp_path):
-    monkeypatch.setattr(editor.config, "config_dir", lambda: tmp_path)
-    status = editor.git_status(editor.Guide(editor.LOCAL))
-    assert status["available"] is False
-    assert "outside the repository" in status["why"]
-
-
 def test_the_editor_offers_no_way_to_commit_or_push():
-    """Read-only by construction: `git` only ever appears with a read verb.
+    """Read-only by construction, and now by having nothing to run it with.
 
     The rule the editor exists under is that a church's own wording is not
     pushable, and a button that could push it is the thing that would make
-    that untrue, so there is no code path to one.
+    that untrue. This used to be pinned by checking that every `git` call
+    named a read verb; the editor no longer shells out at all, so the
+    guarantee is now the stronger and simpler one -- there is no
+    subprocess in the file to run a push with, and no endpoint to ask for
+    one.
     """
     source = Path(editor.__file__).read_text("utf-8")
 
-    # One place runs git, and every call into it names a read.
-    assert source.count("subprocess.run") == 1
-    calls = re.findall(r'_git\(repo, "([a-z-]+)"', source)
-    assert calls, "the guard found no git calls to check"
-    assert set(calls) <= {"rev-parse", "status", "log", "diff"}, calls
+    assert "import subprocess" not in source
+    assert "subprocess.run" not in source
+    for verb in ("git add", "git commit", "git push", "git checkout"):
+        assert verb not in source, f"{verb!r} appears in the editor"
 
-    # And the browser has no endpoint to ask for one: the commands are text.
     handled = re.findall(r'path == "(/api/[a-z]+)"', source)
     assert "/api/commit" not in handled and "/api/push" not in handled
+
+
+# ---------------------------------------------------------------------------
+# what the editor can reach
+# ---------------------------------------------------------------------------
+
+# Keys no form edits, each for a stated reason rather than by oversight.
+NOT_IN_THE_EDITOR = {
+    "version": "bumped in code when a file's shape changes, not by hand",
+    "role": "a back-reference to the role id, which roles.json already holds",
+    "note": "prose for whoever edits the JSON, and the editor exists so that "
+            "nobody has to; it was a section once and earned its removal",
+}
+
+
+def test_every_top_level_key_is_reachable_from_the_editor():
+    """Nothing in a guide file is editable only by opening the JSON.
+
+    `hero` and `languages` both sat in roles.json for a while with no form
+    behind them, which is invisible until somebody needs to change the
+    front cover. Grepping the editor's own section and field names is
+    crude, but it fails when a new key arrives with no form, which is the
+    moment the decision wants making.
+    """
+    source = (Path(editor.__file__).parents[2] / "editor" / "editor.js").read_text("utf-8")
+    # From the shared field constants (TODO, DIAGRAM, LEVEL, NUMBER) through
+    # the end of SECTIONS -- the forms are assembled out of both halves.
+    spec = source[source.index("what a form is made of"):source.index("const LAYERS = [")]
+
+    reachable = set(re.findall(r"^  (\w+): \{", spec, re.M))           # section names
+    reachable |= set(re.findall(r'\bat: "(\w+)"', spec))               # sub / strings
+    reachable |= set(re.findall(r'\bBI\("(\w+)"', spec))              # text fields
+    reachable |= set(re.findall(r'\bkey: "(\w+)"', spec))              # everything else
+    reachable |= set(validate.LAYERS)               # reached through `layers`
+
+    for name, doc in validate.load_documents(server.webroot() / "data").items():
+        for key in doc:
+            assert key in reachable or key in NOT_IN_THE_EDITOR, \
+                f"{name}.json carries {key!r}, which no form in the editor edits"
+
+
+def test_adding_and_reordering_are_not_in_the_form():
+    """They belong to the tree, because they are navigation.
+
+    You decide where a step goes by looking at the steps around it, and the
+    form only ever shows one of them. Delete stays in the form, where you
+    can see the thing you are about to remove.
+    """
+    source = (Path(editor.__file__).parents[2] / "editor" / "editor.js").read_text("utf-8")
+    for gone in ('data-op="add"', 'data-op="up"', 'data-op="down"'):
+        assert gone not in source, f"{gone} is still rendered somewhere"
+    assert 'data-op="delete"' in source
+    assert 'class="add" data-doc=' in source, "the tree has no add button"
+    assert 'draggable="true"' in source, "the tree rows cannot be dragged"
 
 
 # ---------------------------------------------------------------------------

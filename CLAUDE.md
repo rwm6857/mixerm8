@@ -210,19 +210,60 @@ answering `/data/*.json` from memory — so it is the guide, not a mock-up of
 it, and `app.js` needed no editor-shaped hooks to make that work.
 
 **Everything in the guide means everything**: the stations, the front cover,
-the language list, the app's own wording, and the `note` at the top of each
-file. The notes were the one piece of prose the editor could not reach,
-which made them the one piece that went stale.
+the language list and the app's own wording were all unreachable at one
+point or another, which is invisible until somebody needs to change the
+front cover. `test_every_top_level_key_is_reachable_from_the_editor` greps
+the section and field names out of `editor.js` and fails when a new
+top-level key arrives with no form behind it. `NOT_IN_THE_EDITOR` in that
+test is the list of deliberate exceptions and the reason for each — the
+`note` blocks are there, because the editor exists so nobody has to read
+the JSON the notes are addressed to.
+
+**The tree owns adding and reordering; the form owns editing.** A `+` on
+each section, and rows that drag. They are navigation rather than editing:
+you decide where a step goes by looking at the steps around it, and the
+form only ever shows one of them. Delete stayed in the form, where you can
+see the thing you are about to remove.
+`test_adding_and_reordering_are_not_in_the_form` pins the split. Dragging
+is confined to one section — a checklist step dropped into the problem
+pages is a step lost — and a map is rebuilt in the new key order rather
+than sorted, because for the screen guides the key order *is* the order
+the tiles appear in on the tablet.
+
+**The mixer screens are filed under the station that has the console.**
+They live in `guides.json`, but a top-level "Mixer screens" heading put
+them as far from the sound desk as the tree could manage. So a tree row
+names the document it edits and the sound group draws from two files,
+keyed off `role.console` rather than off the string "audio".
+
+**One language at a time, with one beside it to read from.** A column per
+language was fine at two and unusable at four: every field became a
+wrapping grid and the form got longer in proportion to how many languages
+the guide offered. `langBar()` is the translator's arrangement instead —
+*Writing in* picks the language you type into, *Alongside* picks one shown
+read-only next to it — so a field is the same shape whether the guide is in
+two languages or eight. The reference side is a block of text rather than a
+second textarea on purpose: two editable boxes that look alike is how a
+sentence gets retyped into the wrong language. The pair lives in
+`localStorage` because translating is a sitting, not a field, and
+`renderForm()` repairs it in one place when a language is renamed or
+removed out from under it.
 
 **The preview has no controls of its own.** It carried a language segment
-and a Tablet/Phone pair; the language segment was the app's own control
-duplicated, with nothing keeping the two agreeing, and the guide is designed
-for a tablet at one width. Both are gone, and `previewPlan()` now leaves the
+and a Tablet/Phone pair; the segment was the app's own control duplicated,
+with nothing keeping the two agreeing, and the guide is designed for a
+tablet at one width. Both are gone, and `previewPlan()` now leaves the
 language out of the hash so the frame keeps whichever one you last pressed
-inside it. A form's text fields carry one column per declared language, so
-the shape of the editor follows an edit to the language list — on leaving
-the field, not per keystroke, because rebuilding a form under a cursor takes
-the cursor with it.
+inside it.
+
+**The editor runs no git at all.** It used to read the branch and print the
+three commands for you to run yourself. The rule behind that was right — a
+church's own wording must not be pushable, so there is no button that
+could — but repeating three shell lines on every screen was noise on the
+way to saying it, and the header already names where a save lands.
+`test_the_editor_offers_no_way_to_commit_or_push` now pins the stronger
+thing: `editor.py` imports nothing that could run a command, so there is no
+code path to audit.
 
 **It is a separate command from the bridge, and that is the design.** The
 bridge listens on the LAN so tablets can reach it; a write endpoint there
@@ -246,10 +287,8 @@ exe are both replaced wholesale by an update and wording written into one
 would be lost. **Local wording is not pushable, and the editor has no button
 that could make it so.** It is outside the repo in fact, not only by
 `.gitignore`, so no pull and no MixerM8 update overwrites it and no push
-publishes it. For `repo` the editor prints the git commands and stops;
-running them is yours, so you see the branch first.
-`test_the_editor_offers_no_way_to_commit_or_push` pins that every `git`
-call in `editor.py` names a read.
+publishes it. Committing a `repo` save is yours to do in a terminal, where
+you see the branch first — see "The editor runs no git at all" above.
 
 **`editor.dumps()` is how a guide file is written, and the committed files
 are already in that form.** Short `{ "en": …, "ko": … }` blocks stay inline,

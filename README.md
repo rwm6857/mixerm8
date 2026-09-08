@@ -253,10 +253,15 @@ it out and the tablet fills in the usual name for the code, so `"languages":
 **Adding one is a two-minute edit and then a translation job**, and the
 editor is honest about the second part. The moment you add `es`, the bar
 along the bottom lists every sentence in the guide that has no Spanish yet
-and tells you how many there are, and every text field in the editor grows a
-third column. Until a sentence is translated the tablet shows it in the first
-declared language rather than leaving a card blank — a card somebody can act
-on beats an empty one — but nothing pretends the gap is not there.
+and tells you how many there are. Until a sentence is translated the tablet
+shows it in the first declared language rather than leaving a card blank —
+a card somebody can act on beats an empty one — but nothing pretends the
+gap is not there.
+
+To do the translating, set **Writing in** to Spanish and **Alongside** to
+the language you are translating from. Each field then shows one box to
+type into and the source sentence beside it to read from. The tree marks
+every entry still missing a language, so you can work down the list.
 
 The app's own words are in `docs/data/ui.json` and work the same way, which
 is the point: without it a station added in Spanish would read half in
@@ -287,15 +292,18 @@ a sentence missing one of your languages, or a problem page titled after a
 component rather than a symptom, before you save rather than after you push.
 Beside the count it shows how much of each language is actually written.
 
-Everything in the guide is reachable from the tree on the left: the stations,
-the front cover, the language list, the app's own wording, and the note at
-the top of each file explaining what that file is for.
+Everything in the guide is reachable from the tree on the left: the
+stations, the front cover, the language list, the app's own wording, and the
+mixer screens, which are filed under whichever station has the console.
+**Adding and reordering happen in that tree** — a `+` on each section, and
+rows you can drag into the order a volunteer should read them in. The form
+in the middle edits one entry at a time and holds the only Delete.
 
 There are two places it can save, and it says which at the top:
 
 - **The example (repo)** writes `docs/data/*.json` in your checkout. Offered
-  only when you are running from a source checkout. The editor writes the
-  files and prints the `git` commands; you run them yourself, so you see the
+  only when you are running from a source checkout. Committing it is yours
+  to do in a terminal: the editor runs no `git` at all, so you see the
   branch you are on first.
 - **This church** writes `%APPDATA%/MixerM8/data/*.local.json` on Windows, or
   `~/.config/MixerM8/data/` elsewhere. This is the one for whoever sets the
@@ -305,7 +313,8 @@ There are two places it can save, and it says which at the top:
 Your own wording is deliberately not pushable. It is written outside the
 repository entirely, so a `git pull` cannot overwrite it, a MixerM8 update
 cannot replace it, and there is no button anywhere in the editor that could
-publish it. If you want a change to ship to everyone, make it in the example.
+publish it — the editor has no way to run a command at all. If you want a
+change to ship to everyone, make it in the example.
 
 ### Diagrams
 

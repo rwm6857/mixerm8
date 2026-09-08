@@ -101,19 +101,48 @@ body {
 }
 .tree .sec:hover { background: var(--panel-2); }
 .tree .sec .n { color: var(--muted); font-size: .74rem; font-weight: 500; }
+
+/* Add sits on the section it adds to, not in the form. The row is the
+   hover target so the + is findable without hunting for a 20px square. */
+.sec-row { display: flex; align-items: stretch; }
+.sec-row:hover { background: var(--panel-2); }
+.sec-row .sec { flex: 1; min-width: 0; }
+.sec-row .sec:hover { background: none; }
+.sec-row .add {
+  flex: none; width: 30px; padding: 0;
+  background: none; border: none; color: var(--muted);
+  font: inherit; font-size: 1.05rem; line-height: 1; cursor: pointer;
+  opacity: 0; transition: opacity .1s;
+}
+.sec-row:hover .add, .sec-row .add:focus-visible { opacity: 1; }
+.sec-row .add:hover { color: var(--fg); background: var(--panel-3); }
+
 .tree .items { padding: 2px 0 6px; }
 .tree .item {
-  display: block; width: 100%; padding: 5px 14px 5px 26px;
+  display: flex; align-items: baseline; gap: 5px;
+  width: 100%; padding: 5px 14px 5px 12px;
   background: none; border: none; border-left: 2px solid transparent;
   color: var(--muted); font: inherit; font-size: .82rem;
   text-align: left; cursor: pointer;
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
+.tree .item .what { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .tree .item:hover { background: var(--panel-2); color: var(--fg); }
 .tree .item[aria-current="true"] {
   background: var(--panel-3); color: var(--fg); border-left-color: var(--accent);
 }
-.tree .item .flag { color: var(--warn); }
+.tree .item .flag { color: var(--warn); flex: none; }
+.tree .item .flag.gap { color: var(--accent); }
+
+/* Dragging to reorder. A marker line rather than live shuffling: nothing
+   moves until you let go, so the row you grabbed stays under your eye. */
+.tree .item .grip {
+  flex: none; width: 10px; color: var(--line);
+  font-size: .78rem; cursor: grab;
+}
+.tree .item:hover .grip { color: var(--muted); }
+.tree .item.lifting { opacity: .4; }
+.tree .item.over-before { box-shadow: inset 0 2px 0 var(--accent); }
+.tree .item.over-after { box-shadow: inset 0 -2px 0 var(--accent); }
 
 /* ---------- the form ---------- */
 .form { padding: 20px 26px 60px; }
@@ -132,10 +161,35 @@ body {
 }
 .field .hint { text-transform: none; letter-spacing: 0; font-weight: 500; color: var(--muted); }
 
-.pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 10px; }
+/* Which language you are writing in, and which one to read beside it.
+   One control for the whole form, so a field is the same shape all the way
+   down however many languages the guide declares. */
+.langbar {
+  display: flex; align-items: center; flex-wrap: wrap; gap: 8px;
+  margin: 0 0 18px; padding: 9px 11px;
+  background: var(--panel); border: 1px solid var(--line); border-radius: 8px;
+}
+.langbar .fname { margin: 0 0 0 4px; }
+.langbar .fname:first-child { margin-left: 0; }
+
+.pair { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.pair.one { grid-template-columns: 1fr; }
+.lang-in, .lang-ref { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.lang-in .tag, .lang-ref .tag {
+  color: var(--muted); font-size: .7rem; font-weight: 700; letter-spacing: .08em;
+}
 .lang-in.gap .tag { color: var(--warn); }
-.lang-in { display: flex; flex-direction: column; gap: 4px; }
-.lang-in .tag { color: var(--muted); font-size: .7rem; font-weight: 700; letter-spacing: .08em; }
+
+/* The reference side is text, not a second box. Two editable fields that
+   look alike is how a sentence gets retyped into the wrong language, and
+   the reason to show this one is to read it. */
+.lang-ref .ref {
+  padding: 9px 11px; border-radius: 7px;
+  background: var(--bg); border: 1px dashed var(--line);
+  color: var(--muted); font-size: .9rem; line-height: 1.5;
+  white-space: pre-wrap; overflow-wrap: anywhere;
+}
+.lang-ref .ref .nothing { color: var(--line); font-style: italic; }
 
 textarea, input[type="text"], select {
   width: 100%; padding: 9px 11px; resize: vertical;
@@ -201,13 +255,3 @@ textarea.has-blank { border-color: var(--warn); }
 .progress span { color: var(--muted); font-size: .76rem; }
 .progress b { color: var(--fg); font-weight: 600; }
 .progress .full b { color: var(--good); }
-
-/* ---------- git ---------- */
-.git { margin-top: 26px; padding-top: 18px; border-top: 1px solid var(--line); }
-.git h2 { margin: 0 0 8px; font-size: .78rem; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
-.git p { margin: 0 0 10px; color: var(--muted); font-size: .84rem; }
-.git pre {
-  margin: 0; padding: 11px 13px; overflow-x: auto;
-  background: var(--bg); border: 1px solid var(--line); border-radius: 7px;
-  font-family: ui-monospace, Menlo, monospace; font-size: .78rem; color: var(--fg);
-}

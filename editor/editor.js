@@ -103,20 +103,12 @@ const GUIDE_FIELDS = [NUMBER, LEVEL, BI("title", "Title"), TODO,
                       BI("action", "What to do", { optional: true }), DIAGRAM];
 
 const SECTIONS = {
-  /* Every file carries a `note` explaining what it is for. It used to be
-   * the one piece of prose in the guide the editor could not touch, which
-   * made it the one piece that went stale. */
-  about: {
-    label: "About this file", kind: "doc",
-    fields: [BI("note", "What this file is for", {
-      hint: "Read by whoever edits the guide next, not by a volunteer.",
-    })],
-  },
   /* The list the whole app is generated from. Adding one here grows every
    * text field in this editor and fills the problems bar with what the new
    * language is missing -- which is the translation job, written down. */
   languages: {
-    label: "Languages", kind: "list", title: (e) => ({ [langIds()[0]]: e.label || e.id }),
+    label: "Languages", kind: "list", one: "language",
+    title: (e) => ({ [langIds()[0]]: e.label || e.id }),
     hint: "One button in the tablet's header per language, in this order. " +
           "The first one is what an untranslated card falls back to, so keep " +
           "it the one somebody in the booth is sure to read.",
@@ -156,17 +148,17 @@ const SECTIONS = {
     }), DIAGRAM],
   },
   faq: {
-    label: "Questions", kind: "list", title: (e) => e.q,
+    label: "Questions", kind: "list", title: (e) => e.q, one: "question",
     fields: [BI("q", "Question"), TODO, BI("a", "Answer"), DIAGRAM],
     blank: () => ({ q: bi(), a: bi() }),
   },
   checklist: {
-    label: "Before", kind: "list", title: (e) => e.text,
+    label: "Before", kind: "list", title: (e) => e.text, one: "step",
     fields: [TODO, BI("text", "Step")],
     blank: () => ({ text: bi() }),
   },
   problems: {
-    label: "Problems", kind: "list", title: (e) => e.title,
+    label: "Problems", kind: "list", title: (e) => e.title, one: "problem page",
     fields: [LEVEL,
              BI("title", "Title", {
                hint: "A symptom in the volunteer's words — \"Someone is too quiet\", " +
@@ -179,13 +171,13 @@ const SECTIONS = {
     blank: () => ({ level: "caution", title: bi(), symptom: bi(), steps: [bi()] }),
   },
   flow: {
-    label: "Order", kind: "list", title: (e) => e.title,
+    label: "Order", kind: "list", title: (e) => e.title, one: "step",
     fields: [BI("when", "When", { hint: "\"45 min before\", \"During\", \"After\"." }),
              BI("title", "Step"), TODO, BI("detail", "Detail"), DIAGRAM],
     blank: () => ({ when: bi(), title: bi(), detail: bi() }),
   },
   equipment: {
-    label: "Equipment", kind: "list", title: (e) => e.title,
+    label: "Equipment", kind: "list", title: (e) => e.title, one: "piece of gear",
     fields: [LEVEL, BI("title", "Name"),
              BI("where", "Where it is", {
                hint: "A blank is a fine answer — it says nobody has written it down. " +
@@ -196,19 +188,20 @@ const SECTIONS = {
     blank: () => ({ level: "info", title: bi(), where: bi(), body: bi() }),
   },
   pages: {
-    label: "Channel tabs", kind: "map", fields: GUIDE_FIELDS,
+    label: "Channel tabs", kind: "map", fields: GUIDE_FIELDS, one: "tab guide",
     hint: "The number the desk reports for this tab. Record them all with " +
           "`mixerm8 --learn`, or press the tab at the desk and read the " +
           "number off the tablet.",
     blank: () => ({ level: "info", title: bi(), body: bi() }),
   },
   screens: {
-    label: "Main screens", kind: "map", fields: GUIDE_FIELDS,
+    label: "Main screens", kind: "map", fields: GUIDE_FIELDS, one: "screen guide",
     hint: "The number the desk reports for this screen.",
     blank: () => ({ level: "info", title: bi(), body: bi() }),
   },
   roles: {
-    label: "Stations", kind: "list", title: (e) => ({ [langIds()[0]]: e.id }),
+    label: "Stations", kind: "list", one: "station",
+    title: (e) => ({ [langIds()[0]]: e.id }),
     fields: [{ key: "id", label: "Id", type: "text",
                hint: "Ends up in a QR code as #audio/ko, so lowercase and boring." },
              BI("label", "Name"), BI("where", "Where the volunteer stands"),
@@ -231,13 +224,22 @@ const LEVELS = [["ok", "Safe"], ["caution", "Careful"],
  * the number that matters; the rest is the same sentence again. */
 const PROBLEM_CAP = 40;
 
+/* Which language you are writing in, and which one to show beside it.
+ *
+ * A column per language was fine at two and unusable at four: every field
+ * became a wrapping grid, and the form got longer in proportion to how
+ * many languages the guide offered. This is the translator's arrangement
+ * instead -- one language to type into, one to read from -- so the form is
+ * the same length whether the guide is in two languages or eight. Kept in
+ * localStorage because it is a working position, not part of the guide. */
 const state = {
+  writing: null,      // language id being edited; null until the docs load
+  beside: null,       // language id shown read-only next to it, or null
   docs: {},
   target: "repo",
   repoAvailable: false,
   dirty: [],
   problems: [],
-  git: {},
   willWriteTo: {},
   sel: null,          // { doc, section, id }  id is an index or a map key
 };
@@ -261,7 +263,6 @@ function absorb(s) {
   state.repoAvailable = s.repoAvailable;
   state.dirty = s.dirty || [];
   state.problems = s.problems || [];
-  state.git = s.git || {};
   state.willWriteTo = s.willWriteTo || {};
 }
 
@@ -284,22 +285,44 @@ function touched(docName) {
 
 /* ---------- the tree ---------- */
 
+/* The tree, as groups of (document, section) rows.
+ *
+ * A group is not the same thing as a file. The mixer screens live in
+ * guides.json but they belong to the station with a console on it: they are
+ * that volunteer's screens, and a top-level "Mixer screens" heading put
+ * them as far from the sound desk as the guide could manage. So a section
+ * names the document it edits, and the sound station's group draws from
+ * two files. */
 function docsInOrder() {
   const out = [];
-  for (const name of ["roles", "ui", "audio", "media", "livestream", "misc", "guides"]) {
-    const doc = state.docs[name];
+  const has = (name) => Boolean(state.docs[name]);
+  const row = (doc, section) => ({ doc, section });
+
+  if (has("roles")) {
+    out.push({ label: "The guide itself", rows: [
+      row("roles", "languages"), row("roles", "hero"), row("roles", "roles"),
+    ]});
+  }
+  if (has("ui")) {
+    out.push({ label: "App wording", rows: [row("ui", "strings")] });
+  }
+  for (const role of state.docs.roles?.roles || []) {
+    const doc = state.docs[role.id];
     if (!doc) continue;
-    if (name === "roles") {
-      out.push({ name, label: "The guide itself",
-                 sections: ["about", "languages", "hero", "roles"] });
-    } else if (name === "ui") {
-      out.push({ name, label: "App wording", sections: ["about", "strings"] });
-    } else if (name === "guides") {
-      out.push({ name, label: "Mixer screens",
-                 sections: ["about", "pages", "screens"] });
-    } else {
-      const has = ["about", "home", "faq", ...LAYERS.filter((l) => doc[l])];
-      out.push({ name, label: labelOf(name), sections: has });
+    const rows = [row(role.id, "home"), row(role.id, "faq"),
+                  ...LAYERS.filter((l) => doc[l]).map((l) => row(role.id, l))];
+    // The console's screens, filed under the station that has the console.
+    if (role.console && has("guides")) {
+      rows.push(row("guides", "pages"), row("guides", "screens"));
+    }
+    out.push({ label: labelOf(role.id), rows });
+  }
+  // A file with no role claiming it would otherwise be unreachable.
+  const claimed = new Set(out.flatMap((g) => g.rows.map((r) => r.doc)));
+  for (const name of ["guides"]) {
+    if (has(name) && !claimed.has(name)) {
+      out.push({ label: "Mixer screens",
+                 rows: [row(name, "pages"), row(name, "screens")] });
     }
   }
   return out;
@@ -338,45 +361,156 @@ function hasBlank(node) {
   return false;
 }
 
+/* ---------- the tree ----------
+ * Adding an entry and moving one both happen here rather than in the form.
+ * They are navigation, not editing: you decide where a step goes by looking
+ * at the steps around it, and the form only ever shows one of them. */
+
+const SINGLE = ["doc", "sub", "strings"];
+const isSingle = (section) => SINGLE.includes(SECTIONS[section].kind);
+
 function renderTree() {
   const sel = state.sel;
-  $("tree").innerHTML = docsInOrder().map((d) => {
-    const secs = d.sections.map((section) => {
+  $("tree").innerHTML = docsInOrder().map((group) => {
+    const rows = group.rows.map(({ doc, section }) => {
       const spec = SECTIONS[section];
-      const rows = entriesOf(d.name, section);
-      const open = sel && sel.doc === d.name && sel.section === section;
-      const single = ["doc", "sub", "strings"].includes(spec.kind);
-      const items = single
-        ? ""
-        : rows.map(([id, entry]) =>
-            `<button class="item" data-doc="${esc(d.name)}" data-section="${esc(section)}" ` +
-            `data-id="${esc(id)}" aria-current="${open && String(sel.id) === String(id)}">` +
-            // Two different flags, because they mean different things: a
-            // "____" is a fact nobody has established, and a gap is a
-            // sentence nobody has translated yet.
-            (hasBlank(entry) ? `<span class="flag">•</span> ` : "") +
-            (blockGap(entry) ? `<span class="flag gap">◦</span> ` : "") +
-            esc(summarise(section, entry, id)) + `</button>`).join("");
-      return `<button class="sec" data-doc="${esc(d.name)}" data-section="${esc(section)}">` +
-             `<span>${esc(spec.label)}</span>` +
-             (single ? "" : `<span class="n">${rows.length}</span>`) +
-             `</button>` + (open ? `<div class="items">${items}</div>` : "");
+      const entries = entriesOf(doc, section);
+      const open = sel && sel.doc === doc && sel.section === section;
+      const single = isSingle(section);
+
+      const head =
+        `<div class="sec-row">` +
+        `<button class="sec" data-doc="${esc(doc)}" data-section="${esc(section)}">` +
+        `<span>${esc(spec.label)}</span>` +
+        (single ? "" : `<span class="n">${entries.length}</span>`) +
+        `</button>` +
+        (single ? "" :
+          `<button class="add" data-doc="${esc(doc)}" data-section="${esc(section)}" ` +
+          `title="Add another ${esc(spec.one)}" ` +
+          `aria-label="Add another ${esc(spec.one)}">+</button>`) +
+        `</div>`;
+
+      if (single || !open) return head;
+
+      const items = entries.map(([id, entry]) =>
+        // Draggable rather than a pair of arrows: the order of these is the
+        // order a volunteer reads them in, and dragging is how you say
+        // "third, after that one" in one gesture instead of three presses.
+        `<button class="item" draggable="true" data-doc="${esc(doc)}" ` +
+        `data-section="${esc(section)}" data-id="${esc(id)}" ` +
+        `aria-current="${String(sel.id) === String(id)}">` +
+        `<span class="grip" aria-hidden="true">⠿</span>` +
+        // Two flags, because they mean different things: a "____" is a fact
+        // nobody has established, and a gap is a sentence nobody has
+        // translated yet.
+        (hasBlank(entry) ? `<span class="flag">•</span>` : "") +
+        (blockGap(entry) ? `<span class="flag gap">◦</span>` : "") +
+        `<span class="what">${esc(summarise(section, entry, id))}</span>` +
+        `</button>`).join("");
+      return head + `<div class="items">${items}</div>`;
     }).join("");
-    return `<div class="doc">${esc(d.label)}</div>${secs}`;
+    return `<div class="doc">${esc(group.label)}</div>${rows}`;
   }).join("");
 
   $("tree").querySelectorAll(".sec").forEach((el) => {
     el.onclick = () => {
-      const spec = SECTIONS[el.dataset.section];
-      const rows = entriesOf(el.dataset.doc, el.dataset.section);
-      select(el.dataset.doc, el.dataset.section,
-             ["doc", "sub", "strings"].includes(spec.kind)
-               ? "" : (rows[0] ? rows[0][0] : null));
+      const { doc, section } = el.dataset;
+      const entries = entriesOf(doc, section);
+      select(doc, section, isSingle(section) ? "" : (entries[0] ? entries[0][0] : null));
+    };
+  });
+  $("tree").querySelectorAll(".add").forEach((el) => {
+    el.onclick = (e) => {
+      e.stopPropagation();
+      addEntry(el.dataset.doc, el.dataset.section);
     };
   });
   $("tree").querySelectorAll(".item").forEach((el) => {
     el.onclick = () => select(el.dataset.doc, el.dataset.section, el.dataset.id);
   });
+  wireDragging();
+}
+
+/* Reordering by drag, over the rows of one section.
+ *
+ * Kept to one section deliberately: dragging a checklist step into the
+ * problem pages would be a way to lose it, and the two are not the same
+ * kind of thing. A drop marker rather than live shuffling, so nothing
+ * moves until you let go and the row you grabbed stays where your eye is.
+ */
+let dragging = null;
+
+function wireDragging() {
+  $("tree").querySelectorAll(".item").forEach((el) => {
+    el.ondragstart = (e) => {
+      dragging = { ...el.dataset };
+      el.classList.add("lifting");
+      e.dataTransfer.effectAllowed = "move";
+      // Firefox will not start a drag without something on the transfer.
+      e.dataTransfer.setData("text/plain", el.dataset.id);
+    };
+    el.ondragend = () => {
+      dragging = null;
+      $("tree").querySelectorAll(".item").forEach((o) =>
+        o.classList.remove("lifting", "over-before", "over-after"));
+    };
+    el.ondragover = (e) => {
+      if (!sameSection(el)) return;
+      e.preventDefault();
+      const box = el.getBoundingClientRect();
+      const after = e.clientY > box.top + box.height / 2;
+      el.classList.toggle("over-before", !after);
+      el.classList.toggle("over-after", after);
+    };
+    el.ondragleave = () => el.classList.remove("over-before", "over-after");
+    el.ondrop = (e) => {
+      if (!sameSection(el)) return;
+      e.preventDefault();
+      const box = el.getBoundingClientRect();
+      const after = e.clientY > box.top + box.height / 2;
+      moveEntry(dragging, el.dataset.id, after);
+    };
+  });
+}
+
+function sameSection(el) {
+  return dragging && dragging.doc === el.dataset.doc &&
+         dragging.section === el.dataset.section && dragging.id !== el.dataset.id;
+}
+
+/* Move `from` to sit before or after `ontoId`.
+ *
+ * A list is spliced. A map is rebuilt in the new key order rather than
+ * reassigned, because for the screen guides the key order *is* the order
+ * the tiles appear in on the tablet -- there is no index to sort by. */
+function moveEntry(from, ontoId, after) {
+  const spec = SECTIONS[from.section];
+  const doc = state.docs[from.doc];
+
+  if (spec.kind === "map") {
+    const keys = Object.keys(doc[from.section]);
+    const rest = keys.filter((k) => k !== from.id);
+    const at = rest.indexOf(ontoId) + (after ? 1 : 0);
+    rest.splice(at, 0, from.id);
+    const rebuilt = {};
+    for (const k of rest) rebuilt[k] = doc[from.section][k];
+    doc[from.section] = rebuilt;
+    state.sel = { doc: from.doc, section: from.section, id: from.id };
+  } else {
+    const list = doc[from.section];
+    const lifted = Number(from.id);
+    const onto = Number(ontoId);
+    // Where the row we dropped onto sits once the lifted one is out of the
+    // list: one lower if it was below the gap that just closed.
+    const settled = onto > lifted ? onto - 1 : onto;
+    const at = settled + (after ? 1 : 0);
+    const moved = list.splice(lifted, 1)[0];
+    list.splice(at, 0, moved);
+    state.sel = { doc: from.doc, section: from.section, id: at };
+  }
+  touched(from.doc);
+  renderTree();
+  renderForm();
 }
 
 function select(doc, section, id) {
@@ -408,10 +542,19 @@ function currentEntry() {
 function renderForm() {
   const box = $("form");
   const sel = state.sel;
+
+  // Renaming or deleting a language can leave the working pair pointing at
+  // one that is gone. Repaired here rather than guarded at every use, so
+  // there is one place the invariant holds.
+  const ids = langIds();
+  if (!ids.includes(state.writing)) state.writing = ids[0];
+  if (state.beside && (!ids.includes(state.beside) || state.beside === state.writing)) {
+    state.beside = null;
+  }
+
   const entry = currentEntry();
   if (!sel || !entry) {
-    box.innerHTML = `<p class="empty">Pick something on the left to edit it.</p>` + gitPanel();
-    wireGit();
+    box.innerHTML = `<p class="empty">Pick something on the left to edit it.</p>`;
     return;
   }
   const spec = SECTIONS[sel.section];
@@ -423,7 +566,12 @@ function renderForm() {
                     : summarise(sel.section, entry, sel.id))}</h1>`;
   if (spec.hint) html += `<p class="field"><span class="hint">${esc(spec.hint)}</span></p>`;
 
-  if (!single) html += rowBar(spec);
+  html += langBar();
+  // Adding and reordering live in the tree; only the destructive one is
+  // here, where you can see the thing you are about to remove.
+  if (!single) html += `<div class="rowbar">` +
+    `<button class="btn tiny bad" data-op="delete">Delete this ` +
+    `${esc(spec.one || "entry")}</button></div>`;
   if (spec.kind === "map") {
     html += field("Key", `<input type="text" data-op="rename" value="${esc(sel.id)}">`);
   }
@@ -434,21 +582,72 @@ function renderForm() {
     ? Object.keys(entry).map((k) => BI(k, k))
     : spec.fields;
   html += fields.map((f) => renderField(f, entry)).join("");
-  html += gitPanel();
 
   box.innerHTML = html;
   box.scrollTop = 0;
   wireForm(entry, spec);
-  wireGit();
+  wireLangBar();
 }
 
-function rowBar(spec) {
-  return `<div class="rowbar">` +
-    `<button class="btn tiny" data-op="add">+ Add another</button>` +
-    (spec.kind === "list"
-      ? `<button class="btn tiny" data-op="up">↑ Move up</button>` +
-        `<button class="btn tiny" data-op="down">↓ Move down</button>` : "") +
-    `<button class="btn tiny bad" data-op="delete">Delete</button></div>`;
+/* Writing in and Alongside. Remembered per browser rather than per entry:
+ * translating is a sitting, not a field, and having to re-pick the pair on
+ * every row would be worse than the columns it replaced. */
+function wireLangBar() {
+  $("form").querySelectorAll("[data-writing]").forEach((el) => {
+    el.onclick = () => {
+      state.writing = el.dataset.writing;
+      if (state.beside === state.writing) state.beside = null;
+      remember();
+      renderForm();
+    };
+  });
+  $("form").querySelectorAll("[data-beside]").forEach((el) => {
+    el.onclick = () => {
+      state.beside = el.dataset.beside || null;
+      remember();
+      renderForm();
+    };
+  });
+}
+
+function remember() {
+  try {
+    localStorage.setItem("mixerm8.editor.langs",
+                         JSON.stringify({ writing: state.writing, beside: state.beside }));
+  } catch { /* private mode; the position just does not survive a reload */ }
+}
+
+/* The remembered pair, if the guide still offers both of them. Defaults to
+ * the first declared language with nothing beside it -- one column, which
+ * is what a guide in one language should look like too. */
+function restoreLangs() {
+  const ids = langIds();
+  let saved = {};
+  try { saved = JSON.parse(localStorage.getItem("mixerm8.editor.langs")) || {}; }
+  catch { /* nothing remembered */ }
+  state.writing = ids.includes(saved.writing) ? saved.writing : ids[0];
+  state.beside = ids.includes(saved.beside) && saved.beside !== state.writing
+    ? saved.beside : null;
+}
+
+/* The one control that decides what every text field below looks like.
+ *
+ * Hidden when the guide is in one language, for the same reason the tablet
+ * hides its own segment: there is nothing to choose. */
+function langBar() {
+  const all = langs();
+  if (all.length < 2) return "";
+  const seg = (name, options, current) =>
+    `<div class="seg">` + options.map(({ id, label }) =>
+      `<button data-${name}="${esc(id)}" aria-pressed="${id === current}">` +
+      `${esc(label)}</button>`).join("") + `</div>`;
+  return `<div class="langbar">` +
+    `<span class="fname">Writing in</span>` +
+    seg("writing", all, state.writing) +
+    `<span class="fname">Alongside</span>` +
+    seg("beside", [{ id: "", label: "—" },
+                   ...all.filter((l) => l.id !== state.writing)], state.beside || "") +
+    `</div>`;
 }
 
 function field(label, inner, hint, extra) {
@@ -456,18 +655,37 @@ function field(label, inner, hint, extra) {
          (hint ? ` <span class="hint">${esc(hint)}</span>` : "") + `</span>${inner}</div>`;
 }
 
-/* One column per declared language, labelled with what that language calls
- * itself. Every column is rendered whether or not the key exists yet, so
- * adding a language turns every field in the editor into a visible gap to
- * fill rather than something you have to know to go looking for. */
+/* One text field: the language you are writing in, and optionally one to
+ * read from beside it.
+ *
+ * The reference side is a block of text rather than a second textarea, on
+ * purpose. Two editable boxes that look alike is how you retype a sentence
+ * into the wrong language, and the whole point of showing it is to read it.
+ *
+ * The tag turns amber when the language being written is empty here, so a
+ * form full of gaps looks like one at a glance without having to compare
+ * it against anything. */
 function textareas(path, node) {
-  return `<div class="pair">` + langs().map(({ id, label }) => {
-    const text = node?.[id] || "";
-    return `<label class="lang-in${text ? "" : " gap"}">` +
-      `<span class="tag" lang="${esc(id)}">${esc(label)}</span>` +
-      `<textarea data-path="${esc(path)}.${id}" lang="${esc(id)}" ` +
-      `class="${BLANK.test(text) ? "has-blank" : ""}">${esc(text)}</textarea></label>`;
-  }).join("") + `</div>`;
+  const all = langs();
+  const write = all.find((l) => l.id === state.writing) || all[0];
+  const text = node?.[write.id] || "";
+  const beside = state.beside && all.find((l) => l.id === state.beside);
+
+  const editable =
+    `<label class="lang-in${text ? "" : " gap"}">` +
+    `<span class="tag" lang="${esc(write.id)}">${esc(write.label)}</span>` +
+    `<textarea data-path="${esc(path)}.${write.id}" lang="${esc(write.id)}" ` +
+    `class="${BLANK.test(text) ? "has-blank" : ""}">${esc(text)}</textarea></label>`;
+
+  if (!beside) return `<div class="pair one">${editable}</div>`;
+
+  const ref = node?.[beside.id] || "";
+  return `<div class="pair">` + editable +
+    `<div class="lang-ref"><span class="tag" lang="${esc(beside.id)}">` +
+    `${esc(beside.label)}</span>` +
+    `<div class="ref" lang="${esc(beside.id)}">${ref ? esc(ref)
+      : `<span class="nothing">nothing written here either</span>`}</div></div>` +
+    `</div>`;
 }
 
 function renderField(f, entry) {
@@ -647,15 +865,7 @@ function wireForm(entry, spec) {
       else if (op === "stepdrop") entry[key].splice(i, 1);
       else if (op === "stepup" && i > 0) entry[key].splice(i - 1, 0, entry[key].splice(i, 1)[0]);
       else if (op === "stepdown") entry[key].splice(i + 1, 0, entry[key].splice(i, 1)[0]);
-      else if (op === "add") return addEntry(spec);
       else if (op === "delete") return deleteEntry(spec, list);
-      else if (op === "up" && sel.id > 0) {
-        list.splice(sel.id - 1, 0, list.splice(sel.id, 1)[0]);
-        state.sel.id -= 1;
-      } else if (op === "down" && sel.id < list.length - 1) {
-        list.splice(sel.id + 1, 0, list.splice(sel.id, 1)[0]);
-        state.sel.id += 1;
-      }
       touched(sel.doc);
       renderTree();
       renderForm();
@@ -663,21 +873,33 @@ function wireForm(entry, spec) {
   });
 }
 
-function addEntry(spec) {
-  const sel = state.sel;
+/* Add an entry to a section, and select it.
+ *
+ * Called from the tree's + rather than from the form, so it takes the
+ * section rather than reading the selection: you can add to a section you
+ * are not currently looking at. A new row goes after the selected one when
+ * that is in the same section, and at the end otherwise. */
+function addEntry(docName, section) {
+  const spec = SECTIONS[section];
+  const doc = state.docs[docName];
   const fresh = spec.blank();
+  const sel = state.sel;
+  const here = sel && sel.doc === docName && sel.section === section;
+
   if (spec.kind === "map") {
+    doc[section] = doc[section] || {};
     let key = "New screen";
     let n = 1;
-    while (state.docs[sel.doc][sel.section][key]) key = `New screen ${++n}`;
-    state.docs[sel.doc][sel.section][key] = fresh;
-    state.sel.id = key;
+    while (doc[section][key]) key = `New screen ${++n}`;
+    doc[section][key] = fresh;
+    state.sel = { doc: docName, section, id: key };
   } else {
-    const list = state.docs[sel.doc][sel.section];
-    list.splice(sel.id + 1, 0, fresh);
-    state.sel.id += 1;
+    const list = (doc[section] = doc[section] || []);
+    const at = here && typeof sel.id === "number" ? sel.id + 1 : list.length;
+    list.splice(at, 0, fresh);
+    state.sel = { doc: docName, section, id: at };
   }
-  touched(sel.doc);
+  touched(docName);
   renderTree();
   renderForm();
 }
@@ -712,36 +934,6 @@ function renameKey(next) {
   touched(sel.doc);
   renderTree();
   renderForm();
-}
-
-/* ---------- git, as words rather than buttons ---------- */
-
-function gitPanel() {
-  const g = state.git;
-  if (!g.available) {
-    return `<div class="git"><h2>Saving</h2><p>${esc(g.why || "")}</p></div>`;
-  }
-  const changed = g.changed?.length
-    ? `<p>Changed so far: ${g.changed.map((c) => esc(c)).join(", ")}</p>` : "<p>Nothing changed yet.</p>";
-  return `<div class="git"><h2>Committing</h2>` +
-    `<p>On branch <b>${esc(g.branch)}</b>. The editor writes files and stops there — ` +
-    `run these yourself so you can see the branch you are on first.</p>` +
-    changed +
-    `<pre id="gitcmds">${esc((g.commands || []).join("\n"))}</pre>` +
-    `<div class="rowbar" style="margin:10px 0 0">` +
-    `<button class="btn tiny" id="copygit">Copy commands</button></div></div>`;
-}
-
-function wireGit() {
-  const btn = $("copygit");
-  if (!btn) return;
-  btn.onclick = async () => {
-    try {
-      await navigator.clipboard.writeText($("gitcmds").textContent);
-      btn.textContent = "Copied";
-      setTimeout(() => { btn.textContent = "Copy commands"; }, 1500);
-    } catch { /* no clipboard permission; the text is on screen anyway */ }
-  };
 }
 
 /* ---------- the preview ---------- */
@@ -829,6 +1021,7 @@ function renderChrome() {
       absorb(await api("/api/target", "POST", { target: el.dataset.t }));
       state.docs = (await api("/api/guide")).docs;
       state.sel = null;
+      restoreLangs();
       renderAll();
     };
   });
@@ -906,6 +1099,7 @@ $("revert").onclick = async () => {
   if (!confirm("Throw away every unsaved change and reload from disk?")) return;
   absorb(await api("/api/revert", "POST", {}));
   state.docs = (await api("/api/guide")).docs;
+  restoreLangs();
   renderAll();
 };
 
@@ -921,5 +1115,6 @@ window.addEventListener("beforeunload", (e) => {
 
 (async function boot() {
   absorb(await api("/api/guide"));
+  restoreLangs();
   renderAll();
 })();
