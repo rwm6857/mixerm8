@@ -172,6 +172,32 @@ def test_every_top_level_key_is_reachable_from_the_editor():
                 f"{name}.json carries {key!r}, which no form in the editor edits"
 
 
+def test_no_icon_button_ships_without_words_behind_it():
+    """A trashcan is only obvious to somebody who can see it.
+
+    The editor leans on icons rather than labels, which is the right trade
+    for a button that appears nineteen times -- but only while every one of
+    them still carries a title for the hover and an aria-label for a screen
+    reader. `iconBtn` is the single place that sets both, so the rule is
+    that nothing else may emit the class.
+    """
+    js = (Path(editor.__file__).parents[2] / "editor" / "editor.js").read_text("utf-8")
+    helper = js[js.index("const iconBtn ="):js.index("/* ---------- the tree")]
+    assert 'title="' in helper and 'aria-label="' in helper, \
+        "iconBtn stopped labelling its buttons"
+
+    # Every icon button in the JS comes from that helper.
+    built = js.count("iconBtn(")
+    emitted = js.count("ico-btn")
+    assert emitted == 1, f"ico-btn is written in {emitted} places, not only in iconBtn"
+    assert built > 1, "the guard found no icon buttons to check"
+
+    # The two in the shell are hand-written, so they are checked by hand.
+    html = (Path(editor.__file__).parents[2] / "editor" / "index.html").read_text("utf-8")
+    for button in re.findall(r"<button[^>]*ico-btn[^>]*>", html):
+        assert "aria-label=" in button and "title=" in button, button
+
+
 def test_adding_and_reordering_are_not_in_the_form():
     """They belong to the tree, because they are navigation.
 
@@ -183,7 +209,7 @@ def test_adding_and_reordering_are_not_in_the_form():
     for gone in ('data-op="add"', 'data-op="up"', 'data-op="down"'):
         assert gone not in source, f"{gone} is still rendered somewhere"
     assert 'data-op="delete"' in source
-    assert 'class="add" data-doc=' in source, "the tree has no add button"
+    assert 'iconBtn("plus", `Add another' in source, "the tree has no add button"
     assert 'draggable="true"' in source, "the tree rows cannot be dragged"
 
 

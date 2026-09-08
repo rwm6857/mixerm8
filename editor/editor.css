@@ -66,8 +66,28 @@ body {
 .btn:disabled { opacity: .4; cursor: default; }
 .btn.primary { background: var(--accent); border-color: var(--accent); color: #06121c; }
 .btn.primary:disabled { background: var(--panel-2); border-color: var(--line); color: var(--fg); }
-.btn.tiny { min-height: 26px; padding: 0 8px; font-size: .76rem; }
 .btn.bad:hover { background: rgb(229 86 75 / .18); border-color: var(--bad); }
+
+/* Icon-only buttons. Square, so a row of them lines up, and 30px because
+   this is a mouse tool rather than the tablet -- the guide's own 52px rule
+   is about a finger in a dark booth. Every one carries a title and an
+   aria-label: a trashcan is only obvious to somebody who can see it. */
+.ico-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 30px; min-height: 30px; padding: 0; flex: none;
+  color: var(--muted);
+}
+.ico-btn:hover { color: var(--fg); }
+.ico-btn.bad { color: var(--muted); }
+.ico-btn.bad:hover { color: #f08e85; }
+.ico { width: 16px; height: 16px; display: block; }
+
+/* Quiet until wanted, then unmistakable. The destructive ones are never
+   hidden behind a hover, only tinted on one -- a Delete you cannot find
+   is worse than a Delete you can see. */
+.ico-btn:focus-visible, .seg button:focus-visible, .add:focus-visible {
+  outline: 2px solid var(--accent); outline-offset: 1px;
+}
 
 .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 7px; overflow: hidden; }
 .seg button {
@@ -104,22 +124,21 @@ body {
 
 /* Add sits on the section it adds to, not in the form. The row is the
    hover target so the + is findable without hunting for a 20px square. */
-.sec-row { display: flex; align-items: stretch; }
+.sec-row { display: flex; align-items: center; }
 .sec-row:hover { background: var(--panel-2); }
 .sec-row .sec { flex: 1; min-width: 0; }
 .sec-row .sec:hover { background: none; }
 .sec-row .add {
-  flex: none; width: 30px; padding: 0;
-  background: none; border: none; color: var(--muted);
-  font: inherit; font-size: 1.05rem; line-height: 1; cursor: pointer;
+  margin-right: 4px;
+  background: none; border: none;
   opacity: 0; transition: opacity .1s;
 }
 .sec-row:hover .add, .sec-row .add:focus-visible { opacity: 1; }
-.sec-row .add:hover { color: var(--fg); background: var(--panel-3); }
+.sec-row .add:hover { background: var(--panel-3); }
 
 .tree .items { padding: 2px 0 6px; }
 .tree .item {
-  display: flex; align-items: baseline; gap: 5px;
+  display: flex; align-items: center; gap: 5px;
   width: 100%; padding: 5px 14px 5px 12px;
   background: none; border: none; border-left: 2px solid transparent;
   color: var(--muted); font: inherit; font-size: .82rem;
@@ -136,9 +155,10 @@ body {
 /* Dragging to reorder. A marker line rather than live shuffling: nothing
    moves until you let go, so the row you grabbed stays under your eye. */
 .tree .item .grip {
-  flex: none; width: 10px; color: var(--line);
-  font-size: .78rem; cursor: grab;
+  flex: none; display: flex; align-items: center;
+  color: var(--line); cursor: grab;
 }
+.tree .item .grip .ico { width: 13px; height: 13px; }
 .tree .item:hover .grip { color: var(--muted); }
 .tree .item.lifting { opacity: .4; }
 .tree .item.over-before { box-shadow: inset 0 2px 0 var(--accent); }

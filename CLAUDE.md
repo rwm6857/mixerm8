@@ -219,6 +219,17 @@ test is the list of deliberate exceptions and the reason for each — the
 `note` blocks are there, because the editor exists so nobody has to read
 the JSON the notes are addressed to.
 
+**Icons where a word is not earning its place.** `ICONS` in `editor.js` is
+chrome in the code, the same way it is in `app.js`, and `iconBtn()` is the
+only thing that emits the class — because it is also the only thing that
+sets a `title` and an `aria-label`, and a trashcan is only obvious to
+somebody who can see it. `test_no_icon_button_ships_without_words_behind_it`
+pins that. A word still earns its place on a button that appears once and
+says something specific: `Save`, and the segments naming the two save
+targets and the languages. It does not earn it on the nineteen add buttons
+in the tree, or on a Remove sitting under a field whose own label already
+says what it is.
+
 **The tree owns adding and reordering; the form owns editing.** A `+` on
 each section, and rows that drag. They are navigation rather than editing:
 you decide where a step goes by looking at the steps around it, and the

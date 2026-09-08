@@ -18,7 +18,8 @@
 
   <div class="bar-right">
     <span class="count" id="dirty"></span>
-    <button class="btn" id="revert" type="button">Discard changes</button>
+    <button class="btn ico-btn" id="revert" type="button"
+            title="Discard every unsaved change" aria-label="Discard every unsaved change"></button>
     <button class="btn primary" id="save" type="button" disabled>Save</button>
   </div>
 </header>
@@ -34,7 +35,8 @@
     <div class="preview-bar">
       <span class="preview-note">The real tablet guide, reading your unsaved
         draft. Switch language in its own header.</span>
-      <button class="btn" id="refresh" type="button" title="Reload the preview">↻</button>
+      <button class="btn ico-btn" id="refresh" type="button"
+              title="Reload the preview" aria-label="Reload the preview"></button>
     </div>
     <div class="screen" id="screen">
       <iframe id="frame" title="The tablet guide, with your unsaved edits"></iframe>

@@ -27,6 +27,41 @@ const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) =>
 
 const BLANK = /_{4,}/;
 
+/* ---------- icons ----------
+ * Chrome, in the code, the same way ICONS is in app.js. A word earns its
+ * place on a button that appears once and says something specific -- Save,
+ * or which of the two places a save goes. It does not earn its place on the
+ * nineteen add buttons in the tree, or on a Remove sitting under a field
+ * whose own label already says what it is.
+ *
+ * Every icon-only button carries a title and an aria-label, because a
+ * trashcan is only obvious to somebody who can see it. */
+const ICONS = {
+  plus:  '<path d="M12 5.5v13M5.5 12h13"/>',
+  trash: '<path d="M3.5 6.5h17M9 6.5V4h6v2.5"/>' +
+         '<path d="M5.8 6.5l.9 13a1.6 1.6 0 0 0 1.6 1.5h7.4a1.6 1.6 0 0 0 1.6-1.5l.9-13"/>' +
+         '<path d="M10 10.5v7M14 10.5v7"/>',
+  up:    '<path d="M5.5 14.5l6.5-6.5 6.5 6.5"/>',
+  down:  '<path d="M5.5 9.5l6.5 6.5 6.5-6.5"/>',
+  reload: '<path d="M20.5 12a8.5 8.5 0 1 1-2.7-6.2"/><path d="M20.5 4v5.5H15"/>',
+  undo:  '<path d="M3.5 8.5h10a5.5 5.5 0 1 1 0 11H8"/><path d="M7 5 3.5 8.5 7 12"/>',
+  grip:  '<g fill="currentColor" stroke="none">' +
+         '<circle cx="9.5" cy="6" r="1.15"/><circle cx="14.5" cy="6" r="1.15"/>' +
+         '<circle cx="9.5" cy="12" r="1.15"/><circle cx="14.5" cy="12" r="1.15"/>' +
+         '<circle cx="9.5" cy="18" r="1.15"/><circle cx="14.5" cy="18" r="1.15"/></g>',
+};
+
+const icon = (name) =>
+  `<svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" ` +
+  `stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" ` +
+  `aria-hidden="true">${ICONS[name] || ""}</svg>`;
+
+/* An icon-only button. `what` is the whole label a screen reader and a
+   hover tooltip get, so it reads as an instruction, not a noun. */
+const iconBtn = (name, what, attrs = "", cls = "") =>
+  `<button class="btn ico-btn ${cls}" type="button" title="${esc(what)}" ` +
+  `aria-label="${esc(what)}" ${attrs}>${icon(name)}</button>`;
+
 /* ---------- languages ----------
  * Read off the draft, so the forms follow an edit to the language list
  * without a reload. The label is only the column tag here: a blank one
@@ -385,9 +420,8 @@ function renderTree() {
         (single ? "" : `<span class="n">${entries.length}</span>`) +
         `</button>` +
         (single ? "" :
-          `<button class="add" data-doc="${esc(doc)}" data-section="${esc(section)}" ` +
-          `title="Add another ${esc(spec.one)}" ` +
-          `aria-label="Add another ${esc(spec.one)}">+</button>`) +
+          iconBtn("plus", `Add another ${spec.one}`,
+                  `data-doc="${esc(doc)}" data-section="${esc(section)}"`, "add")) +
         `</div>`;
 
       if (single || !open) return head;
@@ -399,7 +433,7 @@ function renderTree() {
         `<button class="item" draggable="true" data-doc="${esc(doc)}" ` +
         `data-section="${esc(section)}" data-id="${esc(id)}" ` +
         `aria-current="${String(sel.id) === String(id)}">` +
-        `<span class="grip" aria-hidden="true">⠿</span>` +
+        `<span class="grip">${icon("grip")}</span>` +
         // Two flags, because they mean different things: a "____" is a fact
         // nobody has established, and a gap is a sentence nobody has
         // translated yet.
@@ -570,8 +604,8 @@ function renderForm() {
   // Adding and reordering live in the tree; only the destructive one is
   // here, where you can see the thing you are about to remove.
   if (!single) html += `<div class="rowbar">` +
-    `<button class="btn tiny bad" data-op="delete">Delete this ` +
-    `${esc(spec.one || "entry")}</button></div>`;
+    iconBtn("trash", `Delete this ${spec.one || "entry"}`,
+            `data-op="delete"`, "bad") + `</div>`;
   if (spec.kind === "map") {
     html += field("Key", `<input type="text" data-op="rename" value="${esc(sel.id)}">`);
   }
@@ -694,13 +728,15 @@ function renderField(f, entry) {
   if (f.type === "bi") {
     if (f.optional && value === undefined) {
       return field(f.label,
-        `<button class="btn tiny" data-op="addfield" data-key="${esc(f.key)}">+ Add</button>`,
+        iconBtn("plus", `Add: ${f.label}`,
+                `data-op="addfield" data-key="${esc(f.key)}"`),
         f.hint, "optional");
     }
     return field(f.label,
       textareas(f.key, value) +
       (f.optional ? `<div class="rowbar" style="margin:8px 0 0">` +
-        `<button class="btn tiny bad" data-op="dropfield" data-key="${esc(f.key)}">Remove</button></div>` : ""),
+        iconBtn("trash", `Remove: ${f.label}`,
+                `data-op="dropfield" data-key="${esc(f.key)}"`, "bad") + `</div>` : ""),
       f.hint);
   }
 
@@ -709,13 +745,17 @@ function renderField(f, entry) {
       `<div class="step-row"><span class="num">${i + 1}</span>` +
       `<div>${textareas(`${f.key}.${i}`, step)}</div>` +
       `<span class="ops">` +
-      `<button class="btn tiny" data-op="stepup" data-key="${esc(f.key)}" data-i="${i}">↑</button>` +
-      `<button class="btn tiny" data-op="stepdown" data-key="${esc(f.key)}" data-i="${i}">↓</button>` +
-      `<button class="btn tiny bad" data-op="stepdrop" data-key="${esc(f.key)}" data-i="${i}">✕</button>` +
+      iconBtn("up", `Move step ${i + 1} earlier`,
+              `data-op="stepup" data-key="${esc(f.key)}" data-i="${i}"`) +
+      iconBtn("down", `Move step ${i + 1} later`,
+              `data-op="stepdown" data-key="${esc(f.key)}" data-i="${i}"`) +
+      iconBtn("trash", `Delete step ${i + 1}`,
+              `data-op="stepdrop" data-key="${esc(f.key)}" data-i="${i}"`, "bad") +
       `</span></div>`).join("");
     return field(f.label,
       `<div class="steps">${rows}</div><div class="rowbar" style="margin:10px 0 0">` +
-      `<button class="btn tiny" data-op="stepadd" data-key="${esc(f.key)}">+ Add a step</button></div>`,
+      iconBtn("plus", "Add a step", `data-op="stepadd" data-key="${esc(f.key)}"`) +
+      `</div>`,
       f.hint);
   }
 
@@ -753,7 +793,7 @@ function renderField(f, entry) {
   if (f.type === "diagram") {
     if (!value) {
       return field(f.label,
-        `<button class="btn tiny" data-op="addfield" data-key="diagram">+ Add</button>`,
+        iconBtn("plus", "Add a diagram", `data-op="addfield" data-key="diagram"`),
         "Optional. A church's own drawings go in docs/img/local/, which is gitignored.",
         "optional");
     }
@@ -764,8 +804,8 @@ function renderField(f, entry) {
       field("Alt text", textareas("diagram.alt", value.alt)) +
       field("Caption", textareas("diagram.caption", value.caption)) +
       `<div class="rowbar" style="margin:4px 0 0">` +
-      `<button class="btn tiny bad" data-op="dropfield" data-key="diagram">Remove</button></div>` +
-      `</div>`);
+      iconBtn("trash", "Remove this diagram", `data-op="dropfield" data-key="diagram"`, "bad") +
+      `</div></div>`);
   }
   return "";
 }
@@ -1103,6 +1143,10 @@ $("revert").onclick = async () => {
   renderAll();
 };
 
+// The two buttons in the shell get their glyphs from the same table as the
+// ones the forms build, rather than a second copy pasted into the HTML.
+$("revert").innerHTML = icon("undo");
+$("refresh").innerHTML = icon("reload");
 $("refresh").onclick = refreshPreview;
 
 window.addEventListener("keydown", (e) => {

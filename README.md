@@ -297,7 +297,8 @@ stations, the front cover, the language list, the app's own wording, and the
 mixer screens, which are filed under whichever station has the console.
 **Adding and reordering happen in that tree** — a `+` on each section, and
 rows you can drag into the order a volunteer should read them in. The form
-in the middle edits one entry at a time and holds the only Delete.
+in the middle edits one entry at a time and holds the only Delete. Most of
+the buttons are icons rather than labels; hover any of them for the words.
 
 There are two places it can save, and it says which at the top:
 
