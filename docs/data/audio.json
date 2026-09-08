@@ -25,6 +25,7 @@
 
   "faq": [
     {
+      "id": "do-i-need-to-understand-what-all-these",
       "q": {
         "en": "Do I need to understand what all these buttons do?",
         "ko": "이 버튼들이 무엇을 하는지 다 알아야 하나요?"
@@ -35,6 +36,7 @@
       }
     },
     {
+      "id": "someone-said-not-to-touch-the-eq-why",
       "q": {
         "en": "Someone said not to touch the EQ. Why?",
         "ko": "EQ를 만지지 말라고 하던데, 왜 그런가요?"
@@ -45,6 +47,7 @@
       }
     },
     {
+      "id": "the-mixer-tab-says-it-is-not-connected",
       "q": {
         "en": "The Mixer tab says it is not connected. Is something broken?",
         "ko": "믹서 탭에 연결되지 않았다고 나옵니다. 고장인가요?"
@@ -55,6 +58,7 @@
       }
     },
     {
+      "id": "can-this-page-change-anything-on-the",
       "q": {
         "en": "Can this page change anything on the mixer?",
         "ko": "이 페이지가 믹서를 변경할 수 있나요?"
@@ -65,6 +69,7 @@
       }
     },
     {
+      "id": "nobody-complained-did-i-do-it-right",
       "q": {
         "en": "Nobody complained. Did I do it right?",
         "ko": "아무도 뭐라고 하지 않았습니다. 잘한 건가요?"
@@ -78,49 +83,57 @@
 
   "checklist": [
     {
+      "id": "turn-on-the-mixer-wait-until-it-has",
       "text": {
         "en": "Turn on the mixer. Wait until it has finished starting up before you touch anything.",
         "ko": "믹서를 켜세요. 완전히 켜질 때까지 아무것도 만지지 마세요."
       }
     },
     {
+      "id": "turn-on-the-amplifiers-after-the-mixer",
       "text": { "en": "Turn on the amplifiers, after the mixer.", "ko": "믹서를 켠 다음에 앰프를 켜세요." }
     },
     {
+      "id": "load-the-scene-scenes-load-only-now",
       "todo": {
         "en": "Fill in the scene name. This desk does use scenes, but loading one is only safe before the service — it resets every fader at once.",
         "ko": "씬 이름을 채워주세요. 이 콘솔은 씬을 사용하지만, 씬 불러오기는 예배 시작 전에만 안전합니다 — 모든 페이더가 한꺼번에 초기화됩니다."
       },
       "text": {
-        "en": "Load the scene: SCENES → ____ → LOAD. Only now, before anyone is on stage.",
-        "ko": "씬을 불러오세요: SCENES → ____ → LOAD. 무대에 사람이 오르기 전, 지금만 하세요."
+        "en": "Load the scene: SCENES → ____ → LOAD. Only now, before anyone is on stage. See [the running order](audio/flow/load-the-scene) for why the timing matters.",
+        "ko": "씬을 불러오세요: SCENES → ____ → LOAD. 무대에 사람이 오르기 전, 지금만 하세요. 시점이 중요한 이유는 [진행 순서](audio/flow/load-the-scene)에서 확인하세요."
       }
     },
     {
+      "id": "line-check-ask-each-person-to-speak-or",
       "text": {
         "en": "Line check: ask each person to speak or play, one at a time, and watch their meter move.",
         "ko": "라인 체크: 한 사람씩 말하거나 연주하게 하고, 해당 미터가 움직이는지 확인하세요."
       }
     },
     {
+      "id": "ask-the-musicians-whether-they-can",
       "text": {
         "en": "Ask the musicians whether they can hear themselves. That is the Sends page.",
         "ko": "연주자들에게 자기 소리가 들리는지 물어보세요. Sends 페이지에서 조절합니다."
       }
     },
     {
+      "id": "start-the-recording-usb-screen-record",
       "text": {
         "en": "Start the recording: USB screen → record. Check the timer is counting up.",
         "ko": "녹음을 시작하세요: USB 화면 → 녹음. 타이머가 올라가는지 확인하세요."
       }
     },
     {
+      "id": "mute-every-microphone-that-nobody-is",
       "text": {
         "en": "Mute every microphone that nobody is using yet.",
         "ko": "아직 사용하지 않는 마이크는 모두 음소거하세요."
       }
     },
     {
+      "id": "press-home-and-stay-there-for-the",
       "text": {
         "en": "Press HOME and stay there for the service.",
         "ko": "HOME을 누르고 예배 중에는 그 화면에 있으세요."
@@ -130,6 +143,7 @@
 
   "problems": [
     {
+      "id": "someone-is-too-quiet",
       "level": "caution",
       "title": { "en": "Someone is too quiet", "ko": "소리가 너무 작습니다" },
       "symptom": {
@@ -160,6 +174,7 @@
       ]
     },
     {
+      "id": "no-sound-at-all-from-one-microphone",
       "level": "caution",
       "title": { "en": "No sound at all from one microphone", "ko": "마이크 하나에서 소리가 전혀 안 납니다" },
       "symptom": {
@@ -201,11 +216,12 @@
       ]
     },
     {
+      "id": "a-squeal-or-a-howl",
       "level": "danger",
       "title": { "en": "A squeal or a howl", "ko": "삐 소리나 웅 소리가 납니다" },
       "symptom": {
-        "en": "A rising tone that gets louder on its own. This is feedback.",
-        "ko": "저절로 점점 커지는 소리입니다. 하울링입니다."
+        "en": "A rising tone that gets louder on its own. This is feedback. If it keeps happening, [the questions](audio/faq/someone-said-not-to-touch-the-eq-why) explain why the EQ is left alone.",
+        "ko": "저절로 점점 커지는 소리입니다. 하울링입니다. 계속 발생한다면 EQ를 건드리지 않는 이유를 [자주 묻는 질문](audio/faq/someone-said-not-to-touch-the-eq-why)에서 확인하세요."
       },
       "steps": [
         {
@@ -227,6 +243,7 @@
       ]
     },
     {
+      "id": "a-microphone-keeps-cutting-out",
       "level": "caution",
       "title": { "en": "A microphone keeps cutting out", "ko": "마이크가 계속 끊깁니다" },
       "symptom": {
@@ -253,6 +270,7 @@
       ]
     },
     {
+      "id": "nothing-was-recorded",
       "level": "caution",
       "title": { "en": "Nothing was recorded", "ko": "녹음이 안 되었습니다" },
       "symptom": {
@@ -282,6 +300,7 @@
 
   "flow": [
     {
+      "id": "power-up",
       "when": { "en": "45 min before", "ko": "45분 전" },
       "title": { "en": "Power up", "ko": "전원 켜기" },
       "detail": {
@@ -290,6 +309,7 @@
       }
     },
     {
+      "id": "load-the-scene",
       "when": { "en": "40 min before", "ko": "40분 전" },
       "title": { "en": "Load the scene", "ko": "씬 불러오기" },
       "todo": {
@@ -297,11 +317,12 @@
         "ko": "콘솔에 표시된 대로 씬 이름을 채워주세요."
       },
       "detail": {
-        "en": "SCENES → select ____ → LOAD. Do this now and only now. It resets every fader, so loading it once the service has started would undo everything and silence the room.",
-        "ko": "SCENES → ____ 선택 → LOAD. 지금, 이때만 하세요. 모든 페이더가 초기화되므로 예배가 시작된 뒤에 불러오면 모든 설정이 사라지고 소리가 끊깁니다."
+        "en": "SCENES → select ____ → LOAD. **Do this now and only now.** It resets every fader, so loading it once the service has started would undo everything and silence the room.",
+        "ko": "SCENES → ____ 선택 → LOAD. **지금, 이때만 하세요.** 모든 페이더가 초기화되므로 예배가 시작된 뒤에 불러오면 모든 설정이 사라지고 소리가 끊깁니다."
       }
     },
     {
+      "id": "line-check",
       "when": { "en": "30 min before", "ko": "30분 전" },
       "title": { "en": "Line check", "ko": "라인 체크" },
       "detail": {
@@ -310,6 +331,7 @@
       }
     },
     {
+      "id": "band-rehearsal",
       "when": { "en": "20 min before", "ko": "20분 전" },
       "title": { "en": "Band rehearsal", "ko": "밴드 리허설" },
       "detail": {
@@ -318,6 +340,7 @@
       }
     },
     {
+      "id": "start-the-recording",
       "when": { "en": "5 min before", "ko": "5분 전" },
       "title": { "en": "Start the recording", "ko": "녹음 시작" },
       "detail": {
@@ -326,6 +349,7 @@
       }
     },
     {
+      "id": "stay-on-home",
       "when": { "en": "During", "ko": "예배 중" },
       "title": { "en": "Stay on HOME", "ko": "HOME 화면 유지" },
       "detail": {
@@ -334,6 +358,7 @@
       }
     },
     {
+      "id": "stop-and-shut-down",
       "when": { "en": "After", "ko": "예배 후" },
       "title": { "en": "Stop and shut down", "ko": "정지 및 종료" },
       "detail": {

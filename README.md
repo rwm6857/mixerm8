@@ -325,6 +325,30 @@ cannot replace it, and there is no button anywhere in the editor that could
 publish it — the editor has no way to run a command at all. If you want a
 change to ship to everyone, make it in the example.
 
+### Formatting, and links between pages
+
+Inside any piece of wording you can use three things and no more:
+
+    **bold**   *italic*   [label](target)
+
+A link either leaves the guide or lands somewhere inside it:
+
+    [the running order](audio/flow/load-the-scene)   a particular entry
+    [the media gear](media/equipment)                a tab
+    [the sound desk](audio)                          a station
+    [the docs](https://example.org)                  the web, opens in a new tab
+
+Internal links are checked. If you rename or delete the thing a link points
+at, the editor tells you before you save — a "see also" that goes nowhere
+reads as an answer and isn't one.
+
+There is deliberately no way to change size, colour or font. A card's
+meaning comes from its severity, and wording that could restyle itself is
+wording that could quietly stop looking like a warning.
+
+In the editor, each text box has **B**, *I* and link buttons on hover, and
+⌘B / ⌘I / ⌘K do the same thing to whatever you have selected. ⌘S saves.
+
 ### Diagrams
 
 Any entry can carry a picture, and the wording beside it always says the same

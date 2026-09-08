@@ -176,6 +176,61 @@ silent, which is the one thing the blanks convention exists to prevent), and
 **problem steps are never collapsed** — somebody is reading those while a
 microphone squeals.
 
+## Every entry has an address
+
+**`id` on every entry, because position is not an address.** Each entry in
+`faq`, `checklist`, `problems`, `flow` and `equipment` carries one, slugged
+from its own wording in the first declared language when it was created and
+**never regenerated** — renaming a heading must not break a link to it.
+`guides` needs no such field: its pages and screens are a map, so the key
+already is the id.
+
+The cost of not having them was concrete and live. Checklist ticks were
+stored as `done: [0, 2, 5]`, so reordering the list — one drag in the
+editor, which is a feature the editor now has — silently moved a
+volunteer's ticks onto different steps. They are keyed by id now, and a
+number left in an older install's `localStorage` matches nothing and reads
+as unticked, which is the right answer anyway. Three rules guard the data
+side: every entry has an id, no two in a section claim one, and an id is
+the shape a link could carry.
+
+## Wording, and the three things it may contain
+
+`fill()` in `app.js` **escapes first, always**, and everything after that
+runs on the escaped string — so no amount of markup in a guide file can put
+a tag on the page that is not one of the handful written there. In order:
+blanks, then links lifted out to placeholders, then emphasis, then the
+links put back. The lifting is why an asterisk inside a URL cannot turn
+half of it italic.
+
+- `____` — a blank nobody has filled in. See the blanks section below.
+- `**bold**` and `*italic*`. **Asterisks rather than underscores**, because
+  four underscores already mean something here and the two conventions
+  would collide in the one place it matters least to be ambiguous.
+- `[label](target)`.
+
+**No sizes, no colours, no fonts, and that is the whole list.** A card's
+meaning comes from its severity, and wording that could restyle itself is
+wording that could quietly stop looking like a warning.
+
+**A link either leaves the guide or lands inside it.** An internal target
+is `station`, `station/tab` or `station/tab/entry`, and it renders as an
+anchor with `data-to` and *no href*: the hash addresses a station and a
+language and nothing deeper, because that is what a QR sticker says, so a
+"see also" inside the guide is navigation rather than an address. Crossing
+to another station still goes through the hash — that is what makes
+`route()` load the other file — but only ever as `#station/language`, with
+which entry to open travelling in `state.jump`. External links are
+`http`, `https` or `mailto` only and carry a `↗`, because a volunteer
+mid-service who taps one loses the page they were on.
+
+`dead_links()` resolves every internal target against the guide it sits
+in. A "see also" pointing at a renamed entry reads as an answer and goes
+nowhere, which is worse than not offering one. The committed example uses
+all three marks on purpose — `test_the_shipped_guide_actually_uses_links_and_emphasis`
+fails if it stops, because a check guarding a feature nothing uses is a
+check that has stopped being tested.
+
 ## Content is two-layered, for privacy
 
 The committed `docs/data/*.json` are a **generic example**.
@@ -266,6 +321,16 @@ They live in `guides.json`, but a top-level "Mixer screens" heading put
 them as far from the sound desk as the tree could manage. So a tree row
 names the document it edits and the sound group draws from two files,
 keyed off `role.console` rather than off the string "audio".
+
+**Bold, italic and link are on the box, not above the form.** `MARKS` in
+`editor.js` drives both the hover toolbar and ⌘B / ⌘I / ⌘K, bound to the
+textarea rather than the window so a shortcut only ever formats the box the
+cursor is in. `applyMark()` edits the text and dispatches `input`, so a
+keystroke and a button press take the same one path into the draft. It
+wraps and unwraps, because pressing bold on something already bold is what
+the muscle memory expects. Deliberately not `contenteditable`: what is
+stored stays the handful of marks the tablet renders, with no stray spans,
+no pasted styling, and a diff that shows the sentence somebody changed.
 
 **One language at a time, and the preview is the other view of it.** A
 column per language was fine at two and unusable at four: every field

@@ -6,6 +6,7 @@ split up and named for their reasons: the name is the argument for why the
 rule exists, and one test_everything_is_valid would throw that away.
 """
 
+import json
 import re
 
 import pytest
@@ -75,7 +76,8 @@ def test_a_guide_in_one_language_needs_only_that_one():
         "roles": {"languages": ["ko"],
                   "roles": [{"id": "misc", "layers": []}]},
         "misc": {"intro": {"ko": "안녕하세요"},
-                 "faq": [{"q": {"ko": "질문"}, "a": {"ko": "대답"}}]},
+                 "faq": [{"id": "jilmun", "q": {"ko": "질문"},
+                          "a": {"ko": "대답"}}]},
     }
     assert validate.languages(korean_only) == ("ko",)
     assert validate.check(korean_only) == []
@@ -152,6 +154,82 @@ def test_a_language_list_the_app_could_not_use_is_caught():
     ]:
         reported = " ".join(validate.bad_language_ids({"roles": {"languages": bad}}))
         assert expect in reported, f"{bad!r} was reported as {reported!r}"
+
+
+# ---------------------------------------------------------------------------
+# Addresses. Everything used to be found by its position in a list, which
+# is not an address: it changes when the thing above it moves. Ids exist so
+# that a link has somewhere to point and a volunteer's tick stays on the
+# step they ticked.
+# ---------------------------------------------------------------------------
+
+def test_every_entry_has_an_id(docs):
+    """Position is not an address.
+
+    The concrete cost was in the app: ticks were stored as `done: [0, 2, 5]`,
+    so reordering a checklist -- one drag in the editor -- moved a
+    volunteer's ticks onto different steps without anything saying so.
+    """
+    assert validate.entries_without_ids(docs) == []
+
+
+def test_ids_survive_being_put_in_a_link(docs):
+    assert validate.bad_entry_ids(docs) == []
+
+
+def test_no_two_entries_in_a_section_claim_one_id(docs):
+    """One would take every link meant for the other, silently."""
+    assert validate.entry_ids_claimed_twice(docs) == []
+
+
+def test_an_id_is_not_regenerated_from_the_wording():
+    """Renaming a heading must not break a link to it.
+
+    So the id is slugged from the wording once, when the entry is made, and
+    never again -- which is why it is a field in the file rather than
+    something the app works out on the way past.
+    """
+    seen = {e["id"] for e in validate.load_documents(server.webroot() / "data")
+            ["audio"]["problems"]}
+    assert "a-squeal-or-a-howl" in seen
+
+
+def test_every_link_in_the_guide_goes_somewhere(docs):
+    """A "see also" pointing at a renamed entry reads as an answer and goes
+    nowhere, which is worse than not offering one."""
+    assert validate.dead_links(docs) == []
+
+
+def test_the_shipped_guide_actually_uses_links_and_emphasis(docs):
+    """Otherwise the two checks above are guarding a feature nothing has.
+
+    The example is what a church copies, so it shows the conventions in
+    use rather than describing them in a comment somewhere.
+    """
+    links = list(validate._link_targets(docs))
+    assert links, "no wording links anywhere, so dead_links proves nothing"
+    assert any(target.count("/") == 2 for _, _, target in links), \
+        "no link reaches a particular entry"
+    assert any("**" in (e.get("detail") or {}).get("en", "")
+               for e in docs["audio"]["flow"]), "no emphasis in the example"
+
+
+def test_a_link_a_tablet_could_not_follow_is_caught(docs):
+    """Every way one can be wrong, in one place, because a dead link is
+    invisible until somebody taps it mid-service."""
+    broken = json.loads(json.dumps(docs))
+    broken["audio"]["faq"][0]["a"]["en"] = (
+        "[gone](audio/problems/no-such-entry) [no tab](audio/nonsense) "
+        "[no station](nowhere/faq) [too deep](audio/faq/a/b) "
+        "[a script](javascript:alert(1)) "
+        "[fine](https://example.org) [also fine](media/equipment)")
+    reported = " ".join(validate.dead_links(broken))
+    for expect in ("nothing there has that id", "not a tab that station has",
+                   "does not exist", "deeper than station/tab/entry",
+                   "not a link a tablet would open"):
+        assert expect in reported, f"{expect!r} was not reported"
+    assert "example.org" not in reported, "an ordinary web link was rejected"
+    assert "media/equipment" not in reported, "a good internal link was rejected"
 
 
 def test_every_role_has_a_content_file(docs):
