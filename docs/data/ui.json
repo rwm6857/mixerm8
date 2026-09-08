@@ -12,6 +12,7 @@
     "tabProblem": { "en": "Problems", "ko": "문제 해결" },
     "tabFlow": { "en": "Order", "ko": "진행 순서" },
     "tabEquip": { "en": "Equipment", "ko": "장비" },
+    "tabPages": { "en": "Training", "ko": "교육 자료" },
     "tabMixer": { "en": "Mixer", "ko": "믹서" },
     "navCheck": { "en": "What to do before the service starts.", "ko": "예배가 시작되기 전에 할 일입니다." },
     "navProblem": { "en": "Something is wrong right now.", "ko": "지금 문제가 생겼을 때 보세요." },
@@ -22,6 +23,10 @@
     "navEquip": {
       "en": "What each piece of gear here is, and where it lives.",
       "ko": "이 자리의 각 장비가 무엇이고 어디에 있는지 알려줍니다."
+    },
+    "navPages": {
+      "en": "Walkthroughs and background reading, for a quiet afternoon.",
+      "ko": "차분한 시간에 볼 수 있는 안내 영상과 배경 설명입니다."
     },
     "navMixer": {
       "en": "Every screen on the desk, and what it does.",
@@ -42,6 +47,10 @@
     "ledeEquip": {
       "en": "Tap a box to read what it does and where it is.",
       "ko": "장비를 눌러 무슨 역할을 하고 어디에 있는지 확인하세요."
+    },
+    "ledePages": {
+      "en": "Longer material. Nothing here is needed to get through a Sunday.",
+      "ko": "좀 더 긴 자료입니다. 주일을 무사히 보내는 데 꼭 필요한 것은 아닙니다."
     },
     "ledeMixer": {
       "en": "Every screen on the desk, and what it does.",

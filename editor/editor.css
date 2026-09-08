@@ -240,6 +240,43 @@ textarea.has-blank { border-color: var(--warn); }
   background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius);
 }
 
+/* ---------- blocks ----------
+   Each block is its own small form, indented so the nesting is legible:
+   a block, its items, and the blocks inside one of those items. Three
+   levels is as deep as it goes -- validate.py refuses steps inside
+   steps. */
+.blocks { display: flex; flex-direction: column; gap: 10px; }
+.block, .item-row {
+  padding: 12px 14px;
+  background: var(--panel); border: 1px solid var(--line); border-radius: 9px;
+}
+.block.bad { border-color: var(--bad); }
+.block-head {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 10px; margin-bottom: 12px;
+}
+.block-head b {
+  color: var(--muted); font-size: .7rem; font-weight: 700;
+  letter-spacing: .08em; text-transform: uppercase;
+}
+.block-head .ops { display: flex; gap: 2px; }
+.block-head .num {
+  width: 22px; height: 22px; flex: none;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: var(--panel-3); border-radius: 50%;
+  color: var(--muted); font-size: .72rem; font-weight: 700;
+}
+.block .field:last-child, .item-row .field:last-child { margin-bottom: 0; }
+
+.items-in { display: flex; flex-direction: column; gap: 8px; }
+.item-row { background: var(--bg); }
+
+/* Adding one. The types are listed rather than hidden behind a menu:
+   there are five, and seeing them is how you find out a page can have a
+   video on it. */
+.addblock { display: flex; flex-wrap: wrap; gap: 6px; }
+.addblock .btn { min-height: 28px; font-size: .78rem; font-weight: 500; }
+
 /* ---------- preview ---------- */
 .preview {
   display: flex; flex-direction: column;

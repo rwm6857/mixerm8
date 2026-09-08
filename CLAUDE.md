@@ -50,7 +50,7 @@ three of the four stations have no console at all.
 
 | Station | Data file | Palette | Tabs |
 | --- | --- | --- | --- |
-| `audio` | `docs/data/audio.json` | green | Home · Before · Problems · Order · Mixer |
+| `audio` | `docs/data/audio.json` | green | Home · Before · Problems · Order · Training · Mixer |
 | `media` | `docs/data/media.json` | amber | Home · Before · Problems · Order · Equipment |
 | `livestream` | `docs/data/livestream.json` | violet | Home · Before · Problems · Order · Equipment |
 | `misc` | `docs/data/misc.json` | slate | Home |
@@ -62,8 +62,9 @@ it declares no layers and gets no tab bar — one tab is not a choice.
 directions: a declared layer must be complete, and an undeclared one must be
 absent, because a tab offering an empty checklist is worse than no tab.
 
-Every station has a **home page** (`intro` + `faq`) and the four optional
-layers are `checklist`, `problems`, `flow` and `equipment`.
+Every station has a **home page** (`intro` + `faq`) and the five optional
+layers are `checklist`, `problems`, `flow`, `equipment` and `pages` — the
+last being the free-form one, described under Blocks below.
 **Audio declares no `equipment` layer**: the Mixer tab already is the sound
 desk's equipment page, and the boxes behind the desk are not a volunteer's
 to touch. The two stations with no console needed somewhere to say what the
@@ -231,6 +232,87 @@ all three marks on purpose — `test_the_shipped_guide_actually_uses_links_and_e
 fails if it stops, because a check guarding a feature nothing uses is a
 check that has stopped being tested.
 
+## Blocks
+
+An entry's fixed fields say what that entry **always** has to say — a problem
+page has a symptom, a piece of equipment has a `where`. `blocks` is
+everything after that, in whatever order somebody put it: a paragraph, a
+video, a checklist of what was in the video, collapsible steps with a diagram
+inside one of them.
+
+**Additive on purpose.** The fixed fields are untouched and a file with no
+`blocks` is a file that has not changed, so nothing is ever half-migrated and
+the guide keeps working while the platform grows around it. Blocks render
+after the fixed body on the home page, on a question, on a problem page, on a
+running-order step and on a piece of equipment — and they are the *whole* body
+of a `pages` entry.
+
+**Three files list the types, because each does a different job with the
+list**: `BLOCKS` in `validate.py` (what a block must carry), `BLOCKS` in
+`app.js` (how it renders) and `BLOCK_TYPES` in `editor.js` (how it is
+edited). Two agreeing and one not is a block that saves, validates, and
+renders as a gap on the tablet, so
+`test_the_editor_and_the_app_agree_on_the_block_types` parses all three and
+compares them.
+
+The types are `text`, `media`, `callout`, `checklist` and `steps`. Each keeps
+the look it already had elsewhere — a callout is a severity card, steps are
+the running order's cards, a checklist ticks like the Before tab — so a page
+assembled out of them looks like the guide rather than like a document.
+
+**A `steps` item's own content is blocks too**, which is how a diagram goes
+inside the step it explains rather than above the whole list. **One level and
+no more**: `steps_nested_too_deep` refuses steps inside steps, because a
+volunteer opening a card to find another card mid-service is the opposite of
+what the layer is for. The editor does not offer the type at that depth
+either, but the rule is what makes it true — a hidden button is not a
+guarantee.
+
+**Checklist item ids are unique across the whole station file, not per
+block.** That is not tidiness: the ticks are one flat set per station keyed
+by id, so two items sharing one anywhere in the file would tick together.
+
+`pages` is the fifth layer and the free-form one — walkthroughs and
+background reading, the material that does not answer a Sunday-morning
+question. A page insists on nothing but a heading, so
+`pages_with_nothing_on_them` is what keeps that freedom from being a way to
+publish a blank. In `editor.js` its section is called `training` rather than
+`pages`, because the console's channel tabs had already taken that word in
+`SECTIONS`; `at` names the real key, and `keyOf()` is the one place that
+maps a section to it.
+
+## A church's own pictures and video
+
+`media_dir()` in `server.py` serves `%APPDATA%/MixerM8/media/` — one flat
+directory, GET only, and a fixed list of types.
+
+**This is a deliberate narrowing of the rule next door, not a hole in it.**
+`override_dir()` is restricted to a single `*.json` filename with a comment
+arguing that widening it to images would turn a narrow lookup into a file
+server "and the value does not pay for that". Then guides grew media blocks,
+and a booth PC running the frozen exe had no way to show a photo of its own
+booth — which is the most obviously useful diagram there is. So the value
+changed and the rule moved with it, to the narrowest thing that does the job:
+no subdirectories, nothing executable, nothing written, and the type list in
+`MEDIA_TYPES` rather than `mimetypes`, which varies by machine and would
+happily hand out an `.html` off a folder a volunteer can drop files into.
+`tests/test_server.py` probes it from the outside, including that a POST to
+it is refused — `/reconnect` is still the only thing on the LAN server that
+changes anything.
+
+Three kinds of `src`, and only one is checkable here: something shipping in
+`docs/`, which must exist; something under `media/`, which lives on the booth
+machine and is not in the repo to look at; and an https address, which is
+somebody else's server. What is always checkable is the suffix, because the
+app decides between `<img>` and `<video>` from it. A video is never
+autoplayed and never loops — somebody is holding a tablet in a booth with the
+service about to start.
+
+The editor's end is `/api/media`: a listing filtered through the same
+allowlist, and an upload, which is the one place that server takes something
+that is not JSON. It is loopback-only like the rest of it, and the name and
+type are checked in `save_media` rather than trusted from the browser.
+
 ## Content is two-layered, for privacy
 
 The committed `docs/data/*.json` are a **generic example**.
@@ -331,6 +413,14 @@ wraps and unwraps, because pressing bold on something already bold is what
 the muscle memory expects. Deliberately not `contenteditable`: what is
 stored stays the handful of marks the tablet renders, with no stray spans,
 no pasted styling, and a diff that shows the sentence somebody changed.
+
+**The block editor is generated from `BLOCK_TYPES`, and one handler does
+every list.** `renderField` takes a path prefix, so the same field spec
+works on an entry and on a picture three levels inside it
+(`blocks.2.items.1.blocks.1.src`); every control carries that path, and
+`arrup`/`arrdown`/`arrdrop`/`blockadd`/`itemadd` splice at any depth through
+`atPath`. Without the prefix there would be a form per nesting level, which
+is the drift this file's generated forms exist to avoid.
 
 **One language at a time, and the preview is the other view of it.** A
 column per language was fine at two and unusable at four: every field
@@ -500,7 +590,7 @@ to stay answerable by looking.
 
 ```bash
 pip install -e ".[dev]"    # stdlib only at runtime; this adds pytest + ruff
-pytest                     # 102 tests, ~27s
+pytest                     # 133 tests, ~28s
 ruff check .               # line length 100
 mixerm8 --discover         # find consoles on the network
 mixerm8 --edit             # the guide editor, localhost only, no console needed

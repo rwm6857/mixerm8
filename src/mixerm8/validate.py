@@ -30,9 +30,52 @@ LAYERS = {
     "problems": ("title", "symptom"),
     "flow": ("when", "title", "detail"),
     "equipment": ("title", "where", "body"),
+    # The free-form one. A page carries a heading and then whatever
+    # `blocks` somebody put on it: a walkthrough video, a checklist of
+    # what was in it, collapsible steps with a diagram inside one. The
+    # other four layers each answer a question a volunteer has on a
+    # Sunday; this is for the training and reference material that does
+    # not fit any of them, which is why it insists on nothing but a title.
+    "pages": ("title",),
 }
 
 LEVELS = ("ok", "caution", "danger", "info")
+
+# ---------------------------------------------------------------------------
+# blocks
+# ---------------------------------------------------------------------------
+#
+# An entry's fixed fields say the things that entry always has to say -- a
+# problem page has a symptom, a piece of equipment has a `where`. `blocks`
+# is everything else, in whatever order somebody wants it: a paragraph, a
+# video, a checklist of what was in the video, a set of collapsible steps
+# with a diagram inside one of them.
+#
+# Deliberately additive. The fixed fields stay exactly as they were and a
+# file with no `blocks` is a file that has not changed, so nothing is ever
+# half-migrated and the guide keeps working while the platform grows around
+# it.
+#
+# Each type names the fields it must carry in every declared language.
+BLOCKS = {
+    "text": ("text",),
+    "media": (),                 # `src` is not wording; checked separately
+    "callout": ("body",),
+    "checklist": (),             # its items carry the wording
+    "steps": (),
+}
+
+# The wording every item of a list-shaped block must carry.
+BLOCK_ITEMS = {"checklist": ("text",), "steps": ("title",)}
+
+# What a `media` block may point at. A church's own files live under
+# `media/`, which the bridge serves from outside the web root; anything
+# else has to ship in `docs/`.
+MEDIA_KINDS = {
+    "image": (".png", ".jpg", ".jpeg", ".svg", ".webp", ".gif"),
+    "video": (".mp4", ".webm", ".m4v"),
+}
+MEDIA_SUFFIXES = tuple(sorted(x for v in MEDIA_KINDS.values() for x in v))
 
 # Sections whose entries carry a stable `id`. Everything used to be
 # addressed by array position, which meant a reorder moved a volunteer's
@@ -227,6 +270,182 @@ def app_wording_missing_a_language(docs: dict[str, dict]) -> list[str]:
     return missing
 
 
+def _blocks_in(docs: dict[str, dict]):
+    """Every ("where", block, depth) in the guide.
+
+    Depth is how many `steps` blocks a block sits inside, which is what the
+    nesting rule below is about. Blocks hang off entries and off the items
+    of a `steps` block, and nowhere else.
+    """
+    def go(where, blocks, depth):
+        if not isinstance(blocks, list):
+            return
+        for i, block in enumerate(blocks):
+            if not isinstance(block, dict):
+                yield f"{where}[{i}]", block, depth
+                continue
+            yield f"{where}[{i}]", block, depth
+            for j, item in enumerate(block.get("items") or []):
+                if isinstance(item, dict):
+                    yield from go(f"{where}[{i}].items[{j}].blocks",
+                                  item.get("blocks"),
+                                  depth + (1 if block.get("type") == "steps" else 0))
+
+    def walk(where, node):
+        if isinstance(node, dict):
+            if isinstance(node.get("blocks"), list):
+                yield from go(f"{where}.blocks", node["blocks"], 0)
+            for key, value in node.items():
+                if key != "blocks":
+                    yield from walk(f"{where}.{key}", value)
+        elif isinstance(node, list):
+            for i, item in enumerate(node):
+                yield from walk(f"{where}[{i}]", item)
+
+    for name, doc in docs.items():
+        yield from walk(f"{name}.json", doc)
+
+
+def unknown_block_types(docs: dict[str, dict]) -> list[str]:
+    """A block the app has never heard of renders as nothing at all.
+
+    Which is the worst way to be wrong: the editor shows it, the file
+    carries it, and the tablet is simply missing a paragraph.
+    """
+    wrong: list[str] = []
+    for where, block, _ in _blocks_in(docs):
+        if not isinstance(block, dict):
+            wrong.append(f"{where} is not a block")
+        elif block.get("type") not in BLOCKS:
+            wrong.append(f"{where} has type {block.get('type')!r}, expected "
+                         f"one of {', '.join(sorted(BLOCKS))}")
+    return wrong
+
+
+def incomplete_blocks(docs: dict[str, dict]) -> list[str]:
+    """Every block's own wording, in every declared language."""
+    problems: list[str] = []
+    wanted = languages(docs)
+    for where, block, _ in _blocks_in(docs):
+        if not isinstance(block, dict):
+            continue
+        kind = block.get("type")
+        for field in BLOCKS.get(kind) or ():
+            node = block.get(field)
+            if not isinstance(node, dict):
+                problems.append(f"{where} is a {kind} block with no {field}")
+                continue
+            for lang in wanted:
+                if not node.get(lang):
+                    problems.append(f"{where}.{field} missing {lang}")
+
+        fields = BLOCK_ITEMS.get(kind)
+        if fields is None:
+            continue
+        items = block.get("items")
+        if not items:
+            problems.append(f"{where} is a {kind} block with no items")
+            continue
+        for i, item in enumerate(items):
+            if not isinstance(item, dict):
+                problems.append(f"{where}.items[{i}] is not an item")
+                continue
+            for field in fields:
+                node = item.get(field)
+                if not isinstance(node, dict):
+                    problems.append(f"{where}.items[{i}] has no {field}")
+                    continue
+                for lang in wanted:
+                    if not node.get(lang):
+                        problems.append(
+                            f"{where}.items[{i}].{field} missing {lang}")
+    return problems
+
+
+def steps_nested_too_deep(docs: dict[str, dict]) -> list[str]:
+    """Collapsible steps inside collapsible steps.
+
+    One level is the useful case -- a step with a diagram or a video in it.
+    Two is a volunteer opening a card to find another card, mid-service,
+    which is the opposite of what the layer is for. So the nesting stops
+    here rather than in whatever renders it.
+    """
+    return [f"{where} puts collapsible steps inside collapsible steps, "
+            f"which is one card too many to open"
+            for where, block, depth in _blocks_in(docs)
+            if isinstance(block, dict) and block.get("type") == "steps" and depth]
+
+
+def block_items_without_ids(docs: dict[str, dict]) -> list[str]:
+    """A checklist item is ticked, so it needs an address like any other.
+
+    Scoped to the whole station rather than to the block, because that is
+    how the ticks are stored: one flat set per station, keyed by id, so two
+    items sharing one anywhere in the file would tick together.
+    """
+    problems: list[str] = []
+    seen: dict[str, dict[str, str]] = {}
+    for where, block, _ in _blocks_in(docs):
+        if not isinstance(block, dict) or block.get("type") not in BLOCK_ITEMS:
+            continue
+        doc = where.split(".", 1)[0]
+        for i, item in enumerate(block.get("items") or []):
+            if not isinstance(item, dict):
+                continue
+            iid = item.get("id")
+            at = f"{where}.items[{i}]"
+            if not isinstance(iid, str) or not iid:
+                problems.append(f"{at} has no id, so a tick on it moves when "
+                                f"it does")
+                continue
+            if not ENTRY_ID.fullmatch(iid):
+                problems.append(f"{at} has id {iid!r}, which is not the shape "
+                                f"a link could carry")
+                continue
+            here = seen.setdefault(doc, {})
+            if iid in here:
+                problems.append(f"{at} and {here[iid]} both claim the id "
+                                f"{iid!r}, so they would tick together")
+            else:
+                here[iid] = at
+    return problems
+
+
+def broken_media(docs: dict[str, dict], root: Path | None = None) -> list[str]:
+    """A media block points at something a tablet can actually play.
+
+    Three kinds of source, and only one of them can be checked here:
+    something shipping in `docs/`, which must exist; something under
+    `media/`, which lives on the booth machine and is not here to look at;
+    and an https address, which is somebody else's server. What is always
+    checkable is the suffix -- a name the app cannot tell an image from a
+    video by is a blank space on the page.
+    """
+    problems: list[str] = []
+    for where, block, _ in _blocks_in(docs):
+        if not isinstance(block, dict) or block.get("type") != "media":
+            continue
+        src = block.get("src")
+        if not isinstance(src, str) or not src:
+            problems.append(f"{where} is a media block with no src")
+            continue
+        scheme = SCHEME.match(src)
+        if scheme and scheme.group(1).lower() not in ("http", "https"):
+            problems.append(f"{where} points at {src!r}, which is not an "
+                            f"address a tablet would fetch")
+            continue
+        if not src.lower().endswith(MEDIA_SUFFIXES):
+            problems.append(f"{where} points at {src!r}, and its name says "
+                            f"nothing about what it is -- one of "
+                            f"{', '.join(MEDIA_SUFFIXES)}")
+            continue
+        # Only a file that ships with the guide is here to be looked at.
+        if root is not None and not scheme and not src.startswith("media/"):
+            if not (root / src).is_file():
+                problems.append(f"{where} -> {src} does not exist")
+    return problems
+
+
 def _identified(docs: dict[str, dict]):
     """Each (doc name, section, index, entry) that ought to carry an id."""
     for name, doc in docs.items():
@@ -419,6 +638,25 @@ def incomplete_layers(docs: dict[str, dict]) -> list[str]:
     return problems
 
 
+def pages_with_nothing_on_them(docs: dict[str, dict]) -> list[str]:
+    """A page is its blocks. One with none is a tile that opens on nothing.
+
+    The other four layers have fixed fields carrying their wording, so an
+    empty one is already caught by `incomplete_layers`. A page's heading
+    is the only field it must have, so this is the rule that keeps the
+    freedom from being a way to publish a blank.
+    """
+    empty: list[str] = []
+    for role in roles(docs):
+        if "pages" not in (role.get("layers") or []):
+            continue
+        for i, page in enumerate((docs.get(role["id"]) or {}).get("pages") or []):
+            if not isinstance(page, dict) or not page.get("blocks"):
+                empty.append(f"{role['id']}.pages[{i}] has a heading and "
+                             f"nothing on it")
+    return empty
+
+
 def missing_home_page(docs: dict[str, dict]) -> list[str]:
     """The station's front page is the landing view, so it is never empty."""
     problems: list[str] = []
@@ -570,6 +808,11 @@ def broken_diagrams(docs: dict[str, dict], root: Path | None = None) -> list[str
 
 ALL_CHECKS = (
     blanks_without_todos,
+    unknown_block_types,
+    incomplete_blocks,
+    steps_nested_too_deep,
+    block_items_without_ids,
+    broken_media,
     todos_missing_a_language,
     bad_language_ids,
     app_wording_missing_a_language,
@@ -582,6 +825,7 @@ ALL_CHECKS = (
     layers_out_of_step,
     incomplete_layers,
     missing_home_page,
+    pages_with_nothing_on_them,
     component_shaped_problem_titles,
     bad_levels,
     guides_missing_language,
@@ -595,6 +839,7 @@ ALL_CHECKS = (
 def check(docs: dict[str, dict], root: Path | None = None) -> list[str]:
     """Every rule, against a whole guide. Empty means it would pass CI."""
     problems: list[str] = []
+    takes_root = (broken_diagrams, broken_media)
     for rule in ALL_CHECKS:
-        problems.extend(rule(docs, root) if rule is broken_diagrams else rule(docs))
+        problems.extend(rule(docs, root) if rule in takes_root else rule(docs))
     return problems

@@ -152,6 +152,74 @@ const GUIDE_FIELDS = [NUMBER, LEVEL, BI("title", "Title"), TODO,
                       BI("body", "What this screen is"),
                       BI("action", "What to do", { optional: true }), DIAGRAM];
 
+/* ---------- blocks ----------
+ *
+ * An entry's fixed fields say what it always has to say. Blocks are
+ * everything after that, in whatever order somebody puts them -- and this
+ * table is the only place in the editor that knows the list, mirroring
+ * BLOCKS in app.js and validate.py. Adding a type is an entry in each of
+ * those three.
+ *
+ * A `steps` item's own content is blocks too, which is how a diagram or a
+ * video goes inside the step it belongs to. One level deep and no more:
+ * `validate.py` refuses steps inside steps, because a volunteer opening a
+ * card to find another card mid-service is the opposite of the point.
+ */
+const MEDIA_SRC = {
+  key: "src", label: "File", type: "media",
+  hint: "Something in your media folder, a file that ships in docs/, or an " +
+        "https address. Videos play on a tap and never on their own.",
+};
+
+const BLOCK_TYPES = {
+  text: {
+    label: "Text", one: "paragraph",
+    fields: [BI("text", "Words")],
+    blank: () => ({ type: "text", text: bi() }),
+  },
+  media: {
+    label: "Picture or video", one: "picture or video",
+    fields: [MEDIA_SRC,
+             BI("alt", "What it shows", {
+               hint: "Read out to somebody who cannot see it, and shown in " +
+                     "its place if the file is missing.",
+             }),
+             BI("caption", "Caption", { optional: true })],
+    blank: () => ({ type: "media", src: "", alt: bi() }),
+  },
+  callout: {
+    label: "Callout", one: "callout",
+    fields: [LEVEL, BI("title", "Heading", { optional: true }),
+             BI("body", "Words"), TODO],
+    blank: () => ({ type: "callout", level: "caution", title: bi(), body: bi() }),
+  },
+  checklist: {
+    label: "Checklist", one: "checklist",
+    items: {
+      one: "item",
+      fields: [TODO, BI("text", "Item"), ENTRY_ID],
+      blank: () => ({ text: bi() }),
+    },
+    blank: () => ({ type: "checklist", items: [] }),
+  },
+  steps: {
+    label: "Collapsible steps", one: "set of steps",
+    items: {
+      one: "step", nests: true,
+      fields: [BI("when", "When", { optional: true }), BI("title", "Step"),
+               TODO, ENTRY_ID],
+      blank: () => ({ title: bi(), blocks: [] }),
+    },
+    blank: () => ({ type: "steps", items: [] }),
+  },
+};
+
+/* Where an entry's free-form content goes. Last in the form, after the
+ * fields that entry always has. */
+const BLOCKS = { key: "blocks", label: "And then", type: "blocks",
+                 hint: "Anything, in any order — words, a picture, a video, " +
+                       "a checklist, collapsible steps." };
+
 const SECTIONS = {
   /* The list the whole app is generated from. Adding one here grows every
    * text field in this editor and fills the problems bar with what the new
@@ -195,11 +263,12 @@ const SECTIONS = {
     label: "Front page", kind: "doc",
     fields: [BI("intro", "Introduction", {
       hint: "The first thing somebody sees when they scan the sticker.",
-    }), DIAGRAM],
+    }), DIAGRAM, BLOCKS],
   },
   faq: {
     label: "Questions", kind: "list", title: (e) => e.q, one: "question", identified: true,
-    fields: [BI("q", "Question"), TODO, BI("a", "Answer"), DIAGRAM, ENTRY_ID],
+    fields: [BI("q", "Question"), TODO, BI("a", "Answer"), DIAGRAM, BLOCKS,
+             ENTRY_ID],
     blank: () => ({ q: bi(), a: bi() }),
   },
   checklist: {
@@ -217,13 +286,14 @@ const SECTIONS = {
              BI("symptom", "What they are seeing or hearing"),
              TODO,
              { key: "steps", label: "Steps", type: "bi-list" },
-             DIAGRAM, ENTRY_ID],
+             DIAGRAM, BLOCKS, ENTRY_ID],
     blank: () => ({ level: "caution", title: bi(), symptom: bi(), steps: [bi()] }),
   },
   flow: {
     label: "Order", kind: "list", title: (e) => e.title, one: "step", identified: true,
     fields: [BI("when", "When", { hint: "\"45 min before\", \"During\", \"After\"." }),
-             BI("title", "Step"), TODO, BI("detail", "Detail"), DIAGRAM, ENTRY_ID],
+             BI("title", "Step"), TODO, BI("detail", "Detail"), DIAGRAM,
+             BLOCKS, ENTRY_ID],
     blank: () => ({ when: bi(), title: bi(), detail: bi() }),
   },
   equipment: {
@@ -235,8 +305,19 @@ const SECTIONS = {
              }),
              TODO, BI("body", "What it does"),
              BI("action", "What to do about it", { optional: true }),
-             DIAGRAM, ENTRY_ID],
+             DIAGRAM, BLOCKS, ENTRY_ID],
     blank: () => ({ level: "info", title: bi(), where: bi(), body: bi() }),
+  },
+  training: {
+    label: "Training", kind: "list", one: "page", identified: true,
+    at: "pages", title: (e) => e.title,
+    hint: "The free-form layer: walkthroughs and background reading. " +
+          "Nothing here is needed to get through a Sunday, which is why a " +
+          "page insists on nothing but a heading.",
+    fields: [BI("title", "Heading"),
+             BI("blurb", "One line for the tile", { optional: true }),
+             TODO, BLOCKS, ENTRY_ID],
+    blank: () => ({ title: bi(), blocks: [] }),
   },
   pages: {
     label: "Channel tabs", kind: "map", fields: GUIDE_FIELDS, one: "tab guide",
@@ -265,6 +346,10 @@ const SECTIONS = {
   },
 };
 
+// The section for the fifth layer is called `training` in this file, not
+// `pages`: `pages` was already taken by the console's channel tabs, and two
+// meanings of one word in a table keyed by it is a bug waiting to happen.
+// Its `at` names the real key in the file.
 const LAYERS = ["checklist", "problems", "flow", "equipment"];
 const LEVELS = [["ok", "Safe"], ["caution", "Careful"],
                 ["danger", "Do not change"], ["info", "Note"]];
@@ -287,6 +372,7 @@ const PROBLEM_CAP = 40;
  * guide. */
 const state = {
   writing: null,      // language id being edited; null until the docs load
+  media: { dir: "", files: [] },   // what is in the church's media folder
   gapSeen: null,      // index of the empty box the bar last jumped to
   detail: false,      // is the bar's Details panel open?
   docs: {},
@@ -365,6 +451,7 @@ function docsInOrder() {
     if (!doc) continue;
     const rows = [row(role.id, "home"), row(role.id, "faq"),
                   ...LAYERS.filter((l) => doc[l]).map((l) => row(role.id, l))];
+    if (doc.pages) rows.push(row(role.id, "training"));
     // The console's screens, filed under the station that has the console.
     if (role.console && has("guides")) {
       rows.push(row("guides", "pages"), row("guides", "screens"));
@@ -403,6 +490,12 @@ function summarise(section, entry, key) {
 const SINGLE = ["doc", "sub", "strings"];
 const isSingle = (section) => SINGLE.includes(SECTIONS[section].kind);
 
+/* The key in the file that a tree section edits. Usually the section's own
+ * name; `at` is for the two that differ -- roles.json's `hero`, and the
+ * Training section, whose key is `pages` because the console's channel
+ * tabs had already taken that word in this table. */
+const keyOf = (section) => SECTIONS[section].at || section;
+
 /* The object a form edits, for one row of the tree.
  *
  * One place, because there were two: the tree listed the whole document
@@ -421,16 +514,16 @@ function entryAt(docName, section, id) {
   if (spec.kind === "sub" || spec.kind === "strings") {
     return (doc[spec.at] = doc[spec.at] || {});
   }
-  if (spec.kind === "map") return (doc[section] || {})[id];
-  return (doc[section] || [])[id];
+  if (spec.kind === "map") return (doc[keyOf(section)] || {})[id];
+  return (doc[keyOf(section)] || [])[id];
 }
 
 function entriesOf(docName, section) {
   const doc = state.docs[docName];
   const spec = SECTIONS[section];
   if (isSingle(section)) return [["", entryAt(docName, section, "")]];
-  if (spec.kind === "map") return Object.entries(doc[section] || {});
-  return (doc[section] || []).map((e, i) => [i, e]);
+  if (spec.kind === "map") return Object.entries(doc[keyOf(section)] || {});
+  return (doc[keyOf(section)] || []).map((e, i) => [i, e]);
 }
 
 function hasBlank(node) {
@@ -561,18 +654,19 @@ function sameSection(el) {
 function moveEntry(from, ontoId, after) {
   const spec = SECTIONS[from.section];
   const doc = state.docs[from.doc];
+  const key = keyOf(from.section);
 
   if (spec.kind === "map") {
-    const keys = Object.keys(doc[from.section]);
+    const keys = Object.keys(doc[key]);
     const rest = keys.filter((k) => k !== from.id);
     const at = rest.indexOf(ontoId) + (after ? 1 : 0);
     rest.splice(at, 0, from.id);
     const rebuilt = {};
-    for (const k of rest) rebuilt[k] = doc[from.section][k];
-    doc[from.section] = rebuilt;
+    for (const k of rest) rebuilt[k] = doc[key][k];
+    doc[key] = rebuilt;
     state.sel = { doc: from.doc, section: from.section, id: from.id };
   } else {
-    const list = doc[from.section];
+    const list = doc[key];
     const lifted = Number(from.id);
     const onto = Number(ontoId);
     // Where the row we dropped onto sits once the lifted one is out of the
@@ -783,28 +877,32 @@ function replaceIn(el, from, to, text, select) {
   el.focus();
 }
 
-function renderField(f, entry) {
+function renderField(f, entry, prefix) {
   const value = entry[f.key];
+  // "symptom" on an entry; "blocks.2.items.0.blocks.1.text" on a block
+  // inside a step. One field spec, any depth.
+  const at = prefix ? `${prefix}.${f.key}` : f.key;
 
   if (f.type === "bi") {
     if (f.optional && value === undefined) {
       return field(f.label,
         iconBtn("plus", `Add: ${f.label}`,
-                `data-op="addfield" data-key="${esc(f.key)}"`),
+                `data-op="addfield" data-key="${esc(f.key)}" data-in="${esc(prefix || "")}"`),
         f.hint, "optional");
     }
     return field(f.label,
-      textareas(f.key, value) +
+      textareas(at, value) +
       (f.optional ? `<div class="rowbar" style="margin:8px 0 0">` +
         iconBtn("trash", `Remove: ${f.label}`,
-                `data-op="dropfield" data-key="${esc(f.key)}"`, "bad") + `</div>` : ""),
+                `data-op="dropfield" data-key="${esc(f.key)}" ` +
+                `data-in="${esc(prefix || "")}"`, "bad") + `</div>` : ""),
       f.hint);
   }
 
   if (f.type === "bi-list") {
     const rows = (value || []).map((step, i) =>
       `<div class="step-row"><span class="num">${i + 1}</span>` +
-      `<div>${textareas(`${f.key}.${i}`, step)}</div>` +
+      `<div>${textareas(`${at}.${i}`, step)}</div>` +
       `<span class="ops">` +
       iconBtn("up", `Move step ${i + 1} earlier`,
               `data-op="stepup" data-key="${esc(f.key)}" data-i="${i}"`) +
@@ -821,26 +919,26 @@ function renderField(f, entry) {
   }
 
   if (f.type === "level") {
-    return field(f.label, `<select data-path="${esc(f.key)}">` + LEVELS.map(([v, l]) =>
+    return field(f.label, `<select data-path="${esc(at)}">` + LEVELS.map(([v, l]) =>
       `<option value="${v}"${(value || "info") === v ? " selected" : ""}>${esc(l)}</option>`
     ).join("") + `</select>`, f.hint);
   }
 
   if (f.type === "text") {
     return field(f.label,
-      `<input type="text" data-path="${esc(f.key)}" value="${esc(value || "")}"` +
+      `<input type="text" data-path="${esc(at)}" value="${esc(value || "")}"` +
       (f.dropEmpty ? ` data-drop-empty="1"` : "") + `>`, f.hint);
   }
 
   if (f.type === "number") {
     return field(f.label,
-      `<input type="number" min="0" step="1" data-path="${esc(f.key)}" ` +
+      `<input type="number" min="0" step="1" data-path="${esc(at)}" ` +
       `value="${value === undefined ? "" : esc(String(value))}">`, f.hint);
   }
 
   if (f.type === "bool") {
     return field(f.label,
-      `<label><input type="checkbox" data-path="${esc(f.key)}"${value ? " checked" : ""}> ` +
+      `<label><input type="checkbox" data-path="${esc(at)}"${value ? " checked" : ""}> ` +
       `<span class="hint">Gives this station the Mixer tab.</span></label>`, f.hint);
   }
 
@@ -851,24 +949,204 @@ function renderField(f, entry) {
       "A declared tab must have content, and content with no tab declared shows nowhere.");
   }
 
+  if (f.type === "blocks") {
+    return field(f.label, blockList(at, value || [], 0), f.hint);
+  }
+
+  if (f.type === "media") {
+    const files = state.media.files || [];
+    return field(f.label,
+      `<input type="text" data-path="${esc(at)}" list="mediafiles" ` +
+      `value="${esc(value || "")}" placeholder="media/booth.jpg">` +
+      `<div class="rowbar" style="margin:8px 0 0">` +
+      `<button class="btn" data-op="pickmedia">Choose a file…</button>` +
+      `<span class="hint">${files.length} in ` +
+      `<code>${esc(state.media.dir || "")}</code></span></div>`,
+      f.hint);
+  }
+
   if (f.type === "diagram") {
     if (!value) {
       return field(f.label,
-        iconBtn("plus", "Add a diagram", `data-op="addfield" data-key="diagram"`),
+        iconBtn("plus", "Add a diagram",
+                `data-op="addfield" data-key="diagram" data-in="${esc(prefix || "")}"`),
         "Optional. A church's own drawings go in docs/img/local/, which is gitignored.",
         "optional");
     }
     return field(f.label,
       `<div class="sub">` +
-      field("File", `<input type="text" data-path="diagram.src" value="${esc(value.src || "")}">`,
+      field("File", `<input type="text" data-path="${esc(at)}.src" ` +
+            `value="${esc(value.src || "")}">`,
             "Relative to docs/, e.g. img/local/booth.svg") +
-      field("Alt text", textareas("diagram.alt", value.alt)) +
-      field("Caption", textareas("diagram.caption", value.caption)) +
+      field("Alt text", textareas(`${at}.alt`, value.alt)) +
+      field("Caption", textareas(`${at}.caption`, value.caption)) +
       `<div class="rowbar" style="margin:4px 0 0">` +
-      iconBtn("trash", "Remove this diagram", `data-op="dropfield" data-key="diagram"`, "bad") +
+      iconBtn("trash", "Remove this diagram",
+              `data-op="dropfield" data-key="diagram" data-in="${esc(prefix || "")}"`, "bad") +
       `</div></div>`);
   }
   return "";
+}
+
+/* ---------- a church's own pictures and video ----------
+ *
+ * The bridge serves one flat folder on the booth machine, read-only and
+ * by extension -- see `media_dir()` in server.py for why that is narrower
+ * than it sounds. This is the editor's end: list what is there, and take
+ * a file so nobody has to find the folder in a file manager.
+ */
+async function loadMedia() {
+  try { state.media = await api("/api/media"); }
+  catch { state.media = { dir: "", files: [] } }
+  const list = $("mediafiles");
+  if (list) {
+    list.innerHTML = (state.media.files || [])
+      .map((f) => `<option value="media/${esc(f.name)}">`).join("");
+  }
+}
+
+/* Choose one of the files already there, or add one. A plain file input
+ * rather than a drag target: this is a media director on a booth PC once
+ * a year, and a control they have used before beats a nicer one they
+ * have not. */
+function pickMedia(button) {
+  const box = button.closest(".field").querySelector("input[type=text]");
+  const files = state.media.files || [];
+  const names = files.map((f) => `media/${f.name}`);
+
+  const picked = prompt(
+    (names.length
+      ? `In ${state.media.dir}:\n\n${names.join("\n")}\n\n`
+      : `Nothing in ${state.media.dir} yet.\n\n`) +
+    "Type one of those, a file that ships in docs/ (img/x32-layout.svg), " +
+    "or an https address.\n\nLeave this empty to add a file instead.",
+    box.value);
+  if (picked === null) return;
+  if (picked.trim()) {
+    box.value = picked.trim();
+    box.dispatchEvent(new Event("input", { bubbles: true }));
+    return;
+  }
+  $("upload").click();
+}
+
+async function uploadMedia(file) {
+  if (!file) return;
+  try {
+    const out = await fetch("/api/media/" + encodeURIComponent(file.name), {
+      method: "POST", body: file,
+    }).then((r) => r.json());
+    if (out.error) throw new Error(out.error);
+    state.media = out;
+    await loadMedia();
+    alert(`Added ${file.name}. Choose it on the block you want it on.`);
+  } catch (err) {
+    alert(`Could not add ${file.name}: ${err.message}`);
+  }
+}
+
+/* ---------- the block editor ----------
+ *
+ * A list of blocks, each opened out as its own small form. Rendered from
+ * BLOCK_TYPES rather than written out, for the same reason the rest of
+ * this file is: the shapes are regular, and a form per type would drift
+ * from app.js the first time one of them changed.
+ *
+ * `path` is the dotted route from the entry to the array being rendered --
+ * "blocks", or "blocks.2.items.0.blocks" for a picture inside a step. Every
+ * control carries it, so one handler does the splicing at any depth.
+ */
+function blockList(path, list, depth) {
+  const rows = list.map((block, i) => {
+    const spec = BLOCK_TYPES[block?.type];
+    const here = `${path}.${i}`;
+    if (!spec) {
+      return `<div class="block bad"><div class="block-head">` +
+        `<b>Unknown block: ${esc(String(block?.type))}</b>` +
+        blockOps(path, i) + `</div>` +
+        `<p class="hint">Nothing renders this, so a tablet would show a gap ` +
+        `here. Delete it, or add the type to the app.</p></div>`;
+    }
+    return `<div class="block"><div class="block-head">` +
+      `<b>${esc(spec.label)}</b>${blockOps(path, i)}</div>` +
+      // `checklist` and `steps` carry no fields of their own -- their
+      // wording is on their items -- so this has to be an empty string
+      // rather than an undefined that concatenates as the word.
+      (spec.fields || []).map((f) => renderField(f, block, here)).join("") +
+      (spec.items ? itemList(spec, `${here}.items`, block.items || [], depth) : "") +
+      `</div>`;
+  }).join("");
+
+  return `<div class="blocks">${rows}` +
+    `<div class="addblock">` + Object.entries(BLOCK_TYPES).map(([kind, spec]) =>
+      // Steps inside steps is refused by the rules, so it is not offered.
+      (kind === "steps" && depth > 0) ? "" :
+      `<button class="btn" data-op="blockadd" data-arr="${esc(path)}" ` +
+      `data-kind="${kind}">+ ${esc(spec.label)}</button>`).join("") +
+    `</div></div>`;
+}
+
+function blockOps(path, i) {
+  return `<span class="ops">` +
+    iconBtn("up", "Move this up", `data-op="arrup" data-arr="${esc(path)}" data-i="${i}"`) +
+    iconBtn("down", "Move this down", `data-op="arrdown" data-arr="${esc(path)}" data-i="${i}"`) +
+    iconBtn("trash", "Delete this", `data-op="arrdrop" data-arr="${esc(path)}" data-i="${i}"`, "bad") +
+    `</span>`;
+}
+
+/* The items of a checklist or a set of steps. A step's own content is
+ * blocks again, one level deeper, which is how a diagram ends up inside
+ * the step it explains. */
+function itemList(spec, path, items, depth) {
+  const rows = items.map((item, i) => {
+    const here = `${path}.${i}`;
+    return `<div class="item-row"><div class="block-head">` +
+      `<span class="num">${i + 1}</span>${blockOps(path, i)}</div>` +
+      spec.items.fields.map((f) => renderField(f, item, here)).join("") +
+      (spec.items.nests
+        ? field("Inside this step", blockList(`${here}.blocks`, item.blocks || [], depth + 1))
+        : "") + `</div>`;
+  }).join("");
+  return field(spec.items.one === "step" ? "Steps" : "Items",
+    `<div class="items-in">${rows}</div><div class="rowbar" style="margin:8px 0 0">` +
+    iconBtn("plus", `Add another ${spec.items.one}`,
+            `data-op="itemadd" data-arr="${esc(path)}"`) + `</div>`);
+}
+
+/* An id no other tickable item in this station file is using.
+ *
+ * Scoped to the whole file rather than to the block, because that is how
+ * the ticks are stored: one flat set per station, keyed by id. Two items
+ * sharing one anywhere in the file would tick together. */
+function freshItemId(docName) {
+  const taken = new Set();
+  const walk = (node) => {
+    if (Array.isArray(node)) return node.forEach(walk);
+    if (!node || typeof node !== "object") return;
+    if (typeof node.id === "string") taken.add(node.id);
+    Object.values(node).forEach(walk);
+  };
+  walk(state.docs[docName]);
+  let n = taken.size + 1;
+  while (taken.has(`item-${n}`)) n += 1;
+  return `item-${n}`;
+}
+
+/* Walk a dotted path from the entry. `blocks.2.items.0.blocks` reads
+ * through arrays as well as objects, because a numeric key on a JS array
+ * is just an index. */
+function atPath(entry, path) {
+  if (!path) return entry;
+  return path.split(".").reduce((node, key) => (node == null ? node : node[key]), entry);
+}
+
+/* The array at a path, created if this is the first thing to go in it. */
+function arrayAt(entry, path) {
+  const parts = path.split(".");
+  const parent = atPath(entry, parts.slice(0, -1).join("."));
+  const last = parts.at(-1);
+  if (!Array.isArray(parent[last])) parent[last] = [];
+  return parent[last];
 }
 
 /* ---------- form wiring ---------- */
@@ -973,17 +1251,43 @@ function wireForm(entry, spec) {
     const op = el.dataset.op;
     if (["rename", "layer"].includes(op)) return;
     el.onclick = () => {
-      const list = state.docs[sel.doc][sel.section];
+      const list = state.docs[sel.doc][keyOf(sel.section)];
       const key = el.dataset.key;
       const i = Number(el.dataset.i);
 
-      if (op === "addfield") entry[key] = key === "diagram" ? { src: "", alt: bi(), caption: bi() } : bi();
-      else if (op === "dropfield") delete entry[key];
+      // An optional field may sit on the entry or on a block inside it.
+      const on = el.dataset.in ? atPath(entry, el.dataset.in) : entry;
+      const arr = el.dataset.arr;
+
+      if (op === "addfield") on[key] = key === "diagram" ? { src: "", alt: bi(), caption: bi() } : bi();
+      else if (op === "dropfield") delete on[key];
       else if (op === "stepadd") (entry[key] = entry[key] || []).push(bi());
       else if (op === "stepdrop") entry[key].splice(i, 1);
       else if (op === "stepup" && i > 0) entry[key].splice(i - 1, 0, entry[key].splice(i, 1)[0]);
       else if (op === "stepdown") entry[key].splice(i + 1, 0, entry[key].splice(i, 1)[0]);
       else if (op === "delete") return deleteEntry(spec, list);
+
+      // Blocks and their items, at any depth, through the path each
+      // control carries. One handler rather than one per nesting level.
+      else if (op === "blockadd") {
+        arrayAt(entry, arr).push(BLOCK_TYPES[el.dataset.kind].blank());
+      } else if (op === "itemadd") {
+        const parts = arr.split(".");
+        const block = atPath(entry, parts.slice(0, -1).join("."));
+        const fresh = BLOCK_TYPES[block.type].items.blank();
+        fresh.id = freshItemId(sel.doc);
+        arrayAt(entry, arr).push(fresh);
+      } else if (op === "arrup" && i > 0) {
+        const a = atPath(entry, arr);
+        a.splice(i - 1, 0, a.splice(i, 1)[0]);
+      } else if (op === "arrdown") {
+        const a = atPath(entry, arr);
+        if (i < a.length - 1) a.splice(i + 1, 0, a.splice(i, 1)[0]);
+      } else if (op === "arrdrop") {
+        atPath(entry, arr).splice(i, 1);
+      } else if (op === "pickmedia") {
+        return pickMedia(el);
+      }
       touched(sel.doc);
       renderTree();
       renderForm();
@@ -1004,15 +1308,16 @@ function addEntry(docName, section) {
   const sel = state.sel;
   const here = sel && sel.doc === docName && sel.section === section;
 
+  const at_key = keyOf(section);
   if (spec.kind === "map") {
-    doc[section] = doc[section] || {};
+    doc[at_key] = doc[at_key] || {};
     let key = "New screen";
     let n = 1;
-    while (doc[section][key]) key = `New screen ${++n}`;
-    doc[section][key] = fresh;
+    while (doc[at_key][key]) key = `New screen ${++n}`;
+    doc[at_key][key] = fresh;
     state.sel = { doc: docName, section, id: key };
   } else {
-    const list = (doc[section] = doc[section] || []);
+    const list = (doc[at_key] = doc[at_key] || []);
     // Given its address at birth rather than on the first save, so it is
     // never briefly a thing nothing can point at.
     if (spec.identified) {
@@ -1035,8 +1340,8 @@ function deleteEntry(spec, list) {
   const what = spec.kind === "map" ? sel.id : summarise(sel.section, currentEntry(), sel.id);
   if (!confirm(`Delete "${what}"? This only changes the draft — nothing is written until you save.`)) return;
   if (spec.kind === "map") {
-    delete state.docs[sel.doc][sel.section][sel.id];
-    const left = Object.keys(state.docs[sel.doc][sel.section]);
+    delete state.docs[sel.doc][keyOf(sel.section)][sel.id];
+    const left = Object.keys(state.docs[sel.doc][keyOf(sel.section)]);
     state.sel.id = left[0] ?? null;
   } else {
     list.splice(sel.id, 1);
@@ -1050,12 +1355,12 @@ function deleteEntry(spec, list) {
 
 function renameKey(next) {
   const sel = state.sel;
-  const group = state.docs[sel.doc][sel.section];
+  const group = state.docs[sel.doc][keyOf(sel.section)];
   if (!next || next === sel.id || group[next]) { renderForm(); return; }
   // Rebuilt rather than reassigned, so the screens keep the order they are read in.
   const rebuilt = {};
   for (const [k, v] of Object.entries(group)) rebuilt[k === sel.id ? next : k] = v;
-  state.docs[sel.doc][sel.section] = rebuilt;
+  state.docs[sel.doc][keyOf(sel.section)] = rebuilt;
   state.sel.id = next;
   touched(sel.doc);
   renderTree();
@@ -1081,8 +1386,9 @@ function previewPlan() {
   if (sel.doc === "roles" || sel.doc === "ui") return { hash: "", view: null };
   const lang = state.writing ? `/${state.writing}` : "";
   if (sel.doc === "guides") return { hash: `audio${lang}`, view: "now", key: sel.id };
-  const view = { home: "home", about: "home", faq: "home" }[sel.section] || sel.section;
-  const drill = ["problems", "equipment"].includes(sel.section);
+  const view = { home: "home", faq: "home", training: "pages" }[sel.section]
+               || sel.section;
+  const drill = ["problems", "equipment", "training"].includes(sel.section);
   const unfold = ["flow", "faq"].includes(sel.section);
   return {
     hash: `${sel.doc}${lang}`,
@@ -1427,8 +1733,15 @@ window.addEventListener("beforeunload", (e) => {
   if (state.dirty.length) { e.preventDefault(); e.returnValue = ""; }
 });
 
+$("upload").onchange = (e) => {
+  const file = e.target.files[0];
+  e.target.value = "";
+  uploadMedia(file);
+};
+
 (async function boot() {
   absorb(await api("/api/guide"));
   restoreLangs();
+  await loadMedia();
   renderAll();
 })();
