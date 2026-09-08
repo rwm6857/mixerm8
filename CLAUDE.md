@@ -126,9 +126,29 @@ fetch has returned, so no language can be known for it.
 
 Declaring a language and translating it are different jobs, and the second
 is weeks. So adding `es` immediately reports every gap it opens — 350-odd
-lines on the shipped example, which is why the editor's problems bar counts
-them and stops listing at `PROBLEM_CAP`, and why it shows how much of each
-language is actually written beside the count.
+lines on the shipped example, which is why the editor's bar along the
+bottom counts rather than lists them.
+
+**That bar is one line that names the next thing to do and goes there.** It
+used to print the rule messages as a bulleted list with a per-language
+progress block under it. Both were true and neither was addressed to the
+person reading them: `audio.json.problems[3].todo missing es` is a dotted
+path, and somebody finishing a translation wants the empty box, not its
+name. So the line reads *"8 things still need writing — click to go to the
+first"*, each click lands the cursor **in** the box (switching the language
+being written, because a form shows one at a time, and moving the previous
+one to Alongside so the source stays in view), and the messages are
+verbatim behind Details along with the progress figures.
+
+`findGaps()` walks the draft rather than parsing the rule messages back
+into locations — the messages are prose meant to be read, and a second
+parser for a human format is a standing invitation to drift.
+`test_the_bar_names_the_next_thing_to_do` pins both halves. It is also why
+`entryAt()` exists: the tree and the form each narrowed a document to a
+section separately, which nothing noticed until the bar walked the tree's
+own list and counted `roles.json` twice, filing half of it under Front
+cover. One function narrows now, and
+`test_one_place_decides_what_a_form_edits` counts the references.
 
 **The station home is the landing view, and the Mixer tab never is.** A
 station has to work with the bridge dead, so the first thing a volunteer sees

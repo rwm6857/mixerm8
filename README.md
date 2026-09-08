@@ -286,11 +286,17 @@ unsaved changes as you type. It runs on your own machine only — nothing on
 the network can reach it — and it never touches the mixer, so you can use it
 on a Mac at home with no console anywhere nearby.
 
-It checks as you type. The bar along the bottom runs exactly the rules the
-test suite runs, so it tells you about a `____` with no explanation above it,
-a sentence missing one of your languages, or a problem page titled after a
-component rather than a symptom, before you save rather than after you push.
-Beside the count it shows how much of each language is actually written.
+It checks as you type, and the line along the bottom tells you what is
+left: *"8 things still need writing — click to go to the first"*. Clicking
+puts the cursor in the empty box, and clicking again moves to the next one,
+so finishing a translation is a matter of working the same button until the
+line says nothing is missing.
+
+Behind **Details** are the rules verbatim — the same ones the test suite
+runs, so a `____` with no explanation above it, a sentence missing one of
+your languages, or a problem page titled after a component rather than a
+symptom all show up before you save rather than after you push — and how
+much of each language is written.
 
 Everything in the guide is reachable from the tree on the left: the
 stations, the front cover, the language list, the app's own wording, and the

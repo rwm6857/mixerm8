@@ -270,6 +270,8 @@ const PROBLEM_CAP = 40;
 const state = {
   writing: null,      // language id being edited; null until the docs load
   beside: null,       // language id shown read-only next to it, or null
+  gapSeen: null,      // index of the empty box the bar last jumped to
+  detail: false,      // is the bar's Details panel open?
   docs: {},
   target: "repo",
   repoAvailable: false,
@@ -379,12 +381,37 @@ function summarise(section, entry, key) {
   return text ? text.slice(0, 46) : "(empty)";
 }
 
+/* The three kinds that edit one thing rather than a list of them, so they
+ * get no count in the tree, no add button and no Delete. */
+const SINGLE = ["doc", "sub", "strings"];
+const isSingle = (section) => SINGLE.includes(SECTIONS[section].kind);
+
+/* The object a form edits, for one row of the tree.
+ *
+ * One place, because there were two: the tree listed the whole document
+ * for a `sub` section while the form narrowed it to `spec.at`, and the
+ * first thing to walk the tree's own list counted roles.json twice and
+ * filed half of it under Front cover.
+ *
+ * A `sub` or `strings` target is created on sight rather than being a
+ * section that silently does nothing when the key is absent.
+ */
+function entryAt(docName, section, id) {
+  const spec = SECTIONS[section];
+  const doc = state.docs[docName];
+  if (!doc) return null;
+  if (spec.kind === "doc") return doc;
+  if (spec.kind === "sub" || spec.kind === "strings") {
+    return (doc[spec.at] = doc[spec.at] || {});
+  }
+  if (spec.kind === "map") return (doc[section] || {})[id];
+  return (doc[section] || [])[id];
+}
+
 function entriesOf(docName, section) {
   const doc = state.docs[docName];
   const spec = SECTIONS[section];
-  if (spec.kind === "doc" || spec.kind === "sub" || spec.kind === "strings") {
-    return [["", doc]];
-  }
+  if (isSingle(section)) return [["", entryAt(docName, section, "")]];
   if (spec.kind === "map") return Object.entries(doc[section] || {});
   return (doc[section] || []).map((e, i) => [i, e]);
 }
@@ -400,9 +427,6 @@ function hasBlank(node) {
  * Adding an entry and moving one both happen here rather than in the form.
  * They are navigation, not editing: you decide where a step goes by looking
  * at the steps around it, and the form only ever shows one of them. */
-
-const SINGLE = ["doc", "sub", "strings"];
-const isSingle = (section) => SINGLE.includes(SECTIONS[section].kind);
 
 function renderTree() {
   const sel = state.sel;
@@ -560,17 +584,7 @@ function select(doc, section, id) {
 
 function currentEntry() {
   const { doc, section, id } = state.sel || {};
-  const spec = SECTIONS[section];
-  if (!spec) return null;
-  if (spec.kind === "doc") return state.docs[doc];
-  // A `sub` section edits one object inside the file -- roles.json's hero,
-  // ui.json's strings -- so it is created on first sight rather than being
-  // a section that silently does nothing.
-  if (spec.kind === "sub" || spec.kind === "strings") {
-    return (state.docs[doc][spec.at] = state.docs[doc][spec.at] || {});
-  }
-  if (spec.kind === "map") return (state.docs[doc][section] || {})[id];
-  return (state.docs[doc][section] || [])[id];
+  return SECTIONS[section] ? entryAt(doc, section, id) : null;
 }
 
 function renderForm() {
@@ -1073,27 +1087,165 @@ function renderChrome() {
     ? `${state.dirty.length} file${state.dirty.length > 1 ? "s" : ""} unsaved` : "";
   $("save").disabled = state.dirty.length === 0;
 
-  const bad = state.problems.length;
-  const box = $("problems");
-  box.classList.toggle("bad", bad > 0);
-  const shown = state.problems.slice(0, PROBLEM_CAP);
-  const rest = bad - shown.length;
-  box.innerHTML = (bad
-    ? `<b>${bad} thing${bad > 1 ? "s" : ""} the rules would reject:</b><ul>` +
-      shown.map((p) => `<li>${esc(p)}</li>`).join("") +
-      (rest ? `<li class="more">…and ${rest} more of the same kind.</li>` : "") +
-      `</ul>`
-    : `<b>Everything here passes the same checks the test suite runs.</b>`)
-    + progressPanel();
+  renderBar();
 }
 
-/* How much of each language is actually written.
+/* ---------- the bar along the bottom ----------
+ *
+ * This used to print the rule messages as a bulleted list with a per-
+ * language progress block under it. Both were true and neither was for
+ * the person reading them: `audio.json.problems[3].todo missing es` is a
+ * dotted path, and a media director wanting to finish a translation needs
+ * somewhere to click, not a diagnostic.
+ *
+ * So the bar is one line that names the next thing to do and takes you
+ * there. The rule messages are still exactly what CI would say -- they are
+ * behind Details, for whoever wants them. */
+
+function renderBar() {
+  const box = $("problems");
+  const gaps = findGaps();
+  const rules = state.problems.length;
+  box.classList.toggle("bad", rules > 0 || gaps.length > 0);
+
+  // Which gap the last click took us to. Back to "the first" whenever the
+  // list shrinks under us, which is what finishing one does.
+  if (state.gapSeen !== null && state.gapSeen >= gaps.length) state.gapSeen = null;
+
+  let line;
+  if (gaps.length) {
+    const at = state.gapSeen;
+    line = `<button class="barline" id="gogap">` + (at === null
+      ? `${gaps.length} thing${gaps.length > 1 ? "s" : ""} still need writing` +
+        ` — <u>click to go to the first</u>`
+      : `${at + 1} of ${gaps.length} · ${esc(gaps[at].where)}` +
+        ` — <u>click for the next</u>`) + `</button>`;
+  } else if (rules) {
+    // Nothing with a box to fill, but the rules still object -- a role
+    // declaring a layer it has not got, two guides on one number.
+    line = `<span class="barline">${rules} thing${rules > 1 ? "s" : ""} ` +
+           `the rules would reject</span>`;
+  } else {
+    line = `<span class="barline ok">Nothing missing — this passes the same ` +
+           `checks the test suite runs</span>`;
+  }
+
+  // Details holds the two things worth having but not worth reading first:
+  // the rule messages verbatim, and how much of each language is written.
+  // Offered whenever it would have something in it.
+  const worth = rules > 0 || langIds().length > 1;
+  box.innerHTML = line +
+    (worth ? `<button class="details" id="showdetail" aria-expanded="${state.detail}">` +
+             `Details</button>` : "") +
+    (worth && state.detail ? detailPanel() : "");
+
+  const go = $("gogap");
+  if (go) go.onclick = () => {
+    const next = state.gapSeen === null ? 0 : (state.gapSeen + 1) % gaps.length;
+    state.gapSeen = next;
+    goToGap(gaps[next]);
+  };
+  const toggle = $("showdetail");
+  if (toggle) toggle.onclick = () => { state.detail = !state.detail; renderBar(); };
+}
+
+/* Every box that is still empty, in the order the tree lists them.
+ *
+ * Computed from the draft rather than parsed back out of the rule
+ * messages. The messages are sentences meant to be read; turning one into
+ * a place to click would mean a second parser for a format that exists to
+ * be human. This walk already had to happen for the flags in the tree. */
+function findGaps() {
+  const ids = langIds();
+  const out = [];
+
+  const collect = (node, prefix, add) => {
+    if (!node || typeof node !== "object") return;
+    if (Array.isArray(node)) {
+      node.forEach((v, i) => collect(v, `${prefix}${prefix ? "." : ""}${i}`, add));
+      return;
+    }
+    if (isBlock(node)) {
+      for (const lang of ids) if (!node[lang]) add(prefix, lang);
+      return;
+    }
+    for (const [k, v] of Object.entries(node)) {
+      collect(v, `${prefix}${prefix ? "." : ""}${k}`, add);
+    }
+  };
+
+  for (const group of docsInOrder()) {
+    for (const { doc, section } of group.rows) {
+      const spec = SECTIONS[section];
+      const where = `${group.label} · ${spec.label}`;
+      for (const [id, entry] of entriesOf(doc, section)) {
+        // A `doc` section edits the whole file, so only the fields its own
+        // form shows are its business -- everything else in that file
+        // belongs to one of the other rows and would be counted twice.
+        const scope = spec.kind === "doc"
+          ? Object.fromEntries(spec.fields.map((f) => [f.key, entry[f.key]]))
+          : entry;
+        collect(scope, "", (path, lang) =>
+          out.push({ doc, section, id, path, lang, where }));
+      }
+    }
+  }
+  return out;
+}
+
+/* Select the entry, then put the cursor in the empty box itself. Landing
+ * on the right form is most of the job; landing in the box means the next
+ * thing you do is type.
+ *
+ * Switching the language first, because a form shows one language at a
+ * time: a gap in Korean has no box on screen while you are writing in
+ * English, so there would be nothing to put the cursor in. Whatever you
+ * were writing in moves to Alongside, so the sentence you are translating
+ * from stays in view.
+ *
+ * Synchronous throughout. `select()` renders the form before it returns,
+ * so there is nothing to wait for -- and the requestAnimationFrame this
+ * used to wait in never fires at all while the window is in the
+ * background, which left the bar a click behind itself. */
+function goToGap(gap) {
+  if (state.writing !== gap.lang) {
+    if (state.beside === gap.lang || !state.beside) state.beside = state.writing;
+    state.writing = gap.lang;
+    remember();
+  }
+  select(gap.doc, gap.section, gap.id);
+
+  const path = `${gap.path}.${gap.lang}`.replace(/["\\]/g, "\\$&");
+  const el = $("form").querySelector(`[data-path="${path}"]`);
+  if (el) {
+    el.scrollIntoView({ block: "center" });
+    el.focus();
+  }
+  renderBar();
+}
+
+function detailPanel() {
+  const shown = state.problems.slice(0, PROBLEM_CAP);
+  const rest = state.problems.length - shown.length;
+  return `<div class="detail">` + progressPanel() +
+    (shown.length
+      ? `<h2>Exactly what the rules would say</h2><ul>` +
+        shown.map((p) => `<li>${esc(p)}</li>`).join("") +
+        (rest ? `<li class="more">…and ${rest} more of the same kind.</li>` : "") +
+        `</ul>`
+      : "") +
+    `</div>`;
+}
+
+/* How much of each language is written, for the Details panel.
  *
  * Declaring a language takes a minute and translating one takes weeks, so
- * the gap between the two is the thing worth showing. Counted over the
- * blocks in the draft rather than over the problems list, because the two
- * answer different questions: the list says what to fix next, this says
- * how far there is to go. */
+ * the gap between the two is worth showing -- but as a figure somebody
+ * goes looking for, not as the first thing in the bar. The line above it
+ * says what to do next; this says how far there is left to go.
+ *
+ * Counted over the language blocks in the draft, the same walk the tree
+ * flags and the bar's own gap list use. */
 function progressPanel() {
   const ids = langIds();
   if (ids.length < 2) return "";
@@ -1114,7 +1266,7 @@ function progressPanel() {
   return `<div class="progress">` + langs().map(({ id, label }) => {
     const done = total[id] ? Math.round((filled[id] / total[id]) * 100) : 100;
     return `<span class="${done === 100 ? "full" : ""}">${esc(label)} ` +
-           `<b>${done}%</b> — ${filled[id]} of ${total[id]}</span>`;
+           `<b>${done}%</b> — ${filled[id]} of ${total[id]} written</span>`;
   }).join("") + `</div>`;
 }
 

@@ -256,22 +256,51 @@ textarea.has-blank { border-color: var(--warn); }
   background: #14161a; border: 1px solid var(--line); border-radius: 12px;
 }
 
-/* ---------- the rules bar ---------- */
+/* ---------- the bar along the bottom ----------
+   One line that names the next thing to do and takes you there. It used to
+   print the rule messages as a bulleted list with a progress block under
+   it -- both true, neither addressed to the person reading them. The
+   messages are still exactly what CI would say, behind Details. */
 .problems {
-  flex: none; max-height: 148px; overflow: auto;
-  padding: 9px 16px;
+  flex: none; max-height: 40vh; overflow: auto;
+  display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 14px;
+  padding: 10px 16px;
   background: var(--panel); border-top: 1px solid var(--line);
-  color: var(--good); font-size: .8rem;
+  color: var(--good); font-size: .82rem;
 }
 .problems.bad { color: var(--warn); }
-.problems b { display: block; margin-bottom: 4px; }
-.problems ul { margin: 0; padding-left: 18px; }
-.problems li { font-family: ui-monospace, Menlo, monospace; font-size: .76rem; }
-.problems .more { font-family: inherit; color: var(--muted); }
 
-/* How much of each language is written. Declaring one is a minute's work
-   and translating it is weeks, so the bar says where that stands. */
-.progress { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 6px; }
+.barline {
+  padding: 0; background: none; border: none;
+  color: inherit; font: inherit; font-weight: 600; text-align: left;
+}
+button.barline { cursor: pointer; }
+button.barline u { text-decoration-color: rgb(232 163 61 / .55); }
+button.barline:hover u { text-decoration-color: currentColor; }
+button.barline:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.barline.ok { font-weight: 500; }
+
+.details {
+  padding: 0; background: none; border: none;
+  color: var(--muted); font: inherit; font-size: .78rem; cursor: pointer;
+  text-decoration: underline; text-decoration-style: dotted;
+}
+.details:hover, .details[aria-expanded="true"] { color: var(--fg); }
+
+.detail { flex-basis: 100%; margin-top: 8px; }
+.detail h2 {
+  margin: 14px 0 0; color: var(--muted);
+  font-size: .7rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
+}
+.detail ul { margin: 6px 0 0; padding-left: 18px; }
+.detail li {
+  font-family: ui-monospace, Menlo, monospace; font-size: .74rem; color: var(--muted);
+}
+.detail .more { font-family: inherit; }
+
+/* How much of each language is written, inside Details. A figure somebody
+   goes looking for, rather than the first thing in the bar. */
+.progress { display: flex; flex-wrap: wrap; gap: 14px; }
 .progress span { color: var(--muted); font-size: .76rem; }
 .progress b { color: var(--fg); font-weight: 600; }
 .progress .full b { color: var(--good); }

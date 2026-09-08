@@ -172,6 +172,44 @@ def test_every_top_level_key_is_reachable_from_the_editor():
                 f"{name}.json carries {key!r}, which no form in the editor edits"
 
 
+def test_one_place_decides_what_a_form_edits():
+    """`entryAt` is the only thing that narrows a document to a section.
+
+    There were two: the tree listed the whole file for a `sub` section
+    while the form narrowed it to `spec.at`. Nothing showed until the bar
+    along the bottom started walking the tree's own list -- at which point
+    roles.json was counted twice and half of it was filed under Front
+    cover. Pinned by counting the references: one in `entryAt`, and the
+    comment above it explaining why.
+    """
+    js = (Path(editor.__file__).parents[2] / "editor" / "editor.js").read_text("utf-8")
+    code = [ln for ln in js.splitlines()
+            if "spec.at" in ln and not ln.lstrip().startswith(("*", "//", "/*"))]
+    assert len(code) == 1, f"spec.at is read in {len(code)} places: {code}"
+    assert "function entryAt" in js
+    assert "return SECTIONS[section] ? entryAt(" in js, \
+        "currentEntry stopped going through entryAt"
+
+
+def test_the_bar_names_the_next_thing_to_do():
+    """It reports one line and a place to click, not a list of dotted paths.
+
+    `audio.json.problems[3].todo missing es` is a true sentence addressed
+    to nobody: the person reading the bar wants the empty box, not its
+    path. The messages are still verbatim behind Details, which is where a
+    format meant for a diff belongs.
+    """
+    js = (Path(editor.__file__).parents[2] / "editor" / "editor.js").read_text("utf-8")
+    assert "function findGaps" in js and "function goToGap" in js
+    # The rule messages appear in one place, and it is the details panel.
+    assert js.count("state.problems.map") == 0, "the bar lists the raw messages again"
+    assert "function detailPanel" in js
+    # Gaps are found by walking the draft, not by parsing the messages back.
+    walk = js[js.index("function findGaps"):js.index("function goToGap")]
+    assert "state.problems" not in walk, \
+        "findGaps parses the rule messages; walk the draft instead"
+
+
 def test_no_icon_button_ships_without_words_behind_it():
     """A trashcan is only obvious to somebody who can see it.
 
