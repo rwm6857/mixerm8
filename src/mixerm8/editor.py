@@ -38,12 +38,18 @@ import sys
 import threading
 import unicodedata
 from pathlib import Path
+from urllib.parse import unquote
 
 from . import config, validate
-from .server import Server, resolve_within, webroot
+from .server import MEDIA_NAME, MEDIA_TYPES, Server, media_dir, resolve_within, webroot
 
 REPO, LOCAL = "repo", "local"
 DEFAULT_PORT = 8181
+
+# The largest file the editor will take. A walkthrough of the booth is a
+# couple of minutes on a phone; anything past this is a video that wanted
+# compressing before it went on a tablet over church wifi.
+MEDIA_CAP = 200 * 1024 * 1024
 
 # Same as ruff's line-length for this repo. Measured in columns rather than
 # characters, because a Korean glyph occupies two of them and half of every
@@ -130,6 +136,61 @@ def repo_data_dir() -> Path | None:
 def local_data_dir() -> Path:
     """The override folder the bridge already reads `*.local.json` from."""
     return config.config_dir() / "data"
+
+
+# ---------------------------------------------------------------------------
+# a church's own pictures and video
+# ---------------------------------------------------------------------------
+
+def media_listing() -> dict:
+    """What is in the media folder, for the editor to offer.
+
+    Filtered through the same allowlist the bridge serves by, so the editor
+    never shows a file a tablet would refuse -- which would otherwise be
+    found out on a Sunday rather than here.
+    """
+    directory = media_dir()
+    files = []
+    if directory.is_dir():
+        for path in sorted(directory.iterdir()):
+            if not path.is_file() or path.suffix.lower() not in MEDIA_TYPES:
+                continue
+            if not MEDIA_NAME.fullmatch(path.name):
+                continue
+            files.append({"name": path.name, "size": path.stat().st_size,
+                          "video": MEDIA_TYPES[path.suffix.lower()].startswith("video")})
+    return {"dir": str(directory), "files": files}
+
+
+def save_media(name: str, read, length: int) -> str:
+    """Put one file in the media folder, or refuse it.
+
+    The same allowlist again, checked here rather than trusted from the
+    browser. Streamed to disk in chunks, because the point of this is
+    video and reading a 200MB upload into memory to write it straight back
+    out is a silly way to run out of it.
+    """
+    if not MEDIA_NAME.fullmatch(name) or Path(name).suffix.lower() not in MEDIA_TYPES:
+        raise ValueError(f"{name!r} is not a name and a type this will serve")
+    if length <= 0 or length > MEDIA_CAP:
+        raise ValueError(f"{length} bytes is not a size this will take "
+                         f"(the limit is {MEDIA_CAP // (1024 * 1024)}MB)")
+
+    directory = media_dir()
+    directory.mkdir(parents=True, exist_ok=True)
+    target = resolve_within(directory, "/" + name)
+    if target is None:
+        raise ValueError(f"{name!r} does not land in the media folder")
+
+    left = length
+    with target.open("wb") as out:
+        while left > 0:
+            chunk = read(min(left, 1 << 20))
+            if not chunk:
+                break
+            out.write(chunk)
+            left -= len(chunk)
+    return str(target)
 
 
 class Guide:
@@ -323,6 +384,16 @@ class EditorHandler(http.server.BaseHTTPRequestHandler):
                 g.load()
             elif path == "/api/target":
                 g.set_target((self._body() or {}).get("target", REPO))
+            elif path.startswith("/api/media/"):
+                # The one place this server takes something that is not
+                # JSON. Loopback only, like everything else here, and the
+                # name and type are checked in save_media rather than
+                # trusted from the browser.
+                name = unquote(path[len("/api/media/"):])
+                length = int(self.headers.get("Content-Length") or 0)
+                written = save_media(name, self.rfile.read, length)
+                self._json({"written": written, **media_listing()})
+                return
             else:
                 self.send_error(404)
                 return
@@ -348,6 +419,8 @@ class EditorHandler(http.server.BaseHTTPRequestHandler):
             self._json({"docs": self.guide.docs, **self._state()})
         elif path == "/api/state":
             self._json(self._state())
+        elif path == "/api/media":
+            self._json(media_listing())
         else:
             self.send_error(404)
 

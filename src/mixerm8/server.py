@@ -5,11 +5,13 @@ from __future__ import annotations
 import http.server
 import json
 import mimetypes
+import re
 import socket
 import socketserver
 import sys
 import threading
 from pathlib import Path
+from urllib.parse import unquote
 
 from . import config
 
@@ -45,6 +47,55 @@ def override_dir() -> Path:
     channel layout.
     """
     return config.config_dir() / "data"
+
+
+def media_dir() -> Path:
+    """A church's own pictures and video, on the booth machine.
+
+    This is a deliberate narrowing of the rule next door rather than a
+    hole in it. `override_dir()` is one `*.json` filename because a wording
+    file is the only thing that ever needed to come from outside the web
+    root -- and then guides grew media blocks, and a booth PC running the
+    frozen exe had no way to show a photo of its own booth, which is the
+    most obviously useful diagram there is.
+
+    So: one flat directory, GET only, and an extension allowlist. No
+    subdirectories, nothing executable, nothing written. `docs/` still
+    holds whatever ships with MixerM8.
+    """
+    return config.config_dir() / "media"
+
+
+# What `media_dir()` will hand out, and what to call it on the way. Kept
+# here rather than left to `mimetypes`, which varies by machine and would
+# happily serve an .html or a .js off a directory a volunteer can drop
+# files into.
+MEDIA_TYPES = {
+    ".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg",
+    ".gif": "image/gif", ".svg": "image/svg+xml", ".webp": "image/webp",
+    ".mp4": "video/mp4", ".webm": "video/webm", ".m4v": "video/mp4",
+}
+
+# A name off that directory, and nothing that could be a path.
+MEDIA_NAME = re.compile(r"[A-Za-z0-9][A-Za-z0-9 ._-]{0,95}")
+
+
+def media_file(name: str) -> tuple[Path, str] | None:
+    """The file to serve for `/media/<name>`, or None to refuse.
+
+    Refuses before touching the filesystem: the name has to be a plain
+    filename of an allowed type. `resolve_within` is belt and braces after
+    that, because a rule that reads a name is a rule somebody will widen.
+    """
+    if not MEDIA_NAME.fullmatch(name):
+        return None
+    ctype = MEDIA_TYPES.get(Path(name).suffix.lower())
+    if ctype is None:
+        return None
+    target = resolve_within(media_dir(), "/" + name)
+    if target is None or not target.is_file():
+        return None
+    return target, ctype
 
 
 def resolve_within(root: Path, path: str) -> Path | None:
@@ -174,6 +225,17 @@ class Handler(http.server.BaseHTTPRequestHandler):
                     self._send_bytes(local.read_bytes(),
                                      "application/json; charset=utf-8")
                     return
+
+        # A church's own pictures and video, off the booth machine. See
+        # media_dir() for why this exists and how narrow it is kept.
+        if path.startswith("/media/"):
+            found = media_file(unquote(path[len("/media/"):]))
+            if found is None:
+                self.send_error(404)
+                return
+            target, ctype = found
+            self._send_bytes(target.read_bytes(), ctype)
+            return
 
         target = resolve_within(self.root, path)
         if target is None:

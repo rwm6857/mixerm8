@@ -1,3 +1,5 @@
+import pytest
+
 from mixerm8 import server
 
 
@@ -183,3 +185,76 @@ def test_the_app_can_draw_every_theme_and_icon_a_role_asks_for():
     assert len(themes) == len(_roles()), "two stations share a palette"
 
 
+# ---------------------------------------------------------------------------
+# A church's own pictures and video.
+#
+# This is the one place the bridge hands out something from outside the web
+# root that is not a *.json wording file, so it is the one place worth
+# probing from the outside. The rule it narrows -- "must not become a
+# second file server" -- is kept by the shape of what follows: one flat
+# directory, GET only, and a fixed list of types.
+# ---------------------------------------------------------------------------
+
+@pytest.fixture
+def media(tmp_path, monkeypatch):
+    monkeypatch.setattr(server.config, "config_dir", lambda: tmp_path)
+    folder = tmp_path / "media"
+    folder.mkdir()
+    (folder / "booth.jpg").write_bytes(b"\xff\xd8\xff")
+    (folder / "walk.mp4").write_bytes(b"\x00\x00\x00 ftyp")
+    (folder / "notes.txt").write_text("not media")
+    (folder / "page.html").write_text("<script>alert(1)</script>")
+    (tmp_path / "secret.json").write_text('{"channel": "layout"}')
+    return folder
+
+
+def test_a_picture_in_the_media_folder_is_served(media):
+    found = server.media_file("booth.jpg")
+    assert found and found[1] == "image/jpeg"
+    assert server.media_file("walk.mp4")[1] == "video/mp4"
+
+
+def test_only_the_types_on_the_list_are_served(media):
+    """`mimetypes` varies by machine and would happily hand out an .html
+    off a directory a volunteer can drop files into."""
+    assert server.media_file("notes.txt") is None
+    assert server.media_file("page.html") is None
+
+
+def test_the_media_folder_is_one_flat_directory(media):
+    """No subdirectories and nothing that could be a path, refused on the
+    name before the filesystem is touched at all."""
+    (media / "sub").mkdir()
+    (media / "sub" / "deep.jpg").write_bytes(b"x")
+    for name in ("sub/deep.jpg", "../secret.json", "..%2Fsecret.json",
+                 "/etc/hosts", "", ".", ".."):
+        assert server.media_file(name) is None, name
+
+
+def test_a_file_that_is_not_there_is_not_a_hint(media):
+    assert server.media_file("nothing-here.jpg") is None
+
+
+def test_the_bridge_serves_media_over_http(media):
+    srv, request = _running_server()
+    try:
+        with request("/media/booth.jpg") as r:
+            assert r.status == 200
+            assert r.getheader("Content-Type") == "image/jpeg"
+        for path in ("/media/page.html", "/media/notes.txt",
+                     "/media/../secret.json", "/media/nothing.jpg"):
+            with request(path) as r:
+                assert r.status == 404, path
+    finally:
+        srv.shutdown()
+
+
+def test_the_media_folder_is_read_only_from_the_lan(media):
+    """The bridge answers exactly one POST, and this is not it -- a volunteer
+    holding a tablet must not be able to put a file on the booth machine."""
+    srv, request = _running_server()
+    try:
+        with request("/media/booth.jpg", method="POST") as r:
+            assert r.status in (404, 501)
+    finally:
+        srv.shutdown()
