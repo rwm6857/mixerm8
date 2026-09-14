@@ -404,6 +404,14 @@ them as far from the sound desk as the tree could manage. So a tree row
 names the document it edits and the sound group draws from two files,
 keyed off `role.console` rather than off the string "audio".
 
+**The language list is one page, and the only section with no `Writing
+in` on it.** Every other section is wording somebody translates; this one
+is the setup deciding what they get translated *into*, so a language picker
+over the top of it would be asking which language to write a language code
+in — hence `untranslated` on the spec. It is also just a short list, so a
+tree row and a page per language was more navigation than content: all of
+them are rows on one page, with the code, the name and the order together.
+
 **Bold, italic and link are on the box, not above the form.** `MARKS` in
 `editor.js` drives both the hover toolbar and ⌘B / ⌘I / ⌘K, bound to the
 textarea rather than the window so a shortcut only ever formats the box the

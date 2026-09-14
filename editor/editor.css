@@ -240,6 +240,27 @@ textarea.has-blank { border-color: var(--warn); }
   background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius);
 }
 
+/* ---------- the language list ----------
+   All of them on one page: three codes and three names is a short list,
+   and a tree row and a page each was more navigation than content. No
+   `Writing in` over it either -- this is the setup that decides what
+   everything else gets translated into. */
+.langrows { display: flex; flex-direction: column; gap: 8px; }
+.langrow {
+  display: grid; grid-template-columns: 24px minmax(90px, 1fr) minmax(120px, 2fr) auto;
+  gap: 10px; align-items: end;
+  padding: 10px 12px;
+  background: var(--panel); border: 1px solid var(--line); border-radius: 9px;
+}
+.langrow > .num {
+  align-self: center; justify-self: center;
+  color: var(--muted); font-size: .78rem; font-weight: 700;
+}
+.langrow label { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.langrow .fname { margin: 0; }
+.langrow .ops { display: flex; gap: 2px; align-self: center; }
+.langrow input { min-height: 32px; }
+
 /* ---------- blocks ----------
    Each block is its own small form, indented so the nesting is legible:
    a block, its items, and the blocks inside one of those items. Three
